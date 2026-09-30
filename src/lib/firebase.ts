@@ -1,0 +1,53 @@
+import { initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
+
+const env = import.meta.env;
+
+export const firebaseConfigured = Boolean(env.VITE_FIREBASE_API_KEY && env.VITE_FIREBASE_PROJECT_ID);
+
+let app: FirebaseApp | undefined;
+let firestore: Firestore | undefined;
+let storage: FirebaseStorage | undefined;
+
+function ensureApp(): FirebaseApp {
+  if (!app) {
+    app = initializeApp({
+      apiKey: env.VITE_FIREBASE_API_KEY,
+      authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
+      appId: env.VITE_FIREBASE_APP_ID,
+    });
+  }
+  return app;
+}
+
+export function db(): Firestore {
+  if (!firestore) {
+    // Offline-first: writes land in the IndexedDB cache and sync when online.
+    firestore = initializeFirestore(ensureApp(), {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      ignoreUndefinedProperties: true,
+    });
+  }
+  return firestore;
+}
+
+export function bucket(): FirebaseStorage {
+  if (!storage) storage = getStorage(ensureApp());
+  return storage;
+}
+
+export function watchUser(cb: (u: User | null) => void): () => void {
+  return onAuthStateChanged(getAuth(ensureApp()), cb);
+}
+
+export async function signIn(): Promise<void> {
+  await signInWithPopup(getAuth(ensureApp()), new GoogleAuthProvider());
+}
+
+export async function logOut(): Promise<void> {
+  await signOut(getAuth(ensureApp()));
+}

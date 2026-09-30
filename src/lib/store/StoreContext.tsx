@@ -1,0 +1,245 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { rangeDays } from '../dates';
+import { authorize, disconnect, gcalConfigured, hasToken, listEvents, eventLocal, type GEvent } from '../google/calendar';
+import { linkedIds, pushDay, reconcile, trashRemoved } from '../google/sync';
+import { emptyDay, type DayEntry, type ISODate, type Settings } from '../types';
+import { defaultSettings } from '../vocab';
+import type { Repo } from './repo';
+
+interface Store {
+  repo: Repo;
+  settings: Settings;
+  saveSettings(s: Settings): void;
+  day(date: ISODate): DayEntry;
+  saveDay(d: DayEntry): void;
+  /** Loads days (and Google events) for a range; safe to call repeatedly. */
+  loadRange(from: ISODate, to: ISODate): Promise<void>;
+  /** Google events for a date that are not already logbook items. */
+  eventsOn(date: ISODate): GEvent[];
+  gcal: { configured: boolean; connected: boolean; syncing: boolean; error?: string };
+  connectGoogle(): Promise<void>;
+  disconnectGoogle(): void;
+  /** Pushes every stored day to Google Calendar (items not yet linked, pending deletions). */
+  syncAll(): Promise<number>;
+  loadAll(): Promise<DayEntry[]>;
+}
+
+const Ctx = createContext<Store | null>(null);
+
+export function useStore(): Store {
+  const s = useContext(Ctx);
+  if (!s) throw new Error('StoreProvider missing');
+  return s;
+}
+
+function persist(repo: Repo, p: Promise<void>) {
+  // Firestore resolves writes only on server ack; offline writes are already cached, so never block UI.
+  p.catch((e) => console.error(`[${repo.mode}] salvataggio fallito`, e));
+}
+
+/** Copies Google ids from a pushed snapshot onto the latest local version of the same day. */
+function mergeIds(latest: DayEntry, pushed: DayEntry, trashed: string[]): DayEntry {
+  const out = structuredClone(latest);
+  if (out.shift && pushed.shift && !out.shift.gcalEventId) out.shift.gcalEventId = pushed.shift.gcalEventId;
+  for (const a of out.appointments) a.gcalEventId ??= pushed.appointments.find((x) => x.id === a.id)?.gcalEventId;
+  for (const t of out.todos) {
+    const p = pushed.todos.find((x) => x.id === t.id);
+    if (p && t.time) t.gcalEventId ??= p.gcalEventId;
+    if (p && !p.time && !t.time) t.gcalEventId = undefined;
+  }
+  out.gcalTrash = (out.gcalTrash ?? []).filter((id) => !trashed.includes(id));
+  return out;
+}
+
+export function StoreProvider({ repo, children }: { repo: Repo; children: ReactNode }) {
+  const [settings, setSettings] = useState<Settings>(defaultSettings());
+  const [days, setDays] = useState<Record<ISODate, DayEntry>>({});
+  const [events, setEvents] = useState<Record<ISODate, GEvent[]>>({});
+  const [connected, setConnected] = useState(hasToken());
+  const [syncing, setSyncing] = useState(false);
+  const [error, setError] = useState<string>();
+
+  const daysRef = useRef(days);
+  daysRef.current = days;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
+  const pushedBase = useRef<Record<ISODate, DayEntry>>({});
+  const timers = useRef<Record<string, number>>({});
+  const pending = useRef<Record<ISODate, DayEntry>>({});
+
+  useEffect(() => {
+    // Flush debounced writes when the app is hidden or closed.
+    const flush = () => {
+      for (const d of Object.values(pending.current)) persist(repo, repo.saveDay(d));
+      pending.current = {};
+    };
+    const onVis = () => document.visibilityState === 'hidden' && flush();
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [repo]);
+
+  useEffect(() => {
+    repo.getSettings().then((s) => {
+      if (s) setSettings({ ...defaultSettings(), ...s, gcal: { ...defaultSettings().gcal, ...s.gcal } });
+    });
+  }, [repo]);
+
+  const saveSettings = useCallback(
+    (s: Settings) => {
+      const next = { ...s, updatedAt: Date.now() };
+      setSettings(next);
+      window.clearTimeout(timers.current.settings);
+      timers.current.settings = window.setTimeout(() => persist(repo, repo.saveSettings(next)), 400);
+    },
+    [repo],
+  );
+
+  const writeDay = useCallback(
+    (d: DayEntry) => {
+      daysRef.current = { ...daysRef.current, [d.date]: d };
+      setDays(daysRef.current);
+      // Debounced so typing in a note does not write on every keystroke.
+      pending.current[d.date] = d;
+      window.clearTimeout(timers.current[`w:${d.date}`]);
+      timers.current[`w:${d.date}`] = window.setTimeout(() => {
+        delete pending.current[d.date];
+        persist(repo, repo.saveDay(d));
+      }, 400);
+    },
+    [repo],
+  );
+
+  const push = useCallback(
+    async (date: ISODate, force = false) => {
+      const s = settingsRef.current;
+      const snapshot = daysRef.current[date];
+      if (!snapshot || !s.gcal.enabled || !hasToken()) return;
+      setSyncing(true);
+      try {
+        const trashed = snapshot.gcalTrash ?? [];
+        const pushed = await pushDay(pushedBase.current[date], snapshot, s, force);
+        pushedBase.current[date] = pushed;
+        const merged = mergeIds(daysRef.current[date], pushed, trashed);
+        if (JSON.stringify(merged) !== JSON.stringify(daysRef.current[date])) writeDay(merged);
+        setError(undefined);
+      } catch (e) {
+        setError(String(e instanceof Error ? e.message : e));
+        setConnected(hasToken());
+      } finally {
+        setSyncing(false);
+      }
+    },
+    [writeDay],
+  );
+
+  const saveDay = useCallback(
+    (d: DayEntry) => {
+      const prev = daysRef.current[d.date];
+      const next = trashRemoved(prev, { ...d, updatedAt: Date.now() });
+      writeDay(next);
+      window.clearTimeout(timers.current[d.date]);
+      timers.current[d.date] = window.setTimeout(() => push(d.date), 1200);
+    },
+    [writeDay, push],
+  );
+
+  const loadRange = useCallback(
+    async (from: ISODate, to: ISODate) => {
+      const loaded = await repo.getRange(from, to);
+      const merged = { ...daysRef.current };
+      for (const d of loaded) {
+        const cached = merged[d.date];
+        if (cached && cached.updatedAt > d.updatedAt) continue; // newer local edit not yet persisted
+        merged[d.date] = d;
+        pushedBase.current[d.date] ??= d;
+      }
+      daysRef.current = merged;
+      setDays(merged);
+
+      const s = settingsRef.current;
+      if (!s.gcal.enabled || !hasToken()) return;
+      try {
+        const cals = [...new Set([s.gcal.calendarId, ...s.gcal.readCalendarIds])];
+        const all = (await Promise.all(cals.map((c) => listEvents(c, from, to)))).flat();
+        const byDate: Record<ISODate, GEvent[]> = {};
+        for (const e of all) {
+          const { date } = eventLocal(e.start);
+          (byDate[date] ??= []).push(e);
+        }
+        setEvents((prev) => {
+          const out = { ...prev };
+          for (const d of rangeDays(from, to)) out[d] = byDate[d] ?? [];
+          return out;
+        });
+        for (const d of loaded) {
+          const r = reconcile(d, byDate[d.date] ?? []);
+          if (r) {
+            pushedBase.current[d.date] = r;
+            writeDay(r);
+          }
+        }
+      } catch (e) {
+        setError(String(e instanceof Error ? e.message : e));
+        setConnected(hasToken());
+      }
+    },
+    [repo, writeDay],
+  );
+
+  const connectGoogle = useCallback(async () => {
+    const ok = await authorize(true);
+    setConnected(ok);
+    if (ok && !settingsRef.current.gcal.enabled) saveSettings({ ...settingsRef.current, gcal: { ...settingsRef.current.gcal, enabled: true } });
+    if (!ok) setError('Autorizzazione Google non concessa');
+    else setError(undefined);
+  }, [saveSettings]);
+
+  const disconnectGoogle = useCallback(() => {
+    disconnect();
+    setConnected(false);
+    setEvents({});
+  }, []);
+
+  const syncAll = useCallback(async () => {
+    const all = await repo.getAll();
+    let n = 0;
+    for (const d of all) {
+      daysRef.current = { ...daysRef.current, [d.date]: daysRef.current[d.date] ?? d };
+      const needs =
+        (d.gcalTrash?.length ?? 0) > 0 ||
+        (d.shift && !d.shift.gcalEventId) ||
+        d.appointments.some((a) => !a.gcalEventId) ||
+        d.todos.some((t) => t.time && !t.gcalEventId);
+      if (needs) {
+        await push(d.date);
+        n++;
+      }
+    }
+    return n;
+  }, [repo, push]);
+
+  const linked = useMemo(() => linkedIds(Object.values(days)), [days]);
+
+  const store: Store = {
+    repo,
+    settings,
+    saveSettings,
+    day: (date) => days[date] ?? emptyDay(date),
+    saveDay,
+    loadRange,
+    eventsOn: (date) =>
+      (events[date] ?? []).filter((e) => !linked.has(e.id) && e.extendedProperties?.private?.logbook !== '1'),
+    gcal: { configured: gcalConfigured, connected, syncing, error },
+    connectGoogle,
+    disconnectGoogle,
+    syncAll,
+    loadAll: () => repo.getAll(),
+  };
+
+  return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
+}

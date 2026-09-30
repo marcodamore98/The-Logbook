@@ -1,0 +1,161 @@
+// Logbook → Google Calendar: turno, appuntamenti e to-do con orario diventano eventi.
+// Google Calendar → Logbook: orari/titoli modificati su Google vengono riportati
+// negli elementi collegati (reconcile), gli altri eventi sono mostrati in lettura.
+
+import { addDays, minutesOf } from '../dates';
+import type { Appointment, DayEntry, Settings, ShiftAssignment, Todo } from '../types';
+import { deleteEvent, eventLocal, hasToken, upsertEvent, type EventInput, type GEvent } from './calendar';
+
+function shiftInput(day: DayEntry, s: ShiftAssignment, settings: Settings): EventInput {
+  const type = settings.shiftTypes.find((t) => t.id === s.shiftTypeId);
+  const names = s.colleagueIds
+    .map((id) => settings.colleagues.find((c) => c.id === id)?.name)
+    .filter(Boolean)
+    .join(', ');
+  const allDay = s.start === s.end && s.start === '00:00';
+  const overnight = !allDay && minutesOf(s.end) <= minutesOf(s.start);
+  return {
+    kind: 'shift',
+    date: day.date,
+    summary: `Turno: ${type?.name ?? 'Turno'}`,
+    location: s.place,
+    description: [names && `Con: ${names}`, s.note].filter(Boolean).join('\n') || undefined,
+    start: allDay ? undefined : s.start,
+    end: allDay ? undefined : s.end,
+    endDate: overnight ? addDays(day.date, 1) : undefined,
+  };
+}
+
+function apptInput(day: DayEntry, a: Appointment): EventInput {
+  const overnight = minutesOf(a.end) <= minutesOf(a.start);
+  return {
+    kind: 'appointment',
+    date: day.date,
+    summary: a.title,
+    location: a.location,
+    start: a.start,
+    end: a.end,
+    endDate: overnight ? addDays(day.date, 1) : undefined,
+  };
+}
+
+function todoInput(day: DayEntry, t: Todo): EventInput {
+  const end = minutesOf(t.time!) + 30;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const endT = end >= 1440 ? '23:59' : `${pad(Math.floor(end / 60))}:${pad(end % 60)}`;
+  return { kind: 'todo', date: day.date, summary: `${t.done ? '✓ ' : '☐ '}${t.text}`, start: t.time, end: endT };
+}
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Pushes the difference between prev and next to Google Calendar and returns
+ * `next` with the created event ids filled in. `force` pushes every linked item.
+ */
+export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settings: Settings, force = false): Promise<DayEntry> {
+  if (!settings.gcal.enabled || !hasToken()) return next;
+  const cal = settings.gcal.calendarId;
+  const out: DayEntry = structuredClone(next);
+
+  for (const id of out.gcalTrash ?? []) await deleteEvent(cal, id);
+  out.gcalTrash = [];
+
+  // Shift
+  const prevShift = prev?.shift;
+  if (out.shift) {
+    const input = shiftInput(out, out.shift, settings);
+    if (force || !out.shift.gcalEventId || !same(input, prevShift && shiftInput(prev!, prevShift, settings))) {
+      out.shift.gcalEventId = await upsertEvent(cal, out.shift.gcalEventId, input);
+    }
+  }
+
+  // Appointments
+  for (const a of out.appointments) {
+    const input = apptInput(out, a);
+    const old = prev?.appointments.find((x) => x.id === a.id);
+    if (force || !a.gcalEventId || !old || !same(input, apptInput(prev!, old))) {
+      a.gcalEventId = await upsertEvent(cal, a.gcalEventId, input);
+    }
+  }
+
+  // Todos with a time
+  for (const t of out.todos) {
+    const old = prev?.todos.find((x) => x.id === t.id);
+    if (!t.time) {
+      if (t.gcalEventId) {
+        await deleteEvent(cal, t.gcalEventId);
+        t.gcalEventId = undefined;
+      }
+      continue;
+    }
+    const input = todoInput(out, t);
+    if (force || !t.gcalEventId || !old || !old.time || !same(input, todoInput(prev!, old))) {
+      t.gcalEventId = await upsertEvent(cal, t.gcalEventId, input);
+    }
+  }
+  return out;
+}
+
+/** Collects the event ids of items removed between prev and next, so they can be deleted later. */
+export function trashRemoved(prev: DayEntry | undefined, next: DayEntry): DayEntry {
+  if (!prev) return next;
+  const keep = new Set<string>();
+  if (next.shift?.gcalEventId) keep.add(next.shift.gcalEventId);
+  next.appointments.forEach((a) => a.gcalEventId && keep.add(a.gcalEventId));
+  next.todos.forEach((t) => t.gcalEventId && keep.add(t.gcalEventId));
+  const gone: string[] = [];
+  if (prev.shift?.gcalEventId && !keep.has(prev.shift.gcalEventId)) gone.push(prev.shift.gcalEventId);
+  prev.appointments.forEach((a) => a.gcalEventId && !keep.has(a.gcalEventId) && gone.push(a.gcalEventId));
+  prev.todos.forEach((t) => t.gcalEventId && !keep.has(t.gcalEventId) && gone.push(t.gcalEventId));
+  if (!gone.length) return next;
+  return { ...next, gcalTrash: [...new Set([...(next.gcalTrash ?? []), ...gone])] };
+}
+
+/** Applies edits made directly on Google Calendar to linked logbook items. Returns null when nothing changed. */
+export function reconcile(day: DayEntry, events: GEvent[]): DayEntry | null {
+  const byId = new Map(events.map((e) => [e.id, e]));
+  let changed = false;
+  const out: DayEntry = structuredClone(day);
+  const times = (e: GEvent) => {
+    const s = eventLocal(e.start);
+    const en = eventLocal(e.end);
+    return s.date === day.date && s.time && en.time ? { start: s.time, end: en.time } : null;
+  };
+  if (out.shift?.gcalEventId) {
+    const e = byId.get(out.shift.gcalEventId);
+    const t = e && times(e);
+    if (t && (t.start !== out.shift.start || t.end !== out.shift.end)) {
+      Object.assign(out.shift, t);
+      changed = true;
+    }
+  }
+  for (const a of out.appointments) {
+    const e = a.gcalEventId ? byId.get(a.gcalEventId) : undefined;
+    if (!e) continue;
+    const t = times(e);
+    if (t && (t.start !== a.start || t.end !== a.end)) {
+      Object.assign(a, t);
+      changed = true;
+    }
+    if (e.summary && e.summary !== a.title) {
+      a.title = e.summary;
+      changed = true;
+    }
+    if ((e.location ?? undefined) !== a.location) {
+      a.location = e.location;
+      changed = true;
+    }
+  }
+  return changed ? out : null;
+}
+
+/** Ids of Google events already represented by logbook items (not shown twice). */
+export function linkedIds(days: DayEntry[]): Set<string> {
+  const s = new Set<string>();
+  for (const d of days) {
+    if (d.shift?.gcalEventId) s.add(d.shift.gcalEventId);
+    d.appointments.forEach((a) => a.gcalEventId && s.add(a.gcalEventId));
+    d.todos.forEach((t) => t.gcalEventId && s.add(t.gcalEventId));
+  }
+  return s;
+}
