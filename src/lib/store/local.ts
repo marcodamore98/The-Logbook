@@ -23,4 +23,5 @@ export const localRepo: Repo = {
     return { src: await blobToDataURL(blob) };
   },
   async deletePhoto() {},
+  resolvePhoto: async (src) => src,
 };

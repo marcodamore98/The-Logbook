@@ -25,42 +25,43 @@ I termini di lavoro e palestra usano **vocabolari standardizzati** (`src/lib/voc
 
 ```bash
 npm install
-cp .env.example .env.local   # facoltativo: senza Firebase l'app funziona in modalità locale
+# facoltativo: senza configurazione Firebase l'app funziona in modalità locale
 npm run dev
 ```
 
 Senza variabili Firebase i dati restano sul dispositivo (IndexedDB) e si possono spostare con *Impostazioni → Esporta/Importa backup*.
 
-## Configurare la sincronizzazione cloud (Firebase)
+## Messa online (GitHub Pages + Firebase)
 
-1. Crea un progetto su <https://console.firebase.google.com>.
-2. **Authentication → Sign-in method** → abilita **Google**. In *Authorized domains* aggiungi il dominio dove pubblicherai l'app (es. `marcodamore98.github.io`).
-3. **Firestore Database** → crea il database (modalità produzione).
-4. **Storage** → attivalo (serve per le foto).
-5. **Impostazioni progetto → Le tue app → Web** → registra l'app e copia i valori in `.env.local`:
-   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_APP_ID`.
-6. Pubblica le regole di sicurezza incluse: `npx firebase-tools deploy --only firestore:rules,storage`. Ogni utente può leggere e scrivere solo i propri dati.
+GitHub e Firebase non vanno collegati direttamente. GitHub **pubblica il sito**, mentre il sito, dal browser, parla con **Firebase** (login e dati) usando la configurazione in `src/lib/config.ts`. Quei valori sono pubblici per natura: la protezione dei dati è data dal login Google e dalle regole di Firestore.
 
-Struttura dei dati: `users/{uid}/meta/settings`, `users/{uid}/days/{YYYY-MM-DD}`; le foto sono in `users/{uid}/photos/`.
+### 1. Firebase (una volta sola)
+1. Nella [console Firebase](https://console.firebase.google.com) apri **Authentication → Metodo di accesso** e verifica che **Google** sia attivo.
+2. Vai in **Authentication → Impostazioni → Domini autorizzati → Aggiungi dominio** e inserisci `marcodamore98.github.io`.
+3. Vai in **Firestore Database → Regole**, incolla il contenuto di [`firestore.rules`](firestore.rules) e premi **Pubblica**. Ogni utente vedrà solo i propri dati.
+4. Vai in **⚙ Impostazioni progetto → Generali → Le tue app → Configurazione SDK** e copia i valori `apiKey`, `authDomain`, `projectId` e `appId` in [`src/lib/config.ts`](src/lib/config.ts).
+
+Firebase Storage **non** serve: le foto vengono compresse e salvate in Firestore, quindi resti nel piano gratuito Spark.
+
+### 2. GitHub (una volta sola)
+1. In **Settings → General → Danger Zone → Change visibility → Make public** rendi pubblico il repository. È pubblico solo il codice: i dati personali stanno in Firestore.
+2. In **Settings → Pages → Build and deployment → Source** scegli **GitHub Actions**.
+3. In **Actions** apri il workflow **Pubblica su GitHub Pages** e premi **Run workflow**. In seguito si avvia da solo a ogni modifica del branch predefinito.
+
+Dopo circa 1 minuto l'app è su **https://marcodamore98.github.io/The-Logbook/**. Dal telefono aprila e scegli "Aggiungi a schermata Home".
 
 ## Configurare Google Calendar
 
 1. Apri <https://console.cloud.google.com> e seleziona **lo stesso progetto di Firebase**.
 2. **API e servizi → Libreria** → abilita **Google Calendar API**.
 3. **Schermata consenso OAuth** → tipo *Esterno*, aggiungi gli ambiti `calendar.events` e `calendar.readonly`, e aggiungi il tuo indirizzo Gmail come *utente di test*.
-4. **Credenziali** → apri l'ID client OAuth "Web client (auto created by Google Service)", oppure creane uno di tipo *Applicazione web*. In *Origini JavaScript autorizzate* aggiungi `http://localhost:5173` e il dominio di produzione.
-5. Copia l'ID client in `VITE_GOOGLE_CLIENT_ID`.
+4. **Credenziali** → apri l'ID client OAuth "Web client (auto created by Google Service)". In *Origini JavaScript autorizzate* aggiungi `https://marcodamore98.github.io` (e `http://localhost:5173` se sviluppi in locale).
+5. Copia l'ID client in `GOOGLE_CLIENT_ID` dentro `src/lib/config.ts`.
 6. Nell'app vai su **Impostazioni → Google Calendar → Collega**. Poi scegli il calendario su cui scrivere (consiglio di creare un calendario dedicato, es. "Turni") e quali calendari mostrare.
 
 Il token di Google dura circa un'ora. Quando scade, in alto compare "Ricollega Google". Le modifiche fatte nel frattempo restano in sospeso e vengono inviate con *Sincronizza elementi in sospeso*.
 
-## Pubblicazione
-
-**GitHub Pages:** il workflow `.github/workflows/deploy.yml` pubblica a ogni push su `main`.
-1. Attiva la pubblicazione in *Settings → Pages → Source: GitHub Actions*.
-2. Aggiungi i valori di `.env.example` come *Secrets* del repository.
-
-**Firebase Hosting:** in alternativa esegui `npm run build && npx firebase-tools deploy --only hosting`.
+Struttura dei dati in Firestore: `users/{uid}/meta/settings`, `users/{uid}/days/{YYYY-MM-DD}`, `users/{uid}/photos/{id}`.
 
 ## Struttura del codice
 
@@ -70,7 +71,8 @@ src/
     types.ts            modello dati (DayEntry, moduli, Settings)
     vocab.ts            vocabolari standardizzati e turni predefiniti
     stats.ts            aggregazioni ed export CSV
-    store/              repository locale (IndexedDB) e cloud (Firestore/Storage) + contesto React
+    config.ts           configurazione pubblica Firebase / Google
+    store/              repository locale (IndexedDB) e cloud (Firestore) + contesto React
     google/             client Google Calendar (GIS) e sincronizzazione bidirezionale
   components/           icone "ink & wash", controlli, editor delle schede
   pages/                Giorno, Mese/Settimana, Statistiche, Impostazioni

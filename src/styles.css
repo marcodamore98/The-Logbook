@@ -261,7 +261,8 @@ textarea { resize: vertical; }
 .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; margin-bottom: 0.6rem; }
 .photos:empty { display: none; }
 .photo { margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
-.photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+.photo img, .photo-loading { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+.photo-loading { background: var(--surface-2); }
 .photo figcaption { display: flex; align-items: center; gap: 0.2rem; padding: 0.3rem; }
 .photo figcaption input { border: none; background: transparent; padding: 0.2rem; font-size: 0.85rem; }
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import type {
   ClinicalModule,
@@ -191,14 +191,37 @@ function OutingEditor({ value: m, onChange }: Props<OutingModule>) {
   );
 }
 
-async function compress(file: File, max = 1600): Promise<Blob> {
+/** Resizes and re-encodes to JPEG, shrinking until it fits comfortably in a Firestore document. */
+async function compress(file: File): Promise<Blob> {
   const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bmp.width * scale);
-  canvas.height = Math.round(bmp.height * scale);
-  canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-  return new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('Compressione fallita'))), 'image/jpeg', 0.82));
+  let max = 1600;
+  let quality = 0.8;
+  for (;;) {
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((res, rej) =>
+      canvas.toBlob((b) => (b ? res(b) : rej(new Error('Compressione fallita'))), 'image/jpeg', quality),
+    );
+    if (blob.size < 600_000 || max <= 640) return blob;
+    max = Math.round(max * 0.8);
+    quality = Math.max(0.6, quality - 0.05);
+  }
+}
+
+function StoredImage({ src, alt }: { src: string; alt: string }) {
+  const { repo } = useStore();
+  const [url, setUrl] = useState(src.startsWith('fs:') ? '' : src);
+  useEffect(() => {
+    let alive = true;
+    repo.resolvePhoto(src).then((u) => alive && setUrl(u));
+    return () => {
+      alive = false;
+    };
+  }, [repo, src]);
+  return url ? <img src={url} alt={alt} loading="lazy" /> : <div className="photo-loading" aria-label="Caricamento foto" />;
 }
 
 function PhotoEditor({ value: m, onChange }: Props<PhotoModule>) {
@@ -230,7 +253,7 @@ function PhotoEditor({ value: m, onChange }: Props<PhotoModule>) {
       <div className="photos">
         {m.items.map((p) => (
           <figure key={p.id} className="photo">
-            <img src={p.src} alt={p.caption ?? ''} loading="lazy" />
+            <StoredImage src={p.src} alt={p.caption ?? ''} />
             <figcaption>
               <input
                 value={p.caption ?? ''}

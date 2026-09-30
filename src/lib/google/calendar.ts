@@ -2,10 +2,11 @@
 // The access token lives in memory/sessionStorage only; it is re-requested
 // silently when it expires, as long as the user granted consent once.
 
+import { GOOGLE_CLIENT_ID } from '../config';
 import { addDays, localDateTime, TIME_ZONE } from '../dates';
 import type { ISODate } from '../types';
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) || GOOGLE_CLIENT_ID;
 const SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly';
 const API = 'https://www.googleapis.com/calendar/v3';
 const TOKEN_KEY = 'logbook.gcal.token';
