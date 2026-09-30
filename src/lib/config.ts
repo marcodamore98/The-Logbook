@@ -8,10 +8,10 @@
 // Le tue app → App web → "Configurazione SDK" (oggetto firebaseConfig).
 
 export const FIREBASE_CONFIG = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  appId: '',
+  apiKey: 'AIzaSyBxOCyjkSq_uLTIokjP6vUOSR0y-Z4m_II',
+  authDomain: 'the-logbook-8c70b.firebaseapp.com',
+  projectId: 'the-logbook-8c70b',
+  appId: '1:1026633603011:web:3e7b98e807361231428f76',
 };
 
 // Google Cloud Console → API e servizi → Credenziali → ID client OAuth 2.0 (tipo Web).
