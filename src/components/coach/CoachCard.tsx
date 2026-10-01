@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import instructions from '../../../docs/personal-trainer-claude.md?raw';
 import { applyProgram, exportForCoach, extractJson } from '../../lib/coach';
 import { useStore } from '../../lib/store/StoreContext';
@@ -23,6 +23,20 @@ export function CoachCard() {
   const [result, setResult] = useState<{ summary: string[]; warnings: string[] } | null>(null);
   const [msg, setMsg] = useState<string>();
   const [err, setErr] = useState<string>();
+  const file = useRef<HTMLInputElement>(null);
+
+  function importText(t: string) {
+    setErr(undefined);
+    setResult(null);
+    try {
+      const r = applyProgram(extractJson(t), store.settings, uid);
+      store.saveSettings(r.settings);
+      setResult(r);
+      setText('');
+    } catch (e) {
+      setErr(String(e instanceof Error ? e.message : e));
+    }
+  }
 
   useEffect(() => {
     store.ensureAllLoaded();
@@ -71,24 +85,23 @@ export function CoachCard() {
           Quando il trainer ti risponde con un programma, copia la sua risposta (anche intera) e incollala qui.
           <textarea rows={5} value={text} placeholder="Incolla qui la risposta di Claude con il blocco JSON…" onChange={(e) => setText(e.target.value)} />
           <div className="row">
-            <button
-              className="btn"
-              disabled={!text.trim()}
-              onClick={() => {
-                setErr(undefined);
-                setResult(null);
-                try {
-                  const r = applyProgram(extractJson(text), store.settings, uid);
-                  store.saveSettings(r.settings);
-                  setResult(r);
-                  setText('');
-                } catch (e) {
-                  setErr(String(e instanceof Error ? e.message : e));
-                }
-              }}
-            >
+            <button className="btn" disabled={!text.trim()} onClick={() => importText(text)}>
               <GlyphUpload /> Importa programma
             </button>
+            <button className="btn-ghost small" onClick={() => file.current?.click()}>
+              oppure carica un file .json
+            </button>
+            <input
+              ref={file}
+              type="file"
+              accept=".json,.txt,application/json,text/plain"
+              hidden
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (f) importText(await f.text());
+              }}
+            />
           </div>
         </li>
       </ol>

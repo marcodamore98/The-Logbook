@@ -88,16 +88,90 @@ export interface ImportResult {
   warnings: string[];
 }
 
-/** Accepts the JSON alone or a whole chat answer containing a ```json block. */
-export function extractJson(text: string): CoachProgram {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = fenced ? fenced[1] : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-  if (!raw.trim()) throw new Error('Non trovo un programma in formato JSON nel testo incollato.');
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    throw new Error(`JSON non valido: ${e instanceof Error ? e.message : e}`);
+/**
+ * Text copied from chat apps on phones often carries characters JSON rejects:
+ * non-breaking/zero-width spaces, typographic quotes, comments, trailing commas.
+ */
+export function sanitizeJson(raw: string): string {
+  let t = raw
+    .replace(/[\u00a0\u2007\u202f\u2000-\u200a\u3000]/g, ' ')
+    .replace(/[\u200b-\u200d\u2060\ufeff]/g, '')
+    // Typographic quotes: delimiters if no straight quotes are present, otherwise text inside strings.
+    .replace(/[\u201c\u201d\u201e\u201f\u00ab\u00bb]/g, raw.includes('"') ? "'" : '"');
+  // Outside strings: drop // and /* */ comments, then trailing commas.
+  let out = '';
+  let inStr = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (inStr) {
+      out += c;
+      if (c === '\\') {
+        out += t[++i] ?? '';
+      } else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') {
+      inStr = true;
+      out += c;
+    } else if (c === '/' && t[i + 1] === '/') {
+      while (i < t.length && t[i] !== '\n') i++;
+      out += '\n';
+    } else if (c === '/' && t[i + 1] === '*') {
+      i = t.indexOf('*/', i + 2);
+      if (i < 0) break;
+      i++;
+    } else out += c;
   }
+  t = out.replace(/,\s*([}\]])/g, '$1');
+  return t;
+}
+
+/** Balanced {...} substrings, outermost first, ignoring braces inside strings. */
+function objectCandidates(text: string): string[] {
+  const out: string[] = [];
+  for (let start = text.indexOf('{'); start >= 0; start = text.indexOf('{', start + 1)) {
+    let depth = 0;
+    let inStr = false;
+    for (let i = start; i < text.length; i++) {
+      const c = text[i];
+      if (inStr) {
+        if (c === '\\') i++;
+        else if (c === '"') inStr = false;
+      } else if (c === '"') inStr = true;
+      else if (c === '{') depth++;
+      else if (c === '}' && --depth === 0) {
+        out.push(text.slice(start, i + 1));
+        start = i;
+        break;
+      }
+    }
+  }
+  return out.sort((a, b) => b.length - a.length);
+}
+
+const isProgram = (v: unknown): v is CoachProgram =>
+  !!v && typeof v === 'object' && ('routines' in v || 'mealPlans' in v || 'goals' in v);
+
+/** Accepts the JSON alone or a whole chat answer containing one or more ```json blocks. */
+export function extractJson(text: string): CoachProgram {
+  const clean = sanitizeJson(text);
+  const fenced = [...clean.matchAll(/```[a-zA-Z]*\s*([\s\S]*?)```/g)].map((m) => m[1]);
+  const candidates = [...fenced, ...objectCandidates(clean)];
+  let firstError: string | undefined;
+  for (const c of candidates) {
+    try {
+      const v = JSON.parse(c);
+      if (isProgram(v)) return v;
+    } catch (e) {
+      if (!firstError && c.trim().startsWith('{')) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const pos = Number(msg.match(/position (\d+)/)?.[1]);
+        firstError = isNaN(pos) ? msg : `${msg} — vicino a: “${c.slice(Math.max(0, pos - 40), pos + 40).replace(/\s+/g, ' ')}”`;
+      }
+    }
+  }
+  if (firstError) throw new Error(`Il programma non è leggibile (${firstError}). Chiedi a Claude di riscrivere solo il blocco JSON, senza commenti.`);
+  throw new Error('Non trovo un programma nel testo incollato: deve contenere "routines", "mealPlans" o "goals".');
 }
 
 function parseReps(r: number | string | undefined): { reps?: number; repsMax?: number } {
