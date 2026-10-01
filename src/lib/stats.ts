@@ -1,4 +1,6 @@
 import { shiftMinutes } from './dates';
+import { countsSet, setsPerMuscle, setVolume } from './training/analytics';
+import { exerciseDef } from './training/exercises';
 import type { DayEntry, ISODate, Settings } from './types';
 import {
   APPROACHES,
@@ -12,7 +14,7 @@ import {
   STUDY_TYPES,
   SURGICAL_ROLES,
   WORKOUT_TYPES,
-  exerciseLabel,
+  CATEGORIES,
   type VocabItem,
 } from './vocab';
 
@@ -31,6 +33,9 @@ export interface Stats {
   outings: { total: number; byType: Count[] };
   photos: number;
   mood?: number;
+  categories: { appointments: Count[]; todos: Count[]; todosDone: number; todosTotal: number };
+  muscles: Count[];
+  body: { weight?: number; kcalIn?: number; steps?: number; sleepH?: number };
 }
 
 class Tally {
@@ -58,8 +63,13 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
     workout: { sessions: 0, minutes: 0, volumeKg: 0, km: 0, sets: 0, byType: [], byExercise: [] },
     outings: { total: 0, byType: [] },
     photos: 0,
+    categories: { appointments: [], todos: [], todosDone: 0, todosTotal: 0 },
+    muscles: [],
+    body: {},
   };
   let moodSum = 0, moodN = 0;
+  const apCat = new Tally(), tdCat = new Tally();
+  const bodyVals: Record<'weight' | 'kcalIn' | 'steps' | 'sleepH', number[]> = { weight: [], kcalIn: [], steps: [], sleepH: [] };
 
   for (const d of days) {
     if (d.shift) {
@@ -75,6 +85,16 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
         if (c) colleagues.add(c.name);
       }
     }
+    for (const a of d.appointments) apCat.add(a.category ?? 'altro');
+    for (const t of d.todos) {
+      tdCat.add(t.category ?? 'altro');
+      s.categories.todosTotal++;
+      if (t.done) s.categories.todosDone++;
+    }
+    if (d.body?.weightKg) bodyVals.weight.push(d.body.weightKg);
+    if (d.body?.kcalIn) bodyVals.kcalIn.push(d.body.kcalIn);
+    if (d.body?.steps) bodyVals.steps.push(d.body.steps);
+    if (d.body?.sleepH) bodyVals.sleepH.push(d.body.sleepH);
     if (d.mood) {
       moodSum += d.mood;
       moodN++;
@@ -109,8 +129,8 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
           wType.add(m.type);
           for (const ex of m.exercises) {
             for (const set of ex.sets) {
-              if (set.warmup) continue;
-              const v = set.reps * (set.kg ?? 0);
+              if (!countsSet(set)) continue;
+              const v = setVolume(set);
               s.workout.volumeKg += v;
               s.workout.sets++;
               wEx.add(ex.exerciseId, v);
@@ -142,15 +162,20 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   s.study.byArea = stArea.list(by(STUDY_AREAS));
   s.study.byType = stType.list(by(STUDY_TYPES));
   s.workout.byType = wType.list(by(WORKOUT_TYPES));
-  s.workout.byExercise = wEx.list(exerciseLabel).filter((c) => c.value > 0);
+  s.workout.byExercise = wEx.list((id) => exerciseDef(id, settings.exercises ?? []).name).filter((c) => c.value > 0);
   s.workout.volumeKg = Math.round(s.workout.volumeKg);
   s.workout.km = Math.round(s.workout.km * 10) / 10;
   s.outings.byType = oType.list(by(OUTING_TYPES));
+  s.categories.appointments = apCat.list(by(CATEGORIES));
+  s.categories.todos = tdCat.list(by(CATEGORIES));
+  s.muscles = [...setsPerMuscle(days, settings.exercises ?? []).entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+  const mean = (v: number[]) => (v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : undefined);
+  s.body = { weight: mean(bodyVals.weight), kcalIn: mean(bodyVals.kcalIn), steps: mean(bodyVals.steps), sleepH: mean(bodyVals.sleepH) };
   s.mood = moodN ? Math.round((moodSum / moodN) * 10) / 10 : undefined;
   return s;
 }
 
-export type Metric = 'surgery' | 'hours' | 'study' | 'workout';
+export type Metric = 'surgery' | 'hours' | 'study' | 'workout' | 'volume' | 'kcal';
 
 export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Settings): number {
   if (!day) return 0;
@@ -166,6 +191,10 @@ export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Se
       return day.modules.reduce((n, m) => n + (m.kind === 'study' ? m.durationMin / 60 : 0), 0);
     case 'workout':
       return day.modules.filter((m) => m.kind === 'workout').length;
+    case 'volume':
+      return day.modules.reduce((n, m) => n + (m.kind === 'workout' ? m.exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + setVolume(s), 0), 0) : 0), 0);
+    case 'kcal':
+      return day.body?.kcalOut ?? 0;
   }
 }
 

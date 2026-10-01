@@ -33,6 +33,29 @@ Nel tabellone ogni attività mostra insieme strutturati (in grassetto con la ste
 
 Per un nuovo mese si aggiunge un file `roster-AAAA-MM.ts` e lo si registra in `ROSTERS`.
 
+## Palestra
+
+La pagina **Palestra** funziona come Hevy, senza la parte social.
+- **Schede (routine):** organizzate in cartelle (es. PPL). Per ogni esercizio imposti le serie (normale, riscaldamento **W**, dropset **D**, a cedimento **F**), il range di ripetizioni, il peso, l'RPE, il recupero e le note. Puoi collegare gli esercizi in **superserie**.
+- **Allenamento:** si avvia con *Inizia oggi* oppure dalla scheda *Allenamento* nella pagina del giorno. Durante l'allenamento hai:
+  - cronometro della sessione;
+  - colonna *Precedente* con i valori dell'ultima volta;
+  - spunta delle serie, che avvia il **timer di recupero** (in una superserie parte dopo l'ultimo esercizio del gruppo);
+  - badge **PR** quando batti un record (peso, 1RM stimato, volume della serie);
+  - *Salva come scheda*.
+- **Esercizi:** libreria di circa 100 esercizi con muscoli e attrezzi, più quelli che crei tu. Per ognuno vedi lo storico, i record e il 1RM stimato nel tempo.
+- **Progressi:** allenamenti per settimana, serie per gruppo muscolare (principale 1, secondari ½), split Push/Pull/Legs.
+
+## Barra laterale “Corpo”
+
+Su schermi larghi è sempre visibile; su telefono si apre con il pulsante *Corpo*. Mostra:
+- il riepilogo della giornata (turno, lavoro, allenamento, umore);
+- peso, massa grassa, sonno, FC a riposo, passi, acqua;
+- calorie assunte e attive, proteine, bilancio;
+- l'andamento del peso a 30 giorni, le medie a 7 giorni e gli obiettivi.
+
+Le schede della pagina del giorno si chiudono con la freccetta, e l'app ricorda la scelta su ogni dispositivo.
+
 ## Allenamenti da Hevy
 
 In Hevy apri *Profilo → ⚙ Impostazioni → Esporta e importa dati → Esporta allenamenti*, poi carica il CSV in *Impostazioni → Allenamenti da Hevy*.

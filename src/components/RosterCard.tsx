@@ -1,6 +1,7 @@
 import { byCode, codeLabel, codeShort, IDLE_CODES, rosterFor, ROSTER_SELF } from '../lib/roster';
 import type { ISODate } from '../lib/types';
 import { GlyphPlus, GlyphSheriff, IconPeople } from './icons';
+import { Card } from './ui';
 
 interface Person {
   name: string;
@@ -46,14 +47,19 @@ export function RosterCard({ date, onJoin }: { date: ISODate; onJoin?: (names: s
     );
 
   return (
-    <section className="card roster">
-      <div className="card-head">
-        <IconPeople />
-        <h2>Tabellone</h2>
+    <Card
+      id="day.roster"
+      className="roster"
+      defaultOpen={false}
+      icon={<IconPeople />}
+      title="Tabellone"
+      summary={mine.length ? `Tu: ${mine.map(codeShort).join(' · ')} · ${active.length} attività` : `${active.length} attività`}
+      actions={
         <span className="legend muted small">
           <GlyphSheriff /> strutturato
         </span>
-      </div>
+      }
+    >
       {active.length === 0 ? (
         <p className="empty">Nessuna assegnazione per oggi.</p>
       ) : (
@@ -90,6 +96,6 @@ export function RosterCard({ date, onJoin }: { date: ISODate; onJoin?: (names: s
           {idle.map(([code, ps]) => `${codeLabel(code)}: ${ps.map((p) => (p.name === ROSTER_SELF ? 'tu' : p.name)).join(', ')}`).join(' · ')}
         </p>
       )}
-    </section>
+    </Card>
   );
 }

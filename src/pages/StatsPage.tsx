@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconOuting, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
-import { Empty } from '../components/ui';
+import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconMood, IconOuting, IconTodo, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
+import { BarList, Columns, fmt } from '../components/charts';
 import {
   addDays,
   addMonths,
@@ -15,7 +15,7 @@ import {
   today,
   WEEKDAYS_SHORT,
 } from '../lib/dates';
-import { computeStats, metricOf, surgeryCsv, type Count, type Metric } from '../lib/stats';
+import { computeStats, metricOf, surgeryCsv, type Metric } from '../lib/stats';
 import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, ISODate } from '../lib/types';
 
@@ -46,111 +46,14 @@ function title(p: Period, anchor: ISODate) {
   return anchor.slice(0, 4);
 }
 
-const fmt = (n: number, d = 0) => n.toLocaleString('it-IT', { maximumFractionDigits: d });
-
-/** Horizontal bar list: magnitude by category, single hue, value labels in ink. */
-function BarList({ data, unit = '', max = 8 }: { data: Count[]; unit?: string; max?: number }) {
-  if (!data.length) return <Empty>Nessun dato nel periodo.</Empty>;
-  const shown = data.slice(0, max);
-  const rest = data.slice(max).reduce((n, c) => n + c.value, 0);
-  const rows = rest ? [...shown, { label: 'Altro', value: rest }] : shown;
-  const top = Math.max(...rows.map((r) => r.value));
-  return (
-    <ul className="barlist">
-      {rows.map((r) => (
-        <li key={r.label} title={`${r.label}: ${fmt(r.value, 1)}${unit}`}>
-          <span className="barlist-label">{r.label}</span>
-          <span className="barlist-track">
-            <span className="barlist-bar" style={{ width: `${(r.value / top) * 100}%` }} />
-          </span>
-          <span className="barlist-value">
-            {fmt(r.value, 1)}
-            {unit}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 const METRICS: { id: Metric; label: string; unit: string }[] = [
   { id: 'surgery', label: 'Interventi', unit: '' },
   { id: 'hours', label: 'Ore di turno', unit: ' h' },
   { id: 'study', label: 'Ore di studio', unit: ' h' },
   { id: 'workout', label: 'Allenamenti', unit: '' },
+  { id: 'volume', label: 'Volume sollevato', unit: ' kg' },
+  { id: 'kcal', label: 'Calorie attive', unit: ' kcal' },
 ];
-
-function Columns({ buckets, unit }: { buckets: { label: string; full: string; value: number }[]; unit: string }) {
-  const [hover, setHover] = useState<number | null>(null);
-  const W = 640, H = 180, pad = { l: 28, r: 8, t: 12, b: 22 };
-  const max = Math.max(1, ...buckets.map((b) => b.value));
-  const niceMax = max <= 5 ? Math.ceil(max) : Math.ceil(max / 5) * 5;
-  const bw = (W - pad.l - pad.r) / buckets.length;
-  const y = (v: number) => pad.t + (H - pad.t - pad.b) * (1 - v / niceMax);
-  const step = buckets.length > 14 ? Math.ceil(buckets.length / 10) : 1;
-  return (
-    <div className="columns-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} className="columns" role="img" aria-label="Andamento nel periodo" onMouseLeave={() => setHover(null)}>
-        {[0, niceMax / 2, niceMax].map((g) => (
-          <g key={g}>
-            <line x1={pad.l} x2={W - pad.r} y1={y(g)} y2={y(g)} className="grid-line" />
-            <text x={pad.l - 6} y={y(g) + 3} className="axis-label" textAnchor="end">
-              {fmt(g, 1)}
-            </text>
-          </g>
-        ))}
-        {buckets.map((b, i) => {
-          const x = pad.l + i * bw;
-          const h = y(0) - y(b.value);
-          const w = Math.max(2, bw - 2);
-          const r = Math.min(4, w / 2, h);
-          return (
-            <g key={i} onMouseEnter={() => setHover(i)} onClick={() => setHover(i)}>
-              <rect x={x} y={pad.t} width={bw} height={H - pad.t - pad.b} fill="transparent" />
-              {b.value > 0 && (
-                <path
-                  className={`col${hover === i ? ' col-hover' : ''}`}
-                  d={`M${x + 1},${y(0)} v${-(h - r)} q0,${-r} ${r},${-r} h${w - 2 * r} q${r},0 ${r},${r} v${h - r} z`}
-                />
-              )}
-              {i % step === 0 && (
-                <text x={x + bw / 2} y={H - 6} className="axis-label" textAnchor="middle">
-                  {b.label}
-                </text>
-              )}
-            </g>
-          );
-        })}
-        <line x1={pad.l} x2={W - pad.r} y1={y(0)} y2={y(0)} className="base-line" />
-      </svg>
-      {hover !== null && (
-        <div className="tooltip" style={{ left: `${((pad.l + (hover + 0.5) * bw) / W) * 100}%` }}>
-          <strong>{buckets[hover].full}</strong>
-          <span>
-            {fmt(buckets[hover].value, 1)}
-            {unit}
-          </span>
-        </div>
-      )}
-      <details className="table-view">
-        <summary>Vedi come tabella</summary>
-        <table>
-          <tbody>
-            {buckets.map((b, i) => (
-              <tr key={i}>
-                <td>{b.full}</td>
-                <td className="num">
-                  {fmt(b.value, 1)}
-                  {unit}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </details>
-    </div>
-  );
-}
 
 export default function StatsPage() {
   const store = useStore();
@@ -326,6 +229,12 @@ export default function StatsPage() {
           </div>
           <h3 className="sub">Sessioni per tipo</h3>
           <BarList data={stats.workout.byType} />
+          {stats.muscles.length > 0 && (
+            <>
+              <h3 className="sub">Serie per muscolo</h3>
+              <BarList data={stats.muscles} max={10} />
+            </>
+          )}
           {stats.workout.byExercise.length > 0 && (
             <>
               <h3 className="sub">Volume per esercizio (kg)</h3>
@@ -346,6 +255,45 @@ export default function StatsPage() {
           </div>
           <BarList data={stats.outings.byType} />
           {stats.photos > 0 && <p className="muted small">{stats.photos} foto salvate</p>}
+        </section>
+        <section className="card">
+          <div className="card-head">
+            <IconTodo />
+            <h2>Impegni e promemoria</h2>
+          </div>
+          <h3 className="sub">Impegni per categoria</h3>
+          <BarList data={stats.categories.appointments} />
+          <h3 className="sub">Promemoria per categoria</h3>
+          <BarList data={stats.categories.todos} />
+          {stats.categories.todosTotal > 0 && (
+            <p className="muted small">
+              Completati {stats.categories.todosDone} su {stats.categories.todosTotal}
+            </p>
+          )}
+        </section>
+        <section className="card">
+          <div className="card-head">
+            <IconMood />
+            <h2>Corpo (medie)</h2>
+          </div>
+          <dl className="side-stats">
+            <div>
+              <dt>Peso</dt>
+              <dd>{stats.body.weight ? `${fmt(stats.body.weight, 1)} kg` : '—'}</dd>
+            </div>
+            <div>
+              <dt>Calorie</dt>
+              <dd>{stats.body.kcalIn ? fmt(stats.body.kcalIn) : '—'}</dd>
+            </div>
+            <div>
+              <dt>Passi</dt>
+              <dd>{stats.body.steps ? fmt(stats.body.steps) : '—'}</dd>
+            </div>
+            <div>
+              <dt>Sonno</dt>
+              <dd>{stats.body.sleepH ? `${fmt(stats.body.sleepH, 1)} h` : '—'}</dd>
+            </div>
+          </dl>
         </section>
       </div>
     </div>

@@ -34,6 +34,7 @@ export interface Todo {
   id: string;
   text: string;
   done: boolean;
+  category?: string; // vocab.CATEGORIES
   time?: HHMM; // with a time it becomes a Google Calendar event
   gcalEventId?: string;
 }
@@ -41,6 +42,7 @@ export interface Todo {
 export interface Appointment {
   id: string;
   title: string;
+  category?: string; // vocab.CATEGORIES
   start: HHMM;
   end: HHMM;
   location?: string;
@@ -97,31 +99,118 @@ export interface NoteModule {
   kind: 'note';
   id: string;
   title?: string;
+  category?: string; // vocab.CATEGORIES
   text: string;
 }
+
+/** normal = serie allenante, warmup = riscaldamento, drop = dropset, failure = a cedimento. */
+export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
 
 export interface WorkoutSet {
   reps: number;
   kg?: number;
-  warmup?: boolean; // serie di riscaldamento: escluse dal volume
+  type?: SetType; // default 'normal'
+  warmup?: boolean; // formato precedente (= type 'warmup')
+  rpe?: number;
+  seconds?: number; // esercizi a tempo
+  km?: number; // esercizi a distanza
+  done?: boolean;
 }
 
 export interface WorkoutExercise {
   exerciseId: string;
   sets: WorkoutSet[];
+  supersetId?: string; // esercizi con lo stesso id formano una superserie
+  restSec?: number; // recupero dopo ogni serie
+  notes?: string;
 }
 
 export interface WorkoutModule {
   kind: 'workout';
   id: string;
   source?: 'hevy';
-  title?: string; // es. nome della routine Hevy
+  title?: string; // nome della scheda / routine
+  routineId?: string;
   type: string; // vocab.WORKOUT_TYPES
   durationMin: number;
+  startedAt?: number; // ms
+  finishedAt?: number; // ms
   rpe?: number; // 1-10
   distanceKm?: number;
   exercises: WorkoutExercise[];
   notes?: string;
+}
+
+// ---- Libreria esercizi e schede ----
+
+/** How an exercise is measured, as in Hevy. */
+export type ExerciseKind =
+  | 'weight_reps'
+  | 'bodyweight_reps'
+  | 'weighted_bodyweight'
+  | 'assisted_bodyweight'
+  | 'duration'
+  | 'weight_duration'
+  | 'distance_duration';
+
+export interface ExerciseDef {
+  id: string;
+  name: string;
+  muscle: string; // vocab MUSCLES
+  secondary?: string[];
+  equipment: string; // vocab EQUIPMENT
+  kind: ExerciseKind;
+  custom?: boolean;
+}
+
+export interface PlannedSet {
+  type: SetType;
+  reps?: number;
+  repsMax?: number; // range, es. 8–12
+  kg?: number;
+  seconds?: number;
+  rpe?: number;
+}
+
+export interface RoutineExercise {
+  exerciseId: string;
+  sets: PlannedSet[];
+  supersetId?: string;
+  restSec?: number;
+  notes?: string;
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  folder?: string; // es. "PPL"
+  type?: string; // vocab.WORKOUT_TYPES (push / pull / legs…)
+  notes?: string;
+  exercises: RoutineExercise[];
+  updatedAt: number;
+}
+
+// ---- Corpo ----
+
+export interface BodyLog {
+  weightKg?: number;
+  bodyFatPct?: number;
+  kcalIn?: number; // calorie assunte
+  kcalOut?: number; // calorie attive / bruciate
+  proteinG?: number;
+  steps?: number;
+  sleepH?: number;
+  restingHr?: number;
+  waterL?: number;
+}
+
+export interface BodyGoals {
+  weightKg?: number;
+  kcalIn?: number;
+  proteinG?: number;
+  steps?: number;
+  sleepH?: number;
+  waterL?: number;
 }
 
 export interface OutingModule {
@@ -152,6 +241,7 @@ export interface DayEntry {
   appointments: Appointment[];
   modules: Module[];
   mood?: number; // 1-5
+  body?: BodyLog;
   gcalTrash?: string[]; // eventi Google da eliminare alla prossima sincronizzazione
   updatedAt: number;
 }
@@ -164,6 +254,9 @@ export interface Settings {
     calendarId: string; // 'primary' o id di un calendario dedicato
     readCalendarIds: string[]; // calendari mostrati in lettura
   };
+  exercises?: ExerciseDef[]; // esercizi personalizzati
+  routines?: Routine[];
+  goals?: BodyGoals;
   seed?: number; // versione dei dati predefiniti già applicata (vedi migrateSettings)
   updatedAt: number;
 }

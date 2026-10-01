@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
+import { WorkoutLogger } from '../training/WorkoutLogger';
 import type {
   ClinicalModule,
   Module,
@@ -8,23 +9,21 @@ import type {
   PhotoModule,
   StudyModule,
   SurgeryModule,
-  WorkoutModule,
+  ISODate,
 } from '../../lib/types';
 import {
   APPROACHES,
+  CATEGORIES,
   CLAVIEN,
   CLINICAL_ACTIVITIES,
-  EXERCISES,
-  exerciseLabel,
   OUTING_TYPES,
   PROCEDURES,
   SETTINGS_URGENCY,
   STUDY_AREAS,
   STUDY_TYPES,
   SURGICAL_ROLES,
-  WORKOUT_TYPES,
 } from '../../lib/vocab';
-import { GlyphClose, GlyphPlus, GlyphTrash } from '../icons';
+import { GlyphPlus, GlyphTrash } from '../icons';
 import { Field, NumberInput, uid, VocabSelect } from '../ui';
 
 type Props<M> = { value: M; onChange: (m: M) => void };
@@ -104,73 +103,6 @@ function StudyEditor({ value: m, onChange }: Props<StudyModule>) {
       </Field>
       <Field label="Appunti" wide>
         <textarea rows={3} value={m.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
-      </Field>
-    </div>
-  );
-}
-
-function WorkoutEditor({ value: m, onChange }: Props<WorkoutModule>) {
-  const set = (p: Partial<WorkoutModule>) => onChange({ ...m, ...p });
-  const endurance = ['run', 'bike', 'swim', 'walk'].includes(m.type);
-  const setEx = (i: number, ex: WorkoutModule['exercises'][number]) =>
-    set({ exercises: m.exercises.map((e, j) => (j === i ? ex : e)) });
-  return (
-    <div className="grid">
-      {m.source === 'hevy' && (
-        <p className="field-wide muted small">Importato da Hevy{m.title ? ` · ${m.title}` : ''}. Una nuova importazione aggiorna questa scheda.</p>
-      )}
-      <Field label="Tipo">
-        <VocabSelect items={WORKOUT_TYPES} value={m.type} onChange={(type) => set({ type })} />
-      </Field>
-      <Field label="Durata (min)">
-        <NumberInput value={m.durationMin} step={5} onChange={(n) => set({ durationMin: n ?? 0 })} />
-      </Field>
-      <Field label="Intensità percepita (RPE 1–10)">
-        <NumberInput value={m.rpe} min={1} onChange={(rpe) => set({ rpe: rpe === undefined ? undefined : Math.min(10, rpe) })} />
-      </Field>
-      {endurance && (
-        <Field label="Distanza (km)">
-          <NumberInput value={m.distanceKm} step={0.1} onChange={(distanceKm) => set({ distanceKm })} />
-        </Field>
-      )}
-      {!endurance && (
-        <div className="field-wide exercises">
-          {m.exercises.map((ex, i) => (
-            <div key={i} className="exercise">
-              <div className="exercise-head">
-                <VocabSelect
-                  items={EXERCISES.some((e) => e.id === ex.exerciseId) ? EXERCISES : [...EXERCISES, { id: ex.exerciseId, label: exerciseLabel(ex.exerciseId), group: 'Da Hevy' }]}
-                  value={ex.exerciseId}
-                  onChange={(exerciseId) => setEx(i, { ...ex, exerciseId })}
-                />
-                <button type="button" className="icon-btn" aria-label="Rimuovi esercizio" onClick={() => set({ exercises: m.exercises.filter((_, j) => j !== i) })}>
-                  <GlyphTrash />
-                </button>
-              </div>
-              <div className="sets">
-                {ex.sets.map((s, k) => (
-                  <span key={k} className={`set${s.warmup ? ' warmup' : ''}`} title={s.warmup ? 'Riscaldamento' : undefined}>
-                    <NumberInput value={s.reps} placeholder="rip" onChange={(reps) => setEx(i, { ...ex, sets: ex.sets.map((x, z) => (z === k ? { ...x, reps: reps ?? 0 } : x)) })} />
-                    <span className="set-x">×</span>
-                    <NumberInput value={s.kg} step={0.5} placeholder="kg" onChange={(kg) => setEx(i, { ...ex, sets: ex.sets.map((x, z) => (z === k ? { ...x, kg } : x)) })} />
-                    <button type="button" className="icon-btn small" aria-label="Rimuovi serie" onClick={() => setEx(i, { ...ex, sets: ex.sets.filter((_, z) => z !== k) })}>
-                      <GlyphClose />
-                    </button>
-                  </span>
-                ))}
-                <button type="button" className="btn-ghost small" onClick={() => setEx(i, { ...ex, sets: [...ex.sets, { ...(ex.sets.at(-1) ?? { reps: 10 }) }] })}>
-                  <GlyphPlus /> serie
-                </button>
-              </div>
-            </div>
-          ))}
-          <button type="button" className="btn-ghost" onClick={() => set({ exercises: [...m.exercises, { exerciseId: 'squat', sets: [{ reps: 10 }] }] })}>
-            <GlyphPlus /> Esercizio
-          </button>
-        </div>
-      )}
-      <Field label="Note" wide>
-        <textarea rows={2} value={m.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
       </Field>
     </div>
   );
@@ -294,8 +226,11 @@ function PhotoEditor({ value: m, onChange }: Props<PhotoModule>) {
 function NoteEditor({ value: m, onChange }: Props<NoteModule>) {
   return (
     <div className="grid">
-      <Field label="Titolo" wide>
+      <Field label="Titolo">
         <input value={m.title ?? ''} onChange={(e) => onChange({ ...m, title: e.target.value })} />
+      </Field>
+      <Field label="Categoria">
+        <VocabSelect items={CATEGORIES} value={m.category} placeholder="—" onChange={(c) => onChange({ ...m, category: c || undefined })} />
       </Field>
       <Field label="Testo" wide>
         <textarea className="note-text" rows={5} value={m.text} onChange={(e) => onChange({ ...m, text: e.target.value })} />
@@ -304,7 +239,7 @@ function NoteEditor({ value: m, onChange }: Props<NoteModule>) {
   );
 }
 
-export function ModuleEditor({ value, onChange }: Props<Module>) {
+export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: ISODate }) {
   switch (value.kind) {
     case 'surgery':
       return <SurgeryEditor value={value} onChange={onChange} />;
@@ -313,7 +248,7 @@ export function ModuleEditor({ value, onChange }: Props<Module>) {
     case 'study':
       return <StudyEditor value={value} onChange={onChange} />;
     case 'workout':
-      return <WorkoutEditor value={value} onChange={onChange} />;
+      return <WorkoutLogger value={value} onChange={onChange} date={date} />;
     case 'outing':
       return <OutingEditor value={value} onChange={onChange} />;
     case 'photos':

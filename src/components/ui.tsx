@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import type { Colleague, ShiftType } from '../lib/types';
 import { grouped, type VocabItem } from '../lib/vocab';
 
@@ -186,5 +186,85 @@ export function ColleaguePicker({
         ))}
       </select>
     </div>
+  );
+}
+
+const COLLAPSE_KEY = 'logbook.collapsed';
+
+function readCollapsed(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(COLLAPSE_KEY) ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
+/** Open/closed state remembered per card on this device. */
+export function useCollapsible(key: string, defaultOpen = true): [boolean, () => void] {
+  const [open, setOpen] = useState(() => readCollapsed()[key] ?? defaultOpen);
+  const toggle = () =>
+    setOpen((o) => {
+      try {
+        localStorage.setItem(COLLAPSE_KEY, JSON.stringify({ ...readCollapsed(), [key]: !o }));
+      } catch {
+        /* storage unavailable */
+      }
+      return !o;
+    });
+  return [open, toggle];
+}
+
+export function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" className={`chevron${open ? ' open' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+/** Card with a header that collapses the body; `summary` is shown while closed. */
+export function Card({
+  id,
+  icon,
+  title,
+  summary,
+  actions,
+  defaultOpen = true,
+  className = '',
+  style,
+  children,
+  open: controlledOpen,
+  onToggle,
+}: {
+  id: string;
+  icon?: ReactNode;
+  title: ReactNode;
+  summary?: ReactNode;
+  actions?: ReactNode;
+  defaultOpen?: boolean;
+  className?: string;
+  style?: CSSProperties;
+  children: ReactNode;
+  open?: boolean;
+  onToggle?: () => void;
+}) {
+  const [stored, toggleStored] = useCollapsible(id, defaultOpen);
+  const open = controlledOpen ?? stored;
+  const toggle = onToggle ?? toggleStored;
+  return (
+    <section className={`card ${className}${open ? '' : ' collapsed'}`} style={style}>
+      <div className="card-head">
+        {icon}
+        <button type="button" className="card-title-btn" onClick={toggle} aria-expanded={open}>
+          <h2>{title}</h2>
+          {!open && summary && <span className="card-summary">{summary}</span>}
+        </button>
+        {actions}
+        <button type="button" className="icon-btn small chevron-btn" onClick={toggle} aria-label={open ? 'Riduci' : 'Espandi'} aria-expanded={open}>
+          <Chevron open={open} />
+        </button>
+      </div>
+      {open && children}
+    </section>
   );
 }

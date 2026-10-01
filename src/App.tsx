@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import type { User } from 'firebase/auth';
-import { IconDay, IconMonth, IconSettings, IconStats, IconSync, IconWeek } from './components/icons';
+import { BodySidebar } from './components/BodySidebar';
+import { IconDay, IconMonth, IconMood, IconSettings, IconStats, IconSync, IconWeek, IconWorkout } from './components/icons';
+import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
 import { localRepo } from './lib/store/local';
@@ -9,6 +11,7 @@ import { StoreProvider, useStore } from './lib/store/StoreContext';
 import { today } from './lib/dates';
 import { MonthPage, WeekPage } from './pages/CalendarPages';
 import DayPage from './pages/DayPage';
+import GymPage from './pages/GymPage';
 import SettingsPage from './pages/SettingsPage';
 import StatsPage from './pages/StatsPage';
 
@@ -16,6 +19,7 @@ const NAV = [
   { to: '/mese', label: 'Mese', Icon: IconMonth },
   { to: '/settimana', label: 'Settimana', Icon: IconWeek },
   { to: '/giorno', label: 'Oggi', Icon: IconDay },
+  { to: '/palestra', label: 'Palestra', Icon: IconWorkout },
   { to: '/statistiche', label: 'Statistiche', Icon: IconStats },
   { to: '/impostazioni', label: 'Impostazioni', Icon: IconSettings },
 ];
@@ -33,36 +37,55 @@ function GoogleStatus() {
 }
 
 function Shell({ userEmail }: { userEmail?: string }) {
+  const [bodyOpen, setBodyOpen] = useState(false);
   return (
     <HashRouter>
-      <div className="app">
-        <header className="topbar">
-          <span className="brand">
-            <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={28} height={28} />
-            The Logbook
-          </span>
-          <nav className="nav">
-            {NAV.map(({ to, label, Icon }) => (
-              <NavLink key={to} to={to} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-                <Icon size={30} />
-                <span>{label}</span>
-              </NavLink>
-            ))}
-          </nav>
-          <GoogleStatus />
-        </header>
-        <main>
-          <Routes>
-            <Route path="/" element={<Navigate to={`/giorno/${today()}`} replace />} />
-            <Route path="/mese/:date?" element={<MonthPage />} />
-            <Route path="/settimana/:date?" element={<WeekPage />} />
-            <Route path="/giorno/:date?" element={<DayPage />} />
-            <Route path="/statistiche" element={<StatsPage />} />
-            <Route path="/impostazioni" element={<SettingsPage userEmail={userEmail} />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <RestTimerProvider>
+        <div className="app">
+          <header className="topbar">
+            <span className="brand">
+              <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={28} height={28} />
+              <span className="brand-name">The Logbook</span>
+            </span>
+            <nav className="nav">
+              {NAV.map(({ to, label, Icon }) => (
+                <NavLink key={to} to={to} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+                  <Icon size={30} />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </nav>
+            <GoogleStatus />
+            <button className="btn-ghost small body-toggle" onClick={() => setBodyOpen(true)} aria-label="Apri corpo e riepilogo">
+              <IconMood size={20} /> Corpo
+            </button>
+          </header>
+          <div className="layout">
+            <main>
+              <Routes>
+                <Route path="/" element={<Navigate to={`/giorno/${today()}`} replace />} />
+                <Route path="/mese/:date?" element={<MonthPage />} />
+                <Route path="/settimana/:date?" element={<WeekPage />} />
+                <Route path="/giorno/:date?" element={<DayPage />} />
+                <Route path="/palestra" element={<GymPage />} />
+                <Route path="/statistiche" element={<StatsPage />} />
+                <Route path="/impostazioni" element={<SettingsPage userEmail={userEmail} />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
+            <div className="side-desktop">
+              <BodySidebar />
+            </div>
+          </div>
+          {bodyOpen && (
+            <div className="drawer-backdrop" onClick={() => setBodyOpen(false)}>
+              <div className="drawer" onClick={(e) => e.stopPropagation()}>
+                <BodySidebar onClose={() => setBodyOpen(false)} />
+              </div>
+            </div>
+          )}
+        </div>
+      </RestTimerProvider>
     </HashRouter>
   );
 }

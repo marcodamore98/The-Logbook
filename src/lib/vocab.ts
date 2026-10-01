@@ -255,6 +255,22 @@ export const OUTING_TYPES: VocabItem[] = [
   { id: 'other', label: 'Altro' },
 ];
 
+// ---------- Categorie generali (impegni, promemoria, note) ----------
+
+export const CATEGORIES: VocabItem[] = [
+  { id: 'lavoro', label: 'Lavoro' },
+  { id: 'studio', label: 'Studio / formazione' },
+  { id: 'salute', label: 'Salute' },
+  { id: 'sport', label: 'Sport' },
+  { id: 'famiglia', label: 'Famiglia' },
+  { id: 'amici', label: 'Amici' },
+  { id: 'casa', label: 'Casa' },
+  { id: 'burocrazia', label: 'Burocrazia' },
+  { id: 'finanze', label: 'Finanze' },
+  { id: 'svago', label: 'Svago' },
+  { id: 'altro', label: 'Altro' },
+];
+
 // ---------- Default settings ----------
 
 /** Guardia medica (continuità assistenziale), fuori dal tabellone di reparto. */
