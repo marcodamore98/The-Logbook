@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconFlame, IconScale, IconOuting, IconTodo, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
-import { BarList, Columns, fmt } from '../components/charts';
+import { BarList, Columns, Donut, fmt, PALETTE, Ring } from '../components/charts';
 import { PrintButton } from '../components/PrintDialog';
 import { Empty } from '../components/ui';
 import {
@@ -171,6 +171,28 @@ export default function StatsPage() {
 
       <section className="card" data-print="andamento">
         <div className="card-head">
+          <h2>Il periodo in sintesi</h2>
+        </div>
+        <div className="hero-stats">
+          <Donut
+            unit=" h"
+            data={[
+              { label: 'Turni', value: Math.round(stats.work.hours * 10) / 10 },
+              { label: 'Studio', value: Math.round((stats.study.minutes / 60) * 10) / 10 },
+              { label: 'Allenamento', value: Math.round((stats.workout.minutes / 60) * 10) / 10 },
+            ]}
+          />
+          <div className="rings">
+            {stats.categories.todosTotal > 0 && <Ring value={stats.categories.todosDone} of={stats.categories.todosTotal} label="Promemoria completati" color={PALETTE[3]} />}
+            {stats.nutrition.days > 0 && store.settings.goals?.kcalIn && <Ring value={stats.nutrition.daysOnKcal} of={stats.nutrition.days} label="Giorni nel target calorico" color={PALETTE[2]} />}
+            {stats.nutrition.days > 0 && store.settings.goals?.proteinG && <Ring value={stats.nutrition.daysOnProtein} of={stats.nutrition.days} label="Giorni con proteine" color={PALETTE[4]} />}
+            {stats.surgery.total > 0 && <Ring value={stats.surgery.byRole.find((r) => r.label === 'Primo operatore')?.value ?? 0} of={stats.surgery.total} label="Interventi da primo operatore" color={PALETTE[0]} />}
+          </div>
+        </div>
+      </section>
+
+      <section className="card" data-print="andamento">
+        <div className="card-head">
           <h2>Andamento</h2>
           <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} aria-label="Metrica">
             {METRICS.map((x) => (
@@ -193,13 +215,13 @@ export default function StatsPage() {
             </button>
           </div>
           <h3 className="sub">Per area</h3>
-          <BarList data={stats.surgery.byGroup} />
+          <Donut data={stats.surgery.byGroup} />
           <h3 className="sub">Interventi più frequenti</h3>
           <BarList data={stats.surgery.byProcedure} />
           <h3 className="sub">Ruolo</h3>
-          <BarList data={stats.surgery.byRole} />
+          <Donut data={stats.surgery.byRole} />
           <h3 className="sub">Via d’accesso</h3>
-          <BarList data={stats.surgery.byApproach} />
+          <Donut data={stats.surgery.byApproach} />
           {stats.surgery.total > 0 && (
             <p className="muted small">
               Complicanze: {stats.surgery.complications} ({fmt((stats.surgery.complications / stats.surgery.total) * 100, 1)}%) · tempo operatorio{' '}
@@ -213,7 +235,7 @@ export default function StatsPage() {
             <h2>Turni</h2>
           </div>
           <h3 className="sub">Per tipo</h3>
-          <BarList data={stats.work.byType} />
+          <Donut data={stats.work.byType} />
           <h3 className="sub">Colleghi in turno</h3>
           <BarList data={stats.work.colleagues} />
         </section>
@@ -222,7 +244,7 @@ export default function StatsPage() {
             <IconClinical />
             <h2>Attività clinica</h2>
           </div>
-          <BarList data={stats.clinical.byActivity} />
+          <Donut data={stats.clinical.byActivity} />
         </section>
         <section className="card" data-print="lavoro">
           <div className="card-head">
@@ -230,7 +252,7 @@ export default function StatsPage() {
             <h2>Studio (minuti)</h2>
           </div>
           <h3 className="sub">Per area</h3>
-          <BarList data={stats.study.byArea} unit="′" />
+          <Donut data={stats.study.byArea} unit="′" />
           <h3 className="sub">Per tipo</h3>
           <BarList data={stats.study.byType} unit="′" />
         </section>
@@ -240,7 +262,7 @@ export default function StatsPage() {
             <h2>Allenamento</h2>
           </div>
           <h3 className="sub">Sessioni per tipo</h3>
-          <BarList data={stats.workout.byType} />
+          <Donut data={stats.workout.byType} />
           {stats.muscles.length > 0 && (
             <>
               <h3 className="sub">Serie per muscolo</h3>
@@ -265,7 +287,7 @@ export default function StatsPage() {
             <IconOuting />
             <h2>Vita privata</h2>
           </div>
-          <BarList data={stats.outings.byType} />
+          <Donut data={stats.outings.byType} />
           {stats.photos > 0 && <p className="muted small">{stats.photos} foto salvate</p>}
         </section>
         <section className="card" data-print="agenda">
@@ -274,9 +296,9 @@ export default function StatsPage() {
             <h2>Impegni e promemoria</h2>
           </div>
           <h3 className="sub">Impegni per categoria</h3>
-          <BarList data={stats.categories.appointments} />
+          <Donut data={stats.categories.appointments} />
           <h3 className="sub">Promemoria per categoria</h3>
-          <BarList data={stats.categories.todos} />
+          <Donut data={stats.categories.todos} />
           {stats.categories.todosTotal > 0 && (
             <p className="muted small">
               Completati {stats.categories.todosDone} su {stats.categories.todosTotal}
@@ -310,6 +332,15 @@ export default function StatsPage() {
                   <dd>{stats.nutrition.fat !== undefined ? `${fmt(stats.nutrition.fat)} g` : '—'}</dd>
                 </div>
               </dl>
+              <h3 className="sub">Ripartizione delle calorie</h3>
+              <Donut
+                data={[
+                  { label: 'Proteine', value: Math.round((stats.nutrition.protein ?? 0) * 4) },
+                  { label: 'Carboidrati', value: Math.round((stats.nutrition.carbs ?? 0) * 4) },
+                  { label: 'Grassi', value: Math.round((stats.nutrition.fat ?? 0) * 9) },
+                ]}
+                unit=" kcal"
+              />
               <p className="muted small">
                 {stats.nutrition.days} {stats.nutrition.days === 1 ? 'giorno registrato' : 'giorni registrati'}
                 {store.settings.goals?.kcalIn ? ` · ${stats.nutrition.daysOnKcal} entro ±10% dell'obiettivo calorico` : ''}

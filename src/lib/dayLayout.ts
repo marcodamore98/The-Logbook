@@ -15,17 +15,8 @@ export const DAY_BLOCKS: BlockDef[] = [
   { id: 'todos', label: 'Da ricordare', print: 'agenda' },
   { id: 'training', label: 'Allenamento', print: 'palestra' },
   { id: 'nutrition', label: 'Alimentazione', print: 'alimentazione' },
-  { id: 'private', label: 'Gite, uscite e foto', print: 'privato' },
-  { id: 'notes', label: 'Note', print: 'diario' },
-];
-
-export const DAY_PRINT_SECTIONS = [
-  { id: 'lavoro', label: 'Lavoro (turno, tabellone, interventi, clinica, studio)' },
-  { id: 'agenda', label: 'Impegni e promemoria' },
-  { id: 'palestra', label: 'Allenamento' },
-  { id: 'alimentazione', label: 'Alimentazione' },
-  { id: 'privato', label: 'Gite, uscite e foto' },
-  { id: 'diario', label: 'Note' },
+  { id: 'private', label: 'Gite e uscite', print: 'privato' },
+  { id: 'diary', label: 'Diario', print: 'diario' },
 ];
 
 export const MODULE_BLOCK: Record<ModuleKind, string> = {
@@ -34,8 +25,8 @@ export const MODULE_BLOCK: Record<ModuleKind, string> = {
   study: 'work',
   workout: 'training',
   outing: 'private',
-  photos: 'private',
-  note: 'notes',
+  photos: 'diary',
+  note: 'diary',
 };
 
 /** Saved order, completed with blocks added in later versions. */

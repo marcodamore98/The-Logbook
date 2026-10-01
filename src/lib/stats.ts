@@ -1,3 +1,4 @@
+import { diaryOf } from './diary';
 import { shiftMinutes } from './dates';
 import { dayFoodTotals, dayIntake } from './nutrition/foods';
 import { countsSet, setsPerMuscle, setVolume } from './training/analytics';
@@ -76,6 +77,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   const bodyVals: Record<'weight' | 'kcalIn' | 'steps' | 'sleepH', number[]> = { weight: [], kcalIn: [], steps: [], sleepH: [] };
 
   for (const d of days) {
+    s.photos += diaryOf(d).photos.length;
     for (const sh of [d.shift, d.guardia]) {
       if (!sh) continue;
       const t = settings.shiftTypes.find((x) => x.id === sh.shiftTypeId);
@@ -159,10 +161,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
           s.outings.total++;
           oType.add(m.type);
           break;
-        case 'photos':
-          s.photos += m.items.length;
-          break;
-        case 'note':
+        default:
           break;
       }
     }

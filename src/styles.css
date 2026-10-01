@@ -854,3 +854,90 @@ main img, main table, main select, main input, main textarea { max-width: 100%; 
   .nav-drawer { width: min(84vw, 320px); }
   .rest-timer { max-width: calc(100vw - 1.5rem); }
 }
+
+/* ---- Menu drawer: slides in, background page locked ---- */
+html.scroll-locked, html.scroll-locked body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+.drawer-backdrop, .sheet-backdrop { overscroll-behavior: contain; touch-action: none; }
+.drawer, .sheet { touch-action: pan-y; overscroll-behavior: contain; }
+.drawer-backdrop.left .nav-drawer { animation: drawer-in 0.22s ease-out; }
+@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .drawer-backdrop.left .nav-drawer { animation: none; } }
+
+/* ---- Movable day blocks (long-press the header, drag) ---- */
+.day-page { display: flex; flex-direction: column; gap: 0.9rem; }
+.blk { position: relative; min-width: 0; }
+.blk .card-head { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.is-dragging { user-select: none; -webkit-user-select: none; }
+.blk.dragging { z-index: 30; transition: none; filter: drop-shadow(0 14px 22px rgb(0 0 0 / 0.28)); opacity: 0.96; scale: 1.02; pointer-events: none; }
+.blk.drop-before::before, .drop-end { content: ''; display: block; height: 4px; border-radius: 4px; background: var(--lime); margin: -0.55rem 0 0.35rem; }
+.blk.drop-before::before { position: absolute; left: 0; right: 0; top: -0.6rem; margin: 0; }
+.order-list li.is-hidden { opacity: 0.6; }
+
+/* ---- Diary ---- */
+.diary-entry { display: flex; flex-direction: column; gap: 0.8rem; }
+.diary-read { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1.02rem; line-height: 1.6; }
+.diary-empty { margin: 0; color: var(--muted); font-style: italic; }
+.diary-text { width: 100%; min-height: 12rem; font: inherit; line-height: 1.6; resize: vertical; }
+.diary-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.photo-caption { font-size: 0.82rem; color: var(--muted); padding: 0.25rem 0.1rem 0; }
+.diary-nav { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.diary-nav input[type='date'] { width: auto; }
+.diary-sheet { padding: 1.1rem 1.2rem; }
+.diary-index { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; max-height: 22rem; overflow-y: auto; }
+.diary-index button { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 0.1rem; background: var(--surface-2); border: 1px solid transparent; border-radius: 12px; padding: 0.55rem 0.8rem; }
+.diary-index button.on { border-color: var(--accent); }
+.diary-index span { color: var(--muted); font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- Explorer's field journal (print only) ---- */
+.diary-print { display: none; }
+@media print {
+  body[data-print-doc='diary'] .diary-screen, body[data-print-doc='diary'] .topbar { display: none !important; }
+  body:not([data-print-doc='diary']) .diary-print { display: none !important; }
+  body[data-print-doc='diary'] .diary-print { display: block; }
+  body[data-print-doc='diary'] { background: #f3e8d0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 16mm 15mm; }
+}
+.explorer { color: #3a2a17; font-family: 'IM Fell English', 'Palatino Linotype', Palatino, Georgia, serif; font-size: 12.5pt; line-height: 1.65; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.explorer h1, .explorer h2 { font-family: inherit; font-weight: 400; color: #4a3015; margin: 0; letter-spacing: 0.01em; }
+.ex-cover { min-height: 245mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 0.7rem; break-after: page; border: 3px double #8a6a3b; padding: 2rem; color: #6b4a1f; }
+.ex-cover h1 { font-size: 34pt; line-height: 1.1; font-style: italic; }
+.ex-kicker { text-transform: uppercase; letter-spacing: 0.35em; font-size: 10pt; margin: 0.6rem 0 0; }
+.ex-rule { width: 40%; height: 0; border-top: 1px solid #8a6a3b; border-bottom: 1px solid #8a6a3b; padding-top: 3px; margin: 0.8rem 0; }
+.ex-range { margin: 0; font-style: italic; font-size: 14pt; }
+.ex-count { margin: 1rem 0 0; font-size: 10pt; letter-spacing: 0.15em; text-transform: uppercase; }
+.ex-day { break-inside: auto; padding: 0 0 1.4rem; margin: 0 0 1.4rem; border-bottom: 1px dashed #b39a6e; }
+.ex-day header { display: flex; align-items: baseline; gap: 0.7rem; break-after: avoid; border-bottom: 1px solid #8a6a3b; padding-bottom: 0.25rem; margin-bottom: 0.7rem; }
+.ex-num { font-size: 11pt; font-style: italic; color: #8a6a3b; min-width: 1.6em; }
+.ex-day h2 { font-size: 16pt; font-style: italic; }
+.ex-day h2::first-letter { text-transform: uppercase; }
+.ex-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; text-align: justify; hyphens: auto; }
+.ex-text::first-letter { font-size: 2.4em; line-height: 0.9; float: left; padding: 0.05em 0.1em 0 0; color: #7a5420; }
+.ex-photos { display: flex; flex-wrap: wrap; gap: 1rem 1.4rem; margin-top: 1rem; }
+.ex-photo { position: relative; margin: 0; background: #fffaf0; padding: 7px 7px 9px; box-shadow: 0 1px 4px rgb(60 40 10 / 0.35); width: 46%; break-inside: avoid; }
+.ex-photo img { display: block; width: 100%; height: auto; max-height: 75mm; object-fit: cover; filter: sepia(0.35) contrast(1.02); }
+.ex-photo figcaption { font-family: 'Caveat', 'Segoe Script', cursive; font-size: 14pt; text-align: center; padding-top: 0.2rem; color: #4a3015; line-height: 1.2; }
+.ex-photo.r0 { transform: rotate(-1.6deg); } .ex-photo.r1 { transform: rotate(1.2deg); } .ex-photo.r2 { transform: rotate(-0.7deg); } .ex-photo.r3 { transform: rotate(1.8deg); }
+.ex-tape { position: absolute; top: -9px; left: 50%; width: 22mm; height: 6mm; margin-left: -11mm; background: rgb(214 190 120 / 0.65); transform: rotate(-2deg); }
+.ex-end { text-align: center; font-style: italic; color: #8a6a3b; margin: 1rem 0 0; }
+
+/* ---- Donut and rings ---- */
+.donut { display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
+.donut-svg { width: 150px; height: 150px; flex: none; }
+.donut-track { fill: none; stroke: var(--surface-2); stroke-width: 16; }
+.donut-total { font-size: 17px; font-weight: 800; fill: var(--ink); letter-spacing: -0.02em; }
+.donut-unit { font-size: 8px; fill: var(--muted); }
+.donut-legend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 0.35rem; }
+.donut-legend li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.donut-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.donut-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.donut-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.donut-val small { color: var(--muted); font-weight: 500; margin-left: 0.2rem; }
+.rings { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.8rem; }
+.ring { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; text-align: center; }
+.ring svg { width: 100%; max-width: 120px; }
+.ring-text { font-size: 18px; font-weight: 800; fill: var(--ink); letter-spacing: -0.03em; }
+.ring figcaption { font-size: 0.82rem; color: var(--muted); }
+.hero-stats { display: flex; flex-direction: column; gap: 1rem; }
+@media print { .donut-svg { width: 120px; height: 120px; } .donut { break-inside: avoid; } }
+.diary-nav { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+.diary-nav input[type='date'] { width: 100%; min-width: 0; text-align: center; }

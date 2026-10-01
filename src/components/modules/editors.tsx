@@ -132,7 +132,7 @@ function OutingEditor({ value: m, onChange }: Props<OutingModule>) {
 }
 
 /** Resizes and re-encodes to JPEG, shrinking until it fits comfortably in a Firestore document. */
-async function compress(file: File): Promise<Blob> {
+export async function compress(file: File): Promise<Blob> {
   const bmp = await createImageBitmap(file);
   let max = 1400;
   let quality = 0.8;
@@ -151,7 +151,7 @@ async function compress(file: File): Promise<Blob> {
   }
 }
 
-function StoredImage({ src, alt }: { src: string; alt: string }) {
+export function StoredImage({ src, alt }: { src: string; alt: string }) {
   const { repo } = useStore();
   const [url, setUrl] = useState(src.startsWith('fs:') ? '' : src);
   useEffect(() => {

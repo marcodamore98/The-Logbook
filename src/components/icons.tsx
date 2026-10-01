@@ -363,3 +363,9 @@ export const IconBarcode = (p: P) => (
     <path d="M18 12v16M26 12v16" strokeWidth="2.6" />
   </Art>
 );
+
+export const GlyphEdit = () => (
+  <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 20l1-4.2L16.3 4.5a1.8 1.8 0 0 1 2.6 0l.6.6a1.8 1.8 0 0 1 0 2.6L8.2 19z M14.5 6.5l3 3" />
+  </svg>
+);

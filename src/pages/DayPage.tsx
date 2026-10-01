@@ -9,21 +9,27 @@ import {
   GlyphPrev,
   GlyphTrash,
   IconAppointment,
+  IconNote,
   IconSleep,
   IconShift,
   IconTodo,
 } from '../components/icons';
 import { RosterCard } from '../components/RosterCard';
 import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
-import { PrintButton } from '../components/PrintDialog';
+import { DiaryEntryView } from '../components/diary/DiaryEntry';
+import { useBlockDrag } from '../components/useBlockDrag';
 import { Card, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
-import { blockOrder, DAY_BLOCKS, DAY_PRINT_SECTIONS, MODULE_BLOCK } from '../lib/dayLayout';
-import { CATEGORIES, labelOf } from '../lib/vocab';
+import { blockOrder, DAY_BLOCKS, MODULE_BLOCK } from '../lib/dayLayout';
+import { CATEGORIES } from '../lib/vocab';
 import { codeShort, idsForNames, rosterFor, ROSTER_SELF, shiftFromCodes } from '../lib/roster';
 import { addDays, formatLong, isoWeek, shiftMinutes, today } from '../lib/dates';
+import { diaryOf, withDiary } from '../lib/diary';
 import { eventLocal } from '../lib/google/calendar';
 import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
+
+/** Cards that can be added by hand; training, food and the diary have their own sections. */
+const ADDABLE: ModuleKind[] = ['surgery', 'clinical', 'study', 'outing'];
 
 export default function DayPage() {
   const params = useParams();
@@ -116,7 +122,7 @@ export default function DayPage() {
 
   const moduleCards = (block: string) =>
     day.modules
-      .filter((m) => m.kind !== 'workout' && MODULE_BLOCK[m.kind] === block)
+      .filter((m) => (block === 'work' || block === 'private') && MODULE_BLOCK[m.kind] === block)
       .map((m) => {
         const meta = metaOf(m.kind);
         const open = openId === m.id;
@@ -133,7 +139,6 @@ export default function DayPage() {
             onToggle={() => setOpenId(open ? null : m.id)}
             actions={
               <>
-                {m.kind === 'note' && !open && m.category && <span className="badge">{labelOf(CATEGORIES, m.category)}</span>}
                 <button className="icon-btn small no-print" aria-label="Elimina scheda" onClick={() => window.confirm(`Eliminare la scheda “${meta.label}”?`) && removeModule(m)}>
                   <GlyphTrash />
                 </button>
@@ -240,6 +245,7 @@ export default function DayPage() {
           <RosterCard
             key="roster"
             date={date}
+            onDelete={() => window.confirm('Eliminare il tabellone da questa pagina? Potrai riaggiungerlo dall’ordine delle sezioni.') && saveSettings({ ...settings, hiddenBlocks: [...hidden, 'roster'] })}
             onJoin={(names) => {
               const base = dayRef.current.shift ?? (myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null);
               if (!base) return;
@@ -345,9 +351,24 @@ export default function DayPage() {
         return <TrainingBlock key="training" day={day} />;
       case 'nutrition':
         return <NutritionBlock key="nutrition" day={day} />;
+      case 'diary': {
+        const d = diaryOf(day);
+        const preview = d.text.trim().split('\n')[0].slice(0, 90);
+        return (
+          <Card
+            key="diary"
+            id="day.diary"
+            print="diario"
+            icon={<IconNote />}
+            title="Diario"
+            summary={preview || (d.photos.length ? `${d.photos.length} foto` : 'Ancora nessuna pagina')}
+          >
+            <DiaryEntryView day={day} onSave={(diary) => update((x) => withDiary(x, diary))} />
+          </Card>
+        );
+      }
       case 'work':
-      case 'private':
-      case 'notes': {
+      case 'private': {
         const cards = moduleCards(id);
         return cards.length ? <div key={id} className="modules">{cards}</div> : null;
       }
@@ -356,26 +377,27 @@ export default function DayPage() {
     }
   };
 
-  // Impegni and Da ricordare side by side when adjacent.
+  const hidden = settings.hiddenBlocks ?? [];
+  const saveSettings = store.saveSettings;
+  const { drag, onPointerDown } = useBlockDrag(order, (o) => saveOrder(o));
   const rendered: React.ReactNode[] = [];
-  for (let i = 0; i < order.length; i++) {
-    const id = order[i];
-    const next = order[i + 1];
-    if ((id === 'agenda' && next === 'todos') || (id === 'todos' && next === 'agenda')) {
-      rendered.push(
-        <div key="pair" className="two-col">
-          {renderBlock(id)}
-          {renderBlock(next)}
-        </div>,
-      );
-      i++;
-    } else rendered.push(renderBlock(id));
+  for (const id of order) {
+    if (hidden.includes(id)) continue;
+    const node = renderBlock(id);
+    if (!node) continue;
+    const cls = drag ? (drag.id === id ? ' dragging' : drag.before === id ? ' drop-before' : '') : '';
+    rendered.push(
+      <div key={id} data-block={id} className={`blk${cls}`} style={drag?.id === id ? { transform: `translateY(${drag.dy}px)` } : undefined}>
+        {node}
+      </div>,
+    );
   }
+  if (drag && drag.before === null) rendered.push(<div key="drop-end" className="drop-end" />);
 
   const saveOrder = (o: string[]) => store.saveSettings({ ...settings, dayLayout: o });
 
   return (
-    <div className="page day-page">
+    <div className={`page day-page${drag ? ' is-dragging' : ''}`} onPointerDown={onPointerDown}>
       <header className="page-head">
         <button className="icon-btn no-print" aria-label="Giorno precedente" onClick={() => nav(`/giorno/${addDays(date, -1)}`)}>
           <GlyphPrev />
@@ -394,7 +416,6 @@ export default function DayPage() {
             <path d="M8 4v16M4.5 7.5L8 4l3.5 3.5M16 20V4M12.5 16.5L16 20l3.5-3.5" />
           </svg>
         </button>
-        <PrintButton sections={DAY_PRINT_SECTIONS} title={`Logbook ${date}`} />
         <button className="icon-btn no-print" aria-label="Giorno successivo" onClick={() => nav(`/giorno/${addDays(date, 1)}`)}>
           <GlyphNext />
         </button>
@@ -414,7 +435,7 @@ export default function DayPage() {
             <div key={area}>
               <h3 className="palette-area">{area === 'lavoro' ? 'Lavoro' : 'Vita privata'}</h3>
               <div className="palette-grid">
-                {MODULES.filter((m) => m.area === area && m.kind !== 'workout').map((m) => (
+                {MODULES.filter((m) => m.area === area && ADDABLE.includes(m.kind)).map((m) => (
                   <button key={m.kind} className="palette-item" onClick={() => addModule(m.kind)}>
                     <m.Icon size={48} />
                     <span className="palette-label">{m.label}</span>
@@ -440,11 +461,16 @@ export default function DayPage() {
                 <GlyphClose />
               </button>
             </div>
-            <p className="muted small">Le nuove schede si inseriscono da sole nella loro sezione (es. gli interventi con il lavoro, le note in fondo).</p>
+            <p className="muted small">Puoi anche spostare una sezione tenendo premuta la sua intestazione e trascinandola col dito. Le nuove schede si inseriscono da sole nella loro sezione.</p>
             <ol className="order-list">
               {order.map((id, i) => (
-                <li key={id}>
-                  <span>{DAY_BLOCKS.find((b) => b.id === id)?.label}</span>
+                <li key={id} className={hidden.includes(id) ? 'is-hidden' : ''}>
+                  <span>{DAY_BLOCKS.find((b) => b.id === id)?.label}{hidden.includes(id) && ' (eliminato)'}</span>
+                  {hidden.includes(id) && (
+                    <button className="btn-ghost small" onClick={() => saveSettings({ ...settings, hiddenBlocks: hidden.filter((x) => x !== id) })}>
+                      Ripristina
+                    </button>
+                  )}
                   <button className="icon-btn small" aria-label="Sposta su" disabled={i === 0} onClick={() => saveOrder(order.map((x, k) => (k === i - 1 ? id : k === i ? order[i - 1] : x)))}>
                     <GlyphPrev />
                   </button>

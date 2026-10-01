@@ -102,3 +102,82 @@ export function Columns({ buckets, unit }: { buckets: { label: string; full: str
   );
 }
 
+
+/** Categorical palette: the brand lime/violet first, then distinct hues readable on light and dark. */
+export const PALETTE = ['#7b6ae6', '#d6f25f', '#f4845f', '#3fb8af', '#f2b134', '#e06c9f', '#5b8def', '#9aa0a6'];
+
+/** Donut chart with a centre total and a legend; small slices are merged into "Altro". */
+export function Donut({ data, unit = '', center, max = 6 }: { data: Count[]; unit?: string; center?: string; max?: number }) {
+  const clean = data.filter((d) => d.value > 0);
+  if (!clean.length) return <Empty>Nessun dato nel periodo.</Empty>;
+  const shown = clean.slice(0, max);
+  const rest = clean.slice(max).reduce((n, c) => n + c.value, 0);
+  const rows = rest ? [...shown, { label: 'Altro', value: rest }] : shown;
+  const total = rows.reduce((n, r) => n + r.value, 0);
+  const R = 42, C = 2 * Math.PI * R;
+  let acc = 0;
+  return (
+    <div className="donut">
+      <svg viewBox="0 0 120 120" className="donut-svg" role="img" aria-label="Distribuzione">
+        <circle cx="60" cy="60" r={R} className="donut-track" />
+        {rows.map((r, i) => {
+          const len = (r.value / total) * C;
+          const el = (
+            <circle
+              key={r.label}
+              cx="60"
+              cy="60"
+              r={R}
+              fill="none"
+              stroke={PALETTE[i % PALETTE.length]}
+              strokeWidth="16"
+              strokeDasharray={`${Math.max(0, len - (rows.length > 1 ? 1.5 : 0))} ${C}`}
+              strokeDashoffset={-acc}
+              transform="rotate(-90 60 60)"
+            >
+              <title>{`${r.label}: ${fmt(r.value, 1)}${unit}`}</title>
+            </circle>
+          );
+          acc += len;
+          return el;
+        })}
+        <text x="60" y="58" textAnchor="middle" className="donut-total">
+          {center ?? fmt(total, 1)}
+        </text>
+        <text x="60" y="73" textAnchor="middle" className="donut-unit">
+          {center ? '' : unit.trim()}
+        </text>
+      </svg>
+      <ul className="donut-legend">
+        {rows.map((r, i) => (
+          <li key={r.label}>
+            <span className="dot" style={{ background: PALETTE[i % PALETTE.length] }} />
+            <span className="donut-name">{r.label}</span>
+            <span className="donut-val">
+              {fmt(r.value, 1)}
+              {unit} <small>{fmt((r.value / total) * 100)}%</small>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Circular progress ring with a big value in the middle. */
+export function Ring({ value, of, label, display, color = PALETTE[0] }: { value: number; of: number; label: string; display?: string; color?: string }) {
+  const R = 38, C = 2 * Math.PI * R;
+  const pct = of > 0 ? Math.min(1, value / of) : 0;
+  return (
+    <figure className="ring">
+      <svg viewBox="0 0 100 100" role="img" aria-label={`${label}: ${fmt(pct * 100)}%`}>
+        <circle cx="50" cy="50" r={R} className="donut-track" strokeWidth="11" />
+        <circle cx="50" cy="50" r={R} fill="none" stroke={color} strokeWidth="11" strokeLinecap="round" strokeDasharray={`${pct * C} ${C}`} transform="rotate(-90 50 50)" />
+        <text x="50" y="55" textAnchor="middle" className="ring-text">
+          {display ?? `${fmt(pct * 100)}%`}
+        </text>
+      </svg>
+      <figcaption>{label}</figcaption>
+    </figure>
+  );
+}

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
-import { GlyphClose, GlyphMenu, IconFood, IconHeart, IconMonth, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
+import { GlyphClose, GlyphMenu, IconFood, IconHeart, IconMonth, IconNote, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
@@ -11,16 +11,21 @@ import { StoreProvider, useStore } from './lib/store/StoreContext';
 import { today } from './lib/dates';
 import { MonthPage, WeekPage } from './pages/CalendarPages';
 import DayPage from './pages/DayPage';
+import DiaryPage from './pages/DiaryPage';
 import GymPage from './pages/GymPage';
 import NutritionPage from './pages/NutritionPage';
 import WorkoutPage from './pages/WorkoutPage';
 import SettingsPage from './pages/SettingsPage';
 import StatsPage from './pages/StatsPage';
 
+/** Width of the strip at the left edge from which a swipe opens the menu. */
+export const EDGE_PX = 40;
+
 const NAV = [
   { to: '/mese', label: 'Mese', Icon: IconMonth },
   { to: '/settimana', label: 'Settimana', Icon: IconWeek },
   { to: '/giorno', label: 'Oggi', Icon: IconToday },
+  { to: '/diario', label: 'Diario', Icon: IconNote },
   { to: '/palestra', label: 'Palestra', Icon: IconWorkout },
   { to: '/alimentazione', label: 'Alimentazione', Icon: IconFood },
   { to: '/statistiche', label: 'Statistiche', Icon: IconStats },
@@ -34,6 +39,7 @@ function useCurrentTitle() {
 
 function NavDrawer({ onClose }: { onClose: () => void }) {
   const loc = useLocation();
+  const swipe = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -41,7 +47,16 @@ function NavDrawer({ onClose }: { onClose: () => void }) {
   }, [onClose]);
   return (
     <div className="drawer-backdrop left" onClick={onClose}>
-      <nav className="drawer nav-drawer" aria-label="Menu" onClick={(e) => e.stopPropagation()}>
+      <nav
+        className="drawer nav-drawer"
+        aria-label="Menu"
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => (swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
+        onTouchEnd={(e) => {
+          const t = swipe.current;
+          if (t && e.changedTouches[0].clientX - t.x < -60 && Math.abs(e.changedTouches[0].clientY - t.y) < 60) onClose();
+        }}
+      >
         <div className="nav-drawer-head">
           <span className="brand">
             <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={30} height={30} />
@@ -100,6 +115,34 @@ function GoogleStatus() {
 function Shell({ userEmail }: { userEmail?: string }) {
   const [bodyOpen, setBodyOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // The page behind a drawer must not scroll.
+  useEffect(() => {
+    document.documentElement.classList.toggle('scroll-locked', menuOpen || bodyOpen);
+    return () => document.documentElement.classList.remove('scroll-locked');
+  }, [menuOpen, bodyOpen]);
+
+  // Swipe right from the left edge opens the menu.
+  useEffect(() => {
+    let t: { x: number; y: number } | null = null;
+    const start = (e: TouchEvent) => (t = e.touches[0].clientX <= EDGE_PX ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null);
+    const move = (e: TouchEvent) => {
+      if (!t) return;
+      const dx = e.touches[0].clientX - t.x;
+      const dy = Math.abs(e.touches[0].clientY - t.y);
+      if (dx > 50 && dy < dx * 0.6) {
+        t = null;
+        setMenuOpen(true);
+      } else if (dy > 40) t = null;
+    };
+    window.addEventListener('touchstart', start, { passive: true });
+    window.addEventListener('touchmove', move, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', start);
+      window.removeEventListener('touchmove', move);
+    };
+  }, []);
+
   return (
     <HashRouter>
       <RestTimerProvider>
@@ -112,6 +155,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
                 <Route path="/mese/:date?" element={<MonthPage />} />
                 <Route path="/settimana/:date?" element={<WeekPage />} />
                 <Route path="/giorno/:date?" element={<DayPage />} />
+                <Route path="/diario/:date?" element={<DiaryPage />} />
                 <Route path="/palestra" element={<GymPage />} />
                 <Route path="/palestra/allenamento/:date/:id" element={<WorkoutPage />} />
                 <Route path="/alimentazione/:date?" element={<NutritionPage />} />

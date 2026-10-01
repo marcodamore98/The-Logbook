@@ -1,6 +1,6 @@
 import { byCode, codeLabel, codeShort, IDLE_CODES, rosterFor, ROSTER_SELF } from '../lib/roster';
 import type { ISODate } from '../lib/types';
-import { GlyphPlus, GlyphSheriff, IconPeople } from './icons';
+import { GlyphPlus, GlyphSheriff, GlyphTrash, IconPeople } from './icons';
 import { Card } from './ui';
 
 interface Person {
@@ -9,7 +9,7 @@ interface Person {
 }
 
 /** Who does what today: one list per activity, staff (★) first, then residents. */
-export function RosterCard({ date, onJoin }: { date: ISODate; onJoin?: (names: string[]) => void }) {
+export function RosterCard({ date, onJoin, onDelete }: { date: ISODate; onJoin?: (names: string[]) => void; onDelete?: () => void }) {
   const roster = rosterFor(date);
   if (!roster) return null;
 
@@ -54,6 +54,13 @@ export function RosterCard({ date, onJoin }: { date: ISODate; onJoin?: (names: s
       defaultOpen={false}
       icon={<IconPeople />}
       title="Tabellone"
+      actions={
+        onDelete && (
+          <button className="icon-btn small no-print" aria-label="Elimina il tabellone" onClick={onDelete}>
+            <GlyphTrash />
+          </button>
+        )
+      }
       summary={mine.length ? `Tu: ${mine.map(codeShort).join(' · ')} · ${active.length} attività` : `${active.length} attività`}
     >
       {active.length === 0 ? (

@@ -298,6 +298,11 @@ export type Module =
 
 export type ModuleKind = Module['kind'];
 
+export interface DiaryEntry {
+  text: string;
+  photos: PhotoItem[];
+}
+
 export interface DayEntry {
   date: ISODate;
   shift?: ShiftAssignment; // lavoro principale (ospedale)
@@ -308,6 +313,7 @@ export interface DayEntry {
   mood?: number; // 1-5
   body?: BodyLog;
   food?: FoodLog;
+  diary?: DiaryEntry; // diario del giorno: solo testo libero e foto
   gcalTrash?: string[]; // eventi Google da eliminare alla prossima sincronizzazione
   updatedAt: number;
 }
@@ -327,6 +333,7 @@ export interface Settings {
   foods?: Food[]; // alimenti personali e salvati da Open Food Facts
   favoriteFoods?: string[];
   dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno
+  hiddenBlocks?: string[]; // blocchi eliminati dalla pagina del giorno (es. il tabellone)
   seed?: number; // versione dei dati predefiniti già applicata (vedi migrateSettings)
   updatedAt: number;
 }
