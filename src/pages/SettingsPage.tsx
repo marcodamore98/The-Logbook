@@ -1,8 +1,10 @@
+import { useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSettings, IconShift, IconSync, IconWorkout } from '../components/icons';
 import { Empty, Field, uid } from '../components/ui';
 import { listCalendars, type GCalendar } from '../lib/google/calendar';
 import { firebaseConfigured, logOut } from '../lib/firebase';
+import { CoachCard } from '../components/coach/CoachCard';
 import { parseHevyCsv } from '../lib/hevy';
 import { myRosterDays, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
@@ -20,6 +22,11 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
   const hevyFile = useRef<HTMLInputElement>(null);
   const myDays = myRosterDays().length;
   const file = useRef<HTMLInputElement>(null);
+
+  const loc = useLocation();
+  useEffect(() => {
+    if (loc.hash) document.getElementById(loc.hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [loc.hash]);
 
   useEffect(() => {
     if (gcal.connected) listCalendars().then(setCalendars).catch(() => setCalendars([]));
@@ -193,6 +200,8 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
         </div>
         {msg?.startsWith('Turni importati') && <p className="muted small">{msg}</p>}
       </section>
+
+      <CoachCard />
 
       <section className="card">
         <div className="card-head">

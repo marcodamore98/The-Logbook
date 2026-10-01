@@ -232,6 +232,26 @@ export interface FoodLog {
   notes?: string;
 }
 
+/** Diet plan prepared e.g. by a coach; values already computed per item. */
+export interface MealPlanItem {
+  foodId?: string;
+  name: string;
+  grams: number;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+export interface MealPlan {
+  id: string;
+  name: string;
+  notes?: string;
+  targets?: { kcal?: number; protein?: number; carbs?: number; fat?: number };
+  meals: Partial<Record<MealId, MealPlanItem[]>>;
+  updatedAt: number;
+}
+
 // ---- Corpo ----
 
 export interface BodyLog {
@@ -302,6 +322,7 @@ export interface Settings {
   exercises?: ExerciseDef[]; // esercizi personalizzati
   routines?: Routine[];
   goals?: BodyGoals;
+  mealPlans?: MealPlan[];
   foods?: Food[]; // alimenti personali e salvati da Open Food Facts
   favoriteFoods?: string[];
   dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno

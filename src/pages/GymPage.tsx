@@ -67,6 +67,9 @@ function Routines() {
         >
           <GlyphPlus /> Nuova scheda
         </button>
+        <Link className="btn-ghost" to="/impostazioni#personal-trainer">
+          Importa dal personal trainer (Claude)
+        </Link>
         <button className="btn-ghost" onClick={() => hevyFile.current?.click()}>
           Crea schede da un export Hevy
         </button>

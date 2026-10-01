@@ -67,6 +67,16 @@ Nella pagina del giorno compare solo il riepilogo, centrato su calorie e protein
 
 Il menu si apre toccando il nome dell'app in alto a sinistra.
 
+## Personal trainer con un Progetto Claude
+
+Si gestisce da *Impostazioni → Personal trainer (Progetto Claude)*:
+1. **Copia istruzioni** e incollale nelle istruzioni di un Progetto su claude.ai. Il testo è in [`docs/personal-trainer-claude.md`](docs/personal-trainer-claude.md).
+2. **Esporta i miei dati** (ultime 4 settimane: allenamenti, pasti, peso, sonno, turni) e incolla o allega il file nella chat del Progetto.
+3. Incolla la risposta di Claude in **Importa programma**:
+   - le schede finiscono in *Palestra*, con superserie, dropset, range di ripetizioni e recuperi;
+   - i piani alimentari si applicano a un giorno da *Alimentazione → Applica un piano alimentare*;
+   - gli obiettivi aggiornano calorie, macronutrienti, peso, passi e sonno.
+
 ## Barra laterale “Corpo”
 
 Su schermi larghi è sempre visibile; su telefono si apre con il pulsante *Corpo*. Mostra:

@@ -663,3 +663,13 @@ textarea { resize: vertical; }
   .chip-on { background: none; color: #000; border-color: #bbb; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 }
+
+/* ---- Coach ---- */
+.coach .steps { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.9rem; }
+.coach .steps li { display: flex; flex-direction: column; gap: 0.45rem; }
+.coach .steps li::marker { font-weight: 600; color: var(--accent); }
+.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.78rem; }
+.import-result { padding: 0.7rem 0.9rem; border-radius: 12px; background: var(--surface-2); font-size: 0.9rem; }
+.import-result ul { margin: 0.3rem 0 0.6rem; padding-left: 1.1rem; }
+.plan-row select { width: auto; max-width: 100%; }
+a.btn-ghost { text-decoration: none; }
