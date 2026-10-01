@@ -809,10 +809,6 @@ a.btn { display: inline-block; text-align: center; text-decoration: none; }
 .nav-item { color: #d2d2ce; font-weight: 600; border-radius: 999px; padding: 0.4rem 1rem 0.4rem 0.45rem; }
 .nav-item:hover { background: #2a2a2d; color: #fff; }
 .nav-item.active { background: #fff; color: #1d1d1f; box-shadow: none; outline: none; }
-.nav-promo { margin-top: auto; background: var(--lime); color: #1d1d1f; border-radius: 22px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.5rem; }
-.nav-promo strong { font-size: 1.15rem; letter-spacing: -0.02em; }
-.nav-promo span { font-size: 0.85rem; opacity: 0.75; }
-.nav-promo .btn { background: #1d1d1f; color: #fff; margin-top: 0.3rem; }
 
 /* "Corpo" panel — dark card like the reference's analysis panel */
 .sidebar {
@@ -844,3 +840,17 @@ a.btn { display: inline-block; text-align: center; text-decoration: none; }
 .login h1 { font-size: 2.4rem; }
 .login img { border-radius: 18px; }
 .login .btn { background: var(--lime); color: #1d1d1f; }
+
+/* Phone fit: no sideways scroll, no auto text inflation, tighter scale */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; max-width: 100%; }
+body { overflow-x: hidden; max-width: 100vw; }
+.app, .layout, main { max-width: 100%; }
+main img, main table, main select, main input, main textarea { max-width: 100%; }
+@media (max-width: 600px) {
+  html { font-size: 14px; }
+  main { padding: 0.8rem 0.75rem 3rem; }
+  h1 { font-size: 1.35rem; }
+  .topbar { padding-left: 0.6rem; padding-right: 0.6rem; gap: 0.4rem; }
+  .nav-drawer { width: min(84vw, 320px); }
+  .rest-timer { max-width: calc(100vw - 1.5rem); }
+}

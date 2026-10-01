@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
 import { GlyphClose, GlyphMenu, IconFood, IconHeart, IconMonth, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
@@ -62,13 +62,6 @@ function NavDrawer({ onClose }: { onClose: () => void }) {
             <span>{label}</span>
           </NavLink>
         ))}
-        <div className="nav-promo">
-          <strong>Il diario di oggi</strong>
-          <span>Turno, allenamento e pasti in una sola pagina.</span>
-          <Link className="btn" to={`/giorno/${today()}`} onClick={onClose}>
-            Apri oggi
-          </Link>
-        </div>
       </nav>
     </div>
   );
