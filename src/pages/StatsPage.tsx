@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconFood, IconMood, IconOuting, IconTodo, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
+import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconFlame, IconScale, IconOuting, IconTodo, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
 import { BarList, Columns, fmt } from '../components/charts';
 import { PrintButton } from '../components/PrintDialog';
 import { Empty } from '../components/ui';
@@ -285,7 +285,7 @@ export default function StatsPage() {
         </section>
         <section className="card" data-print="alimentazione">
           <div className="card-head">
-            <IconFood />
+            <IconFlame />
             <h2>Alimentazione (medie giornaliere)</h2>
           </div>
           {stats.nutrition.days === 0 ? (
@@ -311,7 +311,7 @@ export default function StatsPage() {
                 </div>
               </dl>
               <p className="muted small">
-                {stats.nutrition.days} giorni registrati
+                {stats.nutrition.days} {stats.nutrition.days === 1 ? 'giorno registrato' : 'giorni registrati'}
                 {store.settings.goals?.kcalIn ? ` · ${stats.nutrition.daysOnKcal} entro ±10% dell'obiettivo calorico` : ''}
                 {store.settings.goals?.proteinG ? ` · ${stats.nutrition.daysOnProtein} con proteine raggiunte` : ''}
               </p>
@@ -320,7 +320,7 @@ export default function StatsPage() {
         </section>
         <section className="card" data-print="alimentazione">
           <div className="card-head">
-            <IconMood />
+            <IconScale />
             <h2>Corpo (medie)</h2>
           </div>
           <dl className="side-stats">

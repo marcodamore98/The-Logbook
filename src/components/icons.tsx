@@ -1,13 +1,10 @@
-// "Ink & wash" icon set: a fine hand-drawn ink line over a soft watercolor
-// blot. Each icon owns a pigment so modules are recognisable at a glance.
+// Icon set: a fine ink line over a soft pastel disc (lime, lavender, mint, sky…).
+// Each icon owns a pigment so areas are recognisable at a glance.
 
 import type { ReactNode, SVGProps } from 'react';
 
-const BLOTS = [
-  'M8.2 14.5C9.6 7.4 17.6 4.3 24.6 5.6c7.4 1.4 11.5 7.3 10.3 14.6-1.1 7.1-6.8 13.6-14.4 13.9-7.9.3-13.5-5.3-13.7-11.4-.1-2.9.7-5.6 1.4-8.2z',
-  'M6.3 20.8c-.9-7.4 5.3-14.1 12.9-14.9 7.2-.8 14.6 3.5 15.3 10.9.8 7.9-4.4 16.3-12.8 16.6-8.1.3-14.6-5.3-15.4-12.6z',
-  'M10.1 9.9c5-4.8 13.8-5.3 19.1-.6 5.1 4.5 6.6 12.5 2.5 18.1-4.3 5.8-12.6 7.8-18.6 4.2-6.4-3.8-8.1-16.6-3-21.7z',
-];
+// Small decorative dot, placed differently per icon so the set feels hand-made.
+const DOTS: [number, number][] = [[30, 9.5], [10, 9.5], [30.5, 30]];
 
 export type Pigment = 'ochre' | 'rose' | 'sage' | 'indigo' | 'teal' | 'terra' | 'plum' | 'sand' | 'sky';
 
@@ -28,8 +25,8 @@ function Art({ size = 36, pigment, blot = 0, children, ...rest }: ArtProps) {
       className={`art-icon pigment-${pigment}`}
       {...rest}
     >
-      <path d={BLOTS[blot]} className="wash" />
-      <path d={BLOTS[(blot + 1) % 3]} className="wash wash-2" transform="translate(6 7) scale(.62)" />
+      <circle cx="20" cy="20" r="18" className="wash" />
+      <circle cx={DOTS[blot][0]} cy={DOTS[blot][1]} r="3.4" className="wash-2" />
       <g className="ink" fill="none" strokeLinecap="round" strokeLinejoin="round">
         {children}
       </g>
@@ -253,4 +250,116 @@ export const GlyphPrint = () => (
   <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 8V4h10v4M6 17H4.5A1.5 1.5 0 0 1 3 15.5v-5A1.5 1.5 0 0 1 4.5 9h15a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H18M7 14h10v6H7z" />
   </svg>
+);
+
+
+// ---- Body, nutrition and training icons ----
+
+export const IconHeart = (p: P) => (
+  <Art pigment="rose" blot={1} {...p}>
+    <path d="M20 30.5c-6.6-4.6-10.2-8.3-10.2-12.7 0-3.2 2.4-5.5 5.3-5.5 2 0 3.9 1.1 4.9 3 1-1.9 2.9-3 4.9-3 2.9 0 5.3 2.3 5.3 5.5 0 4.4-3.6 8.1-10.2 12.7z" />
+    <path d="M13 21.2h4l1.8-3.4 2.6 6 1.9-2.6h3.7" strokeWidth="1.2" />
+  </Art>
+);
+
+export const IconSteps = (p: P) => (
+  <Art pigment="ochre" blot={0} {...p}>
+    <path d="M12.6 20.4c1.8-1.3 4.1.4 4.1 3.2 0 2.6-.9 5.2-2.5 6.3-1.4.9-3.1 0-3.3-1.9-.3-2.7.3-6 1.7-7.6z" />
+    <path d="M23.4 11.2c1.8-1.2 4 .4 4 3 0 2.5-.9 4.9-2.5 5.9-1.3.9-3 .1-3.1-1.8-.3-2.4.2-5.6 1.6-7.1z" />
+    <path d="M12.8 18.2h.1M15.6 18.8h.1M23.6 9.3h.1M26.2 9.7h.1" strokeWidth="2" />
+  </Art>
+);
+
+export const IconSleep = (p: P) => (
+  <Art pigment="indigo" blot={2} {...p}>
+    <path d="M26.8 23.6a9.2 9.2 0 1 1-10.1-12.8 7.4 7.4 0 0 0 10.1 12.8z" />
+    <path d="M27.5 10.2v3.6M25.7 12h3.6" strokeWidth="1.3" />
+  </Art>
+);
+
+export const IconWater = (p: P) => (
+  <Art pigment="teal" blot={0} {...p}>
+    <path d="M20 9.5c3.9 4.7 7 8.2 7 12a7 7 0 0 1-14 0c0-3.8 3.1-7.3 7-12z" />
+    <path d="M16.6 23.4a3.5 3.5 0 0 0 2.5 3.1" strokeWidth="1.2" />
+  </Art>
+);
+
+export const IconScale = (p: P) => (
+  <Art pigment="plum" blot={1} {...p}>
+    <path d="M10.5 12.5c6.3-.4 12.7-.4 19 0 .5 5.6.5 11.6 0 16.9-6.3.4-12.7.4-19 0-.4-5.4-.4-11.4 0-16.9z" />
+    <path d="M14.5 21a5.5 5.5 0 0 1 11 0" />
+    <path d="M20 21l2.3-2.8" />
+  </Art>
+);
+
+export const IconFlame = (p: P) => (
+  <Art pigment="terra" blot={2} {...p}>
+    <path d="M20.6 8.6c.5 3.2-1.7 4.8-3.2 6.5-1.5 1.7-2.6 3.4-2.6 5.9 0 3.5 2.4 6.1 5.4 6.1s5.6-2.5 5.6-5.9c0-2.1-.9-3.5-2-4.7.1 1.3-.4 2.3-1.2 2.8.5-3.4-.7-7.9-2-10.7z" />
+    <path d="M20.2 29c-1.5 0-2.6-1.1-2.6-2.7 0-1.6 1.1-2.5 2-3.5.6 1.3 3.2 2.1 3.2 4.3 0 1.2-.9 1.9-2.6 1.9z" strokeWidth="1.2" />
+  </Art>
+);
+
+export const IconBolt = (p: P) => (
+  <Art pigment="ochre" blot={1} {...p}>
+    <path d="M22.6 8.5l-9.2 12.2h5.9l-1.8 10.8 9.3-13h-6.1z" />
+  </Art>
+);
+
+export const IconTarget = (p: P) => (
+  <Art pigment="rose" blot={0} {...p}>
+    <circle cx="19" cy="21" r="9.5" />
+    <circle cx="19" cy="21" r="5.4" />
+    <circle cx="19" cy="21" r="1.6" />
+    <path d="M19.5 20.5l9-9M25.5 10.5h4v4" />
+  </Art>
+);
+
+export const IconTimer = (p: P) => (
+  <Art pigment="sky" blot={2} {...p}>
+    <circle cx="20" cy="22.5" r="9" />
+    <path d="M17 9.5h6M20 9.5v4M20 17.8v5l3.2 2M28 14l1.8-1.8" />
+  </Art>
+);
+
+export const IconTrophy = (p: P) => (
+  <Art pigment="ochre" blot={0} {...p}>
+    <path d="M13.5 10.5h13v5.5a6.5 6.5 0 0 1-13 0z" />
+    <path d="M13.5 12.8h-3c0 3 1.3 4.8 3.7 5.3M26.5 12.8h3c0 3-1.3 4.8-3.7 5.3M20 22.5v4.7M15.5 29.8h9" />
+  </Art>
+);
+
+export const IconBreakfast = (p: P) => (
+  <Art pigment="ochre" blot={1} {...p}>
+    <path d="M10.5 18h14v4.2a7 7 0 0 1-14 0zM24.5 19.4h2.2a2.7 2.7 0 0 1 0 5.4h-2.8" />
+    <path d="M9.5 31.2h16M14.2 14.4c-1-1.3 1-2.2 0-3.7M19 14.4c-1-1.3 1-2.2 0-3.7" strokeWidth="1.2" />
+  </Art>
+);
+
+export const IconLunch = (p: P) => (
+  <Art pigment="sage" blot={0} {...p}>
+    <path d="M13 9.5v6.2c0 1.5 1 2.5 2.4 2.5s2.4-1 2.4-2.5V9.5M15.4 9.5v20.6" />
+    <path d="M25.6 9.5c-2.5 1.7-3.5 4.9-3.3 9.2h3.3v11.4" />
+  </Art>
+);
+
+export const IconDinner = (p: P) => (
+  <Art pigment="indigo" blot={2} {...p}>
+    <circle cx="19.5" cy="22" r="9" />
+    <circle cx="19.5" cy="22" r="4.6" />
+    <path d="M29.5 8.5v3.4M27.8 10.2h3.4" strokeWidth="1.3" />
+  </Art>
+);
+
+export const IconSnack = (p: P) => (
+  <Art pigment="terra" blot={1} {...p}>
+    <path d="M20 14.6c-2-1.6-6.5-1.3-8 2.5-1.6 4 .3 10.8 4.2 12.6 1.4.6 2.5-.2 3.8-.2s2.4.8 3.8.2c3.9-1.8 5.8-8.6 4.2-12.6-1.5-3.8-6-4.1-8-2.5z" />
+    <path d="M20 14.6c0-2.6 1.4-4.5 3.8-5.5" />
+  </Art>
+);
+
+export const IconBarcode = (p: P) => (
+  <Art pigment="sky" blot={0} {...p}>
+    <path d="M10.5 12v16M14.5 12v16M22 12v16M29.5 12v16" />
+    <path d="M18 12v16M26 12v16" strokeWidth="2.6" />
+  </Art>
 );

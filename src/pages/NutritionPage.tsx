@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Columns, fmt } from '../components/charts';
-import { GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash } from '../components/icons';
+import { GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconBreakfast, IconDinner, IconLunch, IconSnack, IconWater } from '../components/icons';
 import { FoodSheet } from '../components/nutrition/FoodSheet';
 import { Card, NumberInput } from '../components/ui';
 import { addDays, formatLong, fromISO, today } from '../lib/dates';
@@ -59,6 +59,11 @@ function MacroBar({ label, value, goal }: { label: string; value: number; goal?:
       </span>
     </div>
   );
+}
+
+function MealIcon({ id }: { id: MealId }) {
+  const I = { breakfast: IconBreakfast, lunch: IconLunch, dinner: IconDinner, snack: IconSnack }[id];
+  return <I size={34} />;
 }
 
 export default function NutritionPage() {
@@ -167,6 +172,7 @@ export default function NutritionPage() {
           <Card
             key={m.id}
             id={`meal.${m.id}`}
+            icon={<MealIcon id={m.id} />}
             className="meal"
             title={m.label}
             summary={entries.length ? `${entries.length} alimenti` : undefined}
@@ -266,6 +272,7 @@ export default function NutritionPage() {
 
       <section className="card water">
         <div className="card-head">
+          <IconWater />
           <h2>Acqua</h2>
           <span className="muted small">
             {fmt(water, 2)} L{goals.waterL ? ` / ${fmt(goals.waterL, 1)} L` : ''}

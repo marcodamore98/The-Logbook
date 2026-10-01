@@ -6,24 +6,24 @@ import { dayIntake } from '../lib/nutrition/foods';
 import { workingSets, workoutVolume } from '../lib/training/analytics';
 import type { BodyGoals, BodyLog, DayEntry, ISODate } from '../lib/types';
 import { fmt } from './charts';
-import { GlyphClose, IconShift, IconWorkout } from './icons';
+import { GlyphClose, IconBolt, IconFlame, IconFood, IconHeart, IconScale, IconShift, IconSleep, IconSteps, IconTarget, IconWater, IconWorkout } from './icons';
 import { NumberInput, useCollapsible, Chevron } from './ui';
 
-type FieldDef = { key: keyof BodyLog; label: string; unit: string; step: number; goal?: keyof BodyGoals };
+type FieldDef = { key: keyof BodyLog; label: string; unit: string; step: number; goal?: keyof BodyGoals; Icon: (p: { size?: number }) => React.ReactElement };
 
 const FIELDS: FieldDef[] = [
-  { key: 'weightKg', label: 'Peso', unit: 'kg', step: 0.1, goal: 'weightKg' },
-  { key: 'bodyFatPct', label: 'Massa grassa', unit: '%', step: 0.1 },
-  { key: 'sleepH', label: 'Sonno', unit: 'h', step: 0.25, goal: 'sleepH' },
-  { key: 'restingHr', label: 'FC a riposo', unit: 'bpm', step: 1 },
-  { key: 'steps', label: 'Passi', unit: '', step: 500, goal: 'steps' },
-  { key: 'waterL', label: 'Acqua', unit: 'L', step: 0.25, goal: 'waterL' },
+  { key: 'weightKg', label: 'Peso', unit: 'kg', step: 0.1, goal: 'weightKg', Icon: IconScale },
+  { key: 'bodyFatPct', label: 'Massa grassa', unit: '%', step: 0.1, Icon: IconTarget },
+  { key: 'sleepH', label: 'Sonno', unit: 'h', step: 0.25, goal: 'sleepH', Icon: IconSleep },
+  { key: 'restingHr', label: 'FC a riposo', unit: 'bpm', step: 1, Icon: IconHeart },
+  { key: 'steps', label: 'Passi', unit: '', step: 500, goal: 'steps', Icon: IconSteps },
+  { key: 'waterL', label: 'Acqua', unit: 'L', step: 0.25, goal: 'waterL', Icon: IconWater },
 ];
 
 const NUTRITION: FieldDef[] = [
-  { key: 'kcalIn', label: 'Calorie assunte', unit: 'kcal', step: 50, goal: 'kcalIn' },
-  { key: 'kcalOut', label: 'Calorie attive', unit: 'kcal', step: 50 },
-  { key: 'proteinG', label: 'Proteine', unit: 'g', step: 5, goal: 'proteinG' },
+  { key: 'kcalIn', label: 'Calorie assunte', unit: 'kcal', step: 50, goal: 'kcalIn', Icon: IconFood },
+  { key: 'kcalOut', label: 'Calorie attive', unit: 'kcal', step: 50, Icon: IconFlame },
+  { key: 'proteinG', label: 'Proteine', unit: 'g', step: 5, goal: 'proteinG', Icon: IconBolt },
 ];
 
 function focusDate(pathname: string): ISODate {
@@ -133,6 +133,7 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
   const input = (f: FieldDef) => (
     <label key={f.key} className="side-field">
       <span className="side-label">
+        <f.Icon size={24} />
         {f.label}
         {f.goal && goals[f.goal] ? <span className="muted"> / {fmt(goals[f.goal]!, 1)}</span> : null}
       </span>

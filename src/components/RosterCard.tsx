@@ -55,11 +55,6 @@ export function RosterCard({ date, onJoin }: { date: ISODate; onJoin?: (names: s
       icon={<IconPeople />}
       title="Tabellone"
       summary={mine.length ? `Tu: ${mine.map(codeShort).join(' · ')} · ${active.length} attività` : `${active.length} attività`}
-      actions={
-        <span className="legend muted small">
-          <GlyphSheriff /> strutturato
-        </span>
-      }
     >
       {active.length === 0 ? (
         <p className="empty">Nessuna assegnazione per oggi.</p>

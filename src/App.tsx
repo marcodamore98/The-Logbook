@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
-import { GlyphClose, GlyphMenu, IconFood, IconMonth, IconMood, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
+import { GlyphClose, GlyphMenu, IconFood, IconHeart, IconMonth, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
@@ -62,6 +62,13 @@ function NavDrawer({ onClose }: { onClose: () => void }) {
             <span>{label}</span>
           </NavLink>
         ))}
+        <div className="nav-promo">
+          <strong>Il diario di oggi</strong>
+          <span>Turno, allenamento e pasti in una sola pagina.</span>
+          <Link className="btn" to={`/giorno/${today()}`} onClick={onClose}>
+            Apri oggi
+          </Link>
+        </div>
       </nav>
     </div>
   );
@@ -79,7 +86,7 @@ function Topbar({ onMenu, onBody }: { onMenu: () => void; onBody: () => void }) 
       {title && <span className="topbar-title">{title}</span>}
       <GoogleStatus />
       <button className="btn-ghost small body-toggle" onClick={onBody} aria-label="Apri corpo e riepilogo">
-        <IconMood size={20} /> Corpo
+        <IconHeart size={26} /> Corpo
       </button>
     </header>
   );

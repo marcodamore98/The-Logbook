@@ -6,7 +6,7 @@ import { exerciseDef, usesDistance, usesReps, usesTime, usesWeight } from '../..
 import { REST_OPTIONS, restLabel, routineFromWorkout, supersetLetters, workoutFromRoutine } from '../../lib/training/routines';
 import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, WorkoutSet } from '../../lib/types';
 import { WORKOUT_TYPES } from '../../lib/vocab';
-import { GlyphCheck, GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash } from '../icons';
+import { GlyphCheck, GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconTimer } from '../icons';
 import { Field, NumberInput, uid, VocabSelect } from '../ui';
 import { ExercisePicker } from './ExercisePicker';
 import { useRestTimer } from './RestTimer';
@@ -264,6 +264,7 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
   return (
     <div className="workout">
       <div className="workout-bar">
+        <IconTimer size={30} />
         {running ? (
           <>
             <span className="workout-clock" aria-label="Durata">

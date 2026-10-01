@@ -9,6 +9,7 @@ import {
   GlyphPrev,
   GlyphTrash,
   IconAppointment,
+  IconSleep,
   IconShift,
   IconTodo,
 } from '../components/icons';
@@ -19,7 +20,7 @@ import { Card, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../co
 import { blockOrder, DAY_BLOCKS, DAY_PRINT_SECTIONS, MODULE_BLOCK } from '../lib/dayLayout';
 import { CATEGORIES, labelOf } from '../lib/vocab';
 import { codeShort, idsForNames, rosterFor, ROSTER_SELF, shiftFromCodes } from '../lib/roster';
-import { addDays, formatLong, shiftMinutes, today } from '../lib/dates';
+import { addDays, formatLong, isoWeek, shiftMinutes, today } from '../lib/dates';
 import { eventLocal } from '../lib/google/calendar';
 import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
@@ -95,6 +96,15 @@ export default function DayPage() {
     </select>
   );
   const openTodos = day.todos.filter((t) => !t.done).length;
+  const shiftSummary =
+    [day.shift, day.guardia]
+      .filter((sh): sh is NonNullable<typeof sh> => !!sh)
+      .map((sh, i) => {
+        const name = settings.shiftTypes.find((t) => t.id === sh.shiftTypeId)?.name ?? 'Turno';
+        const who = i === 0 ? sh.colleagueIds.map((c) => settings.colleagues.find((x) => x.id === c)?.name).filter(Boolean).slice(0, 3).join(', ') : '';
+        return `${name} · ${sh.start}–${sh.end}${who ? ` · con ${who}` : ''}`;
+      })
+      .join(' + ') || (suggestion ? `Dal tabellone: ${myCodes.map(codeShort).join(' · ')}` : 'Nessun turno');
   const hours =
     Math.round(
       [day.shift, day.guardia].reduce((n, sh) => {
@@ -142,12 +152,11 @@ export default function DayPage() {
           <Card
             key="shift"
             id="day.shift"
-            collapsible={false}
             print="lavoro"
             icon={<IconShift />}
             title="Turno"
             style={shiftType ? ({ '--tint': shiftType.color } as React.CSSProperties) : undefined}
-            summary={day.shift ? `${shiftType?.name ?? 'Turno'} · ${day.shift.start}–${day.shift.end}${day.shift.colleagueIds.length ? ` · con ${day.shift.colleagueIds.map((c) => settings.colleagues.find((x) => x.id === c)?.name).filter(Boolean).slice(0, 3).join(', ')}${day.shift.colleagueIds.length > 3 ? '…' : ''}` : ''}` : suggestion ? `Dal tabellone: ${myCodes.map(codeShort).join(' · ')}` : 'Nessun turno'}
+            summary={shiftSummary}
             actions={
               <>
                 {hours > 0 && <span className="badge">{hours} h</span>}
@@ -195,7 +204,9 @@ export default function DayPage() {
               )}
             </div>
             <div className="guardia">
-              <h3 className="sub">Guardia medica</h3>
+              <h3 className="sub">
+                <IconSleep size={26} /> Guardia medica
+              </h3>
               <div className="grid">
                 <Field label="Tipo di guardia">
                   <ShiftTypeSelect types={guardiaTypes} value={day.guardia?.shiftTypeId} onChange={chooseGuardia} empty="Nessuna guardia medica" />
@@ -371,6 +382,7 @@ export default function DayPage() {
         </button>
         <div className="page-title">
           <h1>{formatLong(date)}</h1>
+          <span className="page-sub">Settimana {isoWeek(date)}</span>
           {date !== today() && (
             <Link to={`/giorno/${today()}`} className="link-quiet no-print">
               vai a oggi
