@@ -1,5 +1,6 @@
 // Minimal Google Calendar v3 client using Google Identity Services (token model).
-// The access token lives in memory/sessionStorage only; it is re-requested
+// The access token (valid ~1h) is kept in localStorage so reopening the app keeps
+// the connection; once expired it is re-requested
 // silently when it expires, as long as the user granted consent once.
 
 import { GOOGLE_CLIENT_ID } from '../config';
@@ -61,7 +62,7 @@ declare global {
 
 let token: { value: string; exp: number } | null = (() => {
   try {
-    const raw = sessionStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(TOKEN_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -88,17 +89,19 @@ export function hasToken(): boolean {
   return !!token && token.exp > Date.now() + 60_000;
 }
 
-/** interactive=false never shows UI beyond a quick popup that closes itself when consent exists. */
+/** interactive=false only reuses a valid token; interactive=true opens the Google popup (must follow a click). */
 export async function authorize(interactive: boolean): Promise<boolean> {
   if (!CLIENT_ID) return false;
   if (hasToken()) return true;
+  // A token popup opened outside a click is blocked by browsers: only ask on user action.
+  if (!interactive) return false;
   await loadGis();
   return new Promise((resolve) => {
     const done = (r: TokenResponse) => {
       if (r.access_token) {
         token = { value: r.access_token, exp: Date.now() + (r.expires_in ?? 3600) * 1000 };
         try {
-          sessionStorage.setItem(TOKEN_KEY, JSON.stringify(token));
+          localStorage.setItem(TOKEN_KEY, JSON.stringify(token));
         } catch {
           /* private mode */
         }
@@ -111,7 +114,8 @@ export async function authorize(interactive: boolean): Promise<boolean> {
       callback: done,
       error_callback: () => resolve(false),
     });
-    client.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+    // '' = show the consent screen only the first time, then just a quick account popup.
+    client.requestAccessToken({ prompt: '' });
   });
 }
 
@@ -119,7 +123,7 @@ export function disconnect(): void {
   if (token && window.google) window.google.accounts.oauth2.revoke(token.value);
   token = null;
   try {
-    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   } catch {
     /* ignore */
   }

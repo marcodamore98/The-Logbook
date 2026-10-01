@@ -15,4 +15,4 @@ export const FIREBASE_CONFIG = {
 };
 
 // Google Cloud Console → API e servizi → Credenziali → ID client OAuth 2.0 (tipo Web).
-export const GOOGLE_CLIENT_ID = '';
+export const GOOGLE_CLIENT_ID = '1026633603011-9raps4rv71vhnudpg7f4e8033466nqjd.apps.googleusercontent.com';
