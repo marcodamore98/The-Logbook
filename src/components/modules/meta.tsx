@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { Module, ModuleKind } from '../../lib/types';
-import { labelOf, CLINICAL_ACTIVITIES, OUTING_TYPES, PROCEDURES, STUDY_TYPES, WORKOUT_TYPES } from '../../lib/vocab';
+import { APPROACHES, labelOf, SURGICAL_ROLES, CLINICAL_ACTIVITIES, OUTING_TYPES, PROCEDURES, STUDY_TYPES, WORKOUT_TYPES } from '../../lib/vocab';
 import { IconClinical, IconNote, IconOuting, IconPhotos, IconStudy, IconSurgery, IconWorkout } from '../icons';
 import { uid } from '../ui';
 
@@ -78,15 +78,15 @@ export const metaOf = (k: ModuleKind) => MODULES.find((m) => m.kind === k)!;
 export function summarize(m: Module): string {
   switch (m.kind) {
     case 'surgery':
-      return labelOf(PROCEDURES, m.procedureId) || 'Intervento';
+      return [labelOf(PROCEDURES, m.procedureId) || 'Intervento', labelOf(SURGICAL_ROLES, m.role), labelOf(APPROACHES, m.approach)].filter(Boolean).join(' · ');
     case 'clinical':
       return `${m.count}× ${labelOf(CLINICAL_ACTIVITIES, m.activityId)}`;
     case 'study':
-      return m.title || labelOf(STUDY_TYPES, m.type);
+      return `${m.title || labelOf(STUDY_TYPES, m.type)} · ${m.durationMin}′`;
     case 'workout':
       return `${m.title || labelOf(WORKOUT_TYPES, m.type)} · ${m.durationMin}′`;
     case 'outing':
-      return m.title || labelOf(OUTING_TYPES, m.type);
+      return [m.title || labelOf(OUTING_TYPES, m.type), m.place].filter(Boolean).join(' · ');
     case 'photos':
       return `${m.items.length} foto`;
     case 'note':

@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BarList, Columns, fmt } from '../components/charts';
 import { GlyphPlus, GlyphTrash, IconStats, IconWorkout } from '../components/icons';
 import { RoutineEditor } from '../components/training/RoutineEditor';
 import { Empty, uid } from '../components/ui';
 import { addDays, fromISO, isoWeek, startOfWeek, today } from '../lib/dates';
 import { useStore } from '../lib/store/StoreContext';
-import { e1rm, isWorkingSet, setsPerMuscle, setVolume } from '../lib/training/analytics';
+import { e1rm, isWorkingSet, setsPerMuscle, setVolume, workingSets, workoutVolume } from '../lib/training/analytics';
 import { allExercises, exerciseDef, MUSCLES } from '../lib/training/exercises';
 import { parseHevyCsv } from '../lib/hevy';
 import { routineFromWorkout, workoutFromRoutine } from '../lib/training/routines';
 import type { Routine, WorkoutModule } from '../lib/types';
 import { labelOf, WORKOUT_TYPES } from '../lib/vocab';
 
-type Tab = 'routines' | 'exercises' | 'progress';
+type Tab = 'routines' | 'history' | 'exercises' | 'progress';
 
 function Routines() {
   const store = useStore();
@@ -35,7 +35,7 @@ function Routines() {
     const date = today();
     const w = workoutFromRoutine(r, uid(), date, store.history);
     await store.updateDay(date, (d) => ({ ...d, modules: [...d.modules, { ...w, startedAt: Date.now() }] }));
-    nav(`/giorno/${date}?apri=${w.id}`);
+    nav(`/palestra/allenamento/${date}/${w.id}`);
   }
 
   const current = routines.find((r) => r.id === editing);
@@ -334,8 +334,38 @@ function Progress() {
   );
 }
 
+function WorkoutHistory() {
+  const store = useStore();
+  const list = store.allDays
+    .flatMap((d) => d.modules.filter((m): m is WorkoutModule => m.kind === 'workout').map((w) => ({ date: d.date, w })))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (!list.length) return <Empty>Nessun allenamento registrato.</Empty>;
+  return (
+    <ul className="workout-history">
+      {list.slice(0, 60).map(({ date, w }) => (
+        <li key={w.id}>
+          <Link className="card workout-row" to={`/palestra/allenamento/${date}/${w.id}`}>
+            <span className="wr-date">{fromISO(date).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+            <span className="wr-title">
+              <strong>{w.title || labelOf(WORKOUT_TYPES, w.type)}</strong>
+              <span className="muted small">
+                {w.exercises.map((e) => exerciseDef(e.exerciseId, store.settings.exercises).name).slice(0, 4).join(', ')}
+                {w.exercises.length > 4 ? '…' : ''}
+              </span>
+            </span>
+            <span className="wr-stats">
+              {fmt(workoutVolume(w))} kg · {workingSets(w)} serie{w.durationMin ? ` · ${w.durationMin}′` : ''}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function GymPage() {
   const store = useStore();
+  const nav = useNavigate();
   const [tab, setTab] = useState<Tab>('routines');
   useEffect(() => {
     store.ensureAllLoaded();
@@ -343,6 +373,7 @@ export default function GymPage() {
   const tabs = useMemo(
     () => [
       ['routines', 'Schede'],
+      ['history', 'Storico'],
       ['exercises', 'Esercizi'],
       ['progress', 'Progressi'],
     ] as const,
@@ -355,6 +386,22 @@ export default function GymPage() {
           <h1>Palestra</h1>
         </div>
       </header>
+      <div className="row">
+        <button
+          className="btn"
+          onClick={async () => {
+            const date = today();
+            const id = uid();
+            await store.updateDay(date, (d) => ({
+              ...d,
+              modules: [...d.modules, { kind: 'workout', id, type: 'strength', durationMin: 0, exercises: [], startedAt: Date.now() }],
+            }));
+            nav(`/palestra/allenamento/${date}/${id}`);
+          }}
+        >
+          <GlyphPlus /> Allenamento libero oggi
+        </button>
+      </div>
       <div className="segmented" role="tablist">
         {tabs.map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
@@ -363,6 +410,7 @@ export default function GymPage() {
         ))}
       </div>
       {tab === 'routines' && <Routines />}
+      {tab === 'history' && <WorkoutHistory />}
       {tab === 'exercises' && <Exercises />}
       {tab === 'progress' && <Progress />}
     </div>

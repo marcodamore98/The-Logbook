@@ -46,6 +46,27 @@ La pagina **Palestra** funziona come Hevy, senza la parte social.
 - **Esercizi:** libreria di circa 100 esercizi con muscoli e attrezzi, più quelli che crei tu. Per ognuno vedi lo storico, i record e il 1RM stimato nel tempo.
 - **Progressi:** allenamenti per settimana, serie per gruppo muscolare (principale 1, secondari ½), split Push/Pull/Legs.
 
+## Alimentazione
+
+È un diario alimentare in stile Lifesum (menu → *Alimentazione*):
+- **Pasti:** colazione, pranzo, cena e spuntini. Puoi cambiare la quantità, spostare un alimento in un altro pasto o copiare un pasto da ieri.
+- **Ricerca:** nel database di circa 130 alimenti italiani di base, negli alimenti recenti e nei preferiti (★).
+- **Prodotti confezionati:** ricerca online e **codice a barre** (fotocamera su Chrome Android, oppure inserimento manuale del codice EAN) tramite [Open Food Facts](https://world.openfoodfacts.org). I prodotti usati vengono salvati tra i tuoi alimenti.
+- **Alimenti personali** e **aggiunta rapida** di sole calorie e macronutrienti.
+- **Riepilogo:** anello delle calorie rimanenti (obiettivo + calorie attive), barre di proteine, carboidrati e grassi, acqua a bicchieri, grafico degli ultimi 7 giorni.
+
+Nella pagina del giorno compare solo il riepilogo, centrato su calorie e proteine.
+
+## Pagina del giorno
+
+- Le sezioni sono in quest'ordine: lavoro, impegni, allenamento, alimentazione, passi e corpo, vita privata, note.
+- Con il pulsante ⇅ le riordini come vuoi. Le nuove schede si inseriscono da sole nella sezione giusta.
+- Da chiusa, ogni scheda mostra un riassunto; aperta mostra i dettagli.
+- L'allenamento si registra nella sua pagina (*Palestra*); nel giorno resta il riepilogo con volume, serie e record.
+- Il pulsante 🖨 stampa la pagina o la salva in **PDF** scegliendo le sezioni (es. solo lavoro). Lo stesso vale per le **Statistiche** (es. solo palestra o solo lavoro).
+
+Il menu si apre toccando il nome dell'app in alto a sinistra.
+
 ## Barra laterale “Corpo”
 
 Su schermi larghi è sempre visibile; su telefono si apre con il pulsante *Corpo*. Mostra:

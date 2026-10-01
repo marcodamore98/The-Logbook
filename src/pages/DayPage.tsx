@@ -9,12 +9,16 @@ import {
   GlyphPrev,
   GlyphTrash,
   IconAppointment,
+  IconFood,
   IconMood,
   IconShift,
   IconTodo,
 } from '../components/icons';
 import { RosterCard } from '../components/RosterCard';
+import { BodyBlock, NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
+import { PrintButton } from '../components/PrintDialog';
 import { Card, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
+import { blockOrder, DAY_BLOCKS, DAY_PRINT_SECTIONS, MODULE_BLOCK } from '../lib/dayLayout';
 import { CATEGORIES, labelOf } from '../lib/vocab';
 import { codeShort, idsForNames, rosterFor, ROSTER_SELF, shiftFromCodes } from '../lib/roster';
 import { addDays, formatLong, shiftMinutes, today } from '../lib/dates';
@@ -34,6 +38,7 @@ export default function DayPage() {
   const dayRef = useRef(day);
   dayRef.current = day;
   const [adding, setAdding] = useState(false);
+  const [ordering, setOrdering] = useState(false);
   const [search] = useSearchParams();
   const [openId, setOpenId] = useState<string | null>(search.get('apri'));
 
@@ -65,8 +70,10 @@ export default function DayPage() {
   const addModule = (k: ModuleKind) => {
     const m = metaOf(k).create();
     update((d) => ({ ...d, modules: [...d.modules, m] }));
-    setOpenId(m.id);
     setAdding(false);
+    // Workouts are logged on their own page; the day keeps a summary.
+    if (k === 'workout') nav(`/palestra/allenamento/${date}/${m.id}`);
+    else setOpenId(m.id);
   };
   const setModule = (m: Module) => update((d) => ({ ...d, modules: d.modules.map((x) => (x.id === m.id ? m : x)) }));
   const removeModule = (m: Module) => {
@@ -86,222 +93,282 @@ export default function DayPage() {
   );
   const openTodos = day.todos.filter((t) => !t.done).length;
   const hours = day.shift && shiftType?.countsAsWork ? Math.round(shiftMinutes(day.shift.start, day.shift.end) / 6) / 10 : 0;
+  const order = blockOrder(settings.dayLayout);
+
+  const moduleCards = (block: string) =>
+    day.modules
+      .filter((m) => m.kind !== 'workout' && MODULE_BLOCK[m.kind] === block)
+      .map((m) => {
+        const meta = metaOf(m.kind);
+        const open = openId === m.id;
+        return (
+          <Card
+            key={m.id}
+            id={`module.${m.id}`}
+            print={DAY_BLOCKS.find((b) => b.id === block)!.print}
+            className={`module module-${m.kind}`}
+            icon={<meta.Icon />}
+            title={meta.label}
+            summary={summarize(m)}
+            open={open}
+            onToggle={() => setOpenId(open ? null : m.id)}
+            actions={
+              <>
+                {m.kind === 'note' && !open && m.category && <span className="badge">{labelOf(CATEGORIES, m.category)}</span>}
+                <button className="icon-btn small no-print" aria-label="Elimina scheda" onClick={() => window.confirm(`Eliminare la scheda “${meta.label}”?`) && removeModule(m)}>
+                  <GlyphTrash />
+                </button>
+              </>
+            }
+          >
+            <ModuleEditor value={m} onChange={setModule} date={date} />
+          </Card>
+        );
+      });
+
+  const renderBlock = (id: string): React.ReactNode => {
+    switch (id) {
+      case 'shift':
+        return (
+          <Card
+            key="shift"
+            id="day.shift"
+            defaultOpen={false}
+            print="lavoro"
+            icon={<IconShift />}
+            title="Turno"
+            style={shiftType ? ({ '--tint': shiftType.color } as React.CSSProperties) : undefined}
+            summary={day.shift ? `${shiftType?.name ?? 'Turno'} · ${day.shift.start}–${day.shift.end}${day.shift.colleagueIds.length ? ` · con ${day.shift.colleagueIds.map((c) => settings.colleagues.find((x) => x.id === c)?.name).filter(Boolean).slice(0, 3).join(', ')}${day.shift.colleagueIds.length > 3 ? '…' : ''}` : ''}` : suggestion ? `Dal tabellone: ${myCodes.map(codeShort).join(' · ')}` : 'Nessun turno'}
+            actions={
+              <>
+                {hours > 0 && <span className="badge">{hours} h</span>}
+                {day.shift?.gcalEventId && (
+                  <span className="badge badge-sync" title="Sincronizzato con Google Calendar">
+                    G
+                  </span>
+                )}
+              </>
+            }
+          >
+            {suggestion && (
+              <div className="suggest no-print">
+                <span>
+                  Dal tabellone: <strong>{myCodes.map(codeShort).join(' · ')}</strong> ({suggestion.start}–{suggestion.end})
+                </span>
+                <button className="btn small" onClick={() => setShift(suggestion)}>
+                  Usa
+                </button>
+              </div>
+            )}
+            <div className="grid">
+              <Field label="Tipo di turno">
+                <ShiftTypeSelect types={settings.shiftTypes} value={day.shift?.shiftTypeId} onChange={chooseShiftType} />
+              </Field>
+              {day.shift && (
+                <>
+                  <Field label="Dalle">
+                    <input type="time" value={day.shift.start} onChange={(e) => setShift({ ...day.shift!, start: e.target.value })} />
+                  </Field>
+                  <Field label="Alle">
+                    <input type="time" value={day.shift.end} onChange={(e) => setShift({ ...day.shift!, end: e.target.value })} />
+                  </Field>
+                  <Field label="Reparto / sede">
+                    <input value={day.shift.place ?? ''} onChange={(e) => setShift({ ...day.shift!, place: e.target.value })} />
+                  </Field>
+                  <div className="field field-wide">
+                    <span className="field-label">In turno con</span>
+                    <ColleaguePicker colleagues={settings.colleagues} selected={day.shift.colleagueIds} onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })} />
+                  </div>
+                  <Field label="Note sul turno" wide>
+                    <input value={day.shift.note ?? ''} onChange={(e) => setShift({ ...day.shift!, note: e.target.value })} />
+                  </Field>
+                </>
+              )}
+            </div>
+          </Card>
+        );
+      case 'roster':
+        return (
+          <RosterCard
+            key="roster"
+            date={date}
+            onJoin={(names) => {
+              const base = dayRef.current.shift ?? (myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null);
+              if (!base) return;
+              const ids = idsForNames(names, settings.colleagues);
+              setShift({ ...base, colleagueIds: [...new Set([...base.colleagueIds, ...ids])] });
+            }}
+          />
+        );
+      case 'agenda':
+        return (
+          <Card
+            key="agenda"
+            id="day.agenda"
+            defaultOpen={false}
+            print="agenda"
+            icon={<IconAppointment />}
+            title="Impegni"
+            summary={agenda.length ? agenda.slice(0, 3).map((x) => `${x.time} ${'a' in x && x.a ? x.a.title || 'Impegno' : 'e' in x && x.e ? x.e.summary ?? '' : ''}`).join(' · ') + (agenda.length > 3 ? ' …' : '') : 'Nessuno'}
+            actions={
+              <button
+                className="icon-btn no-print"
+                aria-label="Aggiungi impegno"
+                onClick={() => update((d) => ({ ...d, appointments: [...d.appointments, { id: uid(), title: '', start: '09:00', end: '10:00' }] }))}
+              >
+                <GlyphPlus />
+              </button>
+            }
+          >
+            {agenda.length === 0 && <Empty>Nessun impegno.</Empty>}
+            <ul className="agenda">
+              {agenda.map((item) =>
+                'a' in item && item.a ? (
+                  <li key={item.key} className="agenda-row">
+                    <input type="time" value={item.a.start} onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, start: e.target.value } : x)) }))} />
+                    <input type="time" value={item.a.end} onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, end: e.target.value } : x)) }))} />
+                    <input
+                      className="grow"
+                      value={item.a.title}
+                      placeholder="Impegno"
+                      onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, title: e.target.value } : x)) }))}
+                    />
+                    {catSelect(item.a.category, (category) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, category } : x)) })))}
+                    {item.a.gcalEventId && (
+                      <span className="badge badge-sync" title="Su Google Calendar">
+                        G
+                      </span>
+                    )}
+                    <button className="icon-btn small no-print" aria-label="Elimina impegno" onClick={() => update((d) => ({ ...d, appointments: d.appointments.filter((x) => x.id !== item.a!.id) }))}>
+                      <GlyphTrash />
+                    </button>
+                  </li>
+                ) : (
+                  <li key={item.key} className="agenda-row gcal">
+                    <span className="time">{'e' in item && item.e && (eventLocal(item.e.start).time ?? 'tutto il giorno')}</span>
+                    <span className="grow">{'e' in item && item.e?.summary}</span>
+                    <span className="badge badge-sync" title="Evento di Google Calendar">
+                      G
+                    </span>
+                  </li>
+                ),
+              )}
+            </ul>
+          </Card>
+        );
+      case 'todos':
+        return (
+          <Card
+            key="todos"
+            id="day.todos"
+            defaultOpen={false}
+            print="agenda"
+            icon={<IconTodo />}
+            title="Da ricordare"
+            summary={day.todos.length ? `${openTodos} da fare su ${day.todos.length}${openTodos ? ` · ${day.todos.filter((t) => !t.done).slice(0, 2).map((t) => t.text).join(', ')}` : ''}` : 'Niente'}
+            actions={
+              <button className="icon-btn no-print" aria-label="Aggiungi promemoria" onClick={() => update((d) => ({ ...d, todos: [...d.todos, { id: uid(), text: '', done: false }] }))}>
+                <GlyphPlus />
+              </button>
+            }
+          >
+            {day.todos.length === 0 && <Empty>Niente da ricordare.</Empty>}
+            <ul className="todos">
+              {day.todos.map((t) => (
+                <li key={t.id} className={`todo${t.done ? ' done' : ''}`}>
+                  <input type="checkbox" checked={t.done} aria-label="Fatto" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, done: e.target.checked } : x)) }))} />
+                  <input className="grow" value={t.text} placeholder="Cosa ricordare…" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, text: e.target.value } : x)) }))} />
+                  {catSelect(t.category, (category) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, category } : x)) })))}
+                  <input
+                    type="time"
+                    value={t.time ?? ''}
+                    title="Con orario viene aggiunto a Google Calendar"
+                    onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: e.target.value || undefined } : x)) }))}
+                  />
+                  <button className="icon-btn small no-print" aria-label="Elimina" onClick={() => update((d) => ({ ...d, todos: d.todos.filter((x) => x.id !== t.id) }))}>
+                    <GlyphTrash />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        );
+      case 'training':
+        return <TrainingBlock key="training" day={day} />;
+      case 'nutrition':
+        return <NutritionBlock key="nutrition" day={day} />;
+      case 'body':
+        return <BodyBlock key="body" day={day} />;
+      case 'work':
+      case 'private':
+      case 'notes': {
+        const cards = moduleCards(id);
+        return cards.length ? <div key={id} className="modules">{cards}</div> : null;
+      }
+      case 'mood':
+        return (
+          <Card key="mood" id="day.mood" print="diario" defaultOpen={false} className="mood-card" icon={<IconMood />} title="Com’è andata" summary={day.mood ? MOODS[day.mood - 1] : undefined}>
+            <div className="moods" role="radiogroup" aria-label="Umore della giornata">
+              {MOODS.map((e, i) => (
+                <button key={i} role="radio" aria-checked={day.mood === i + 1} className={`mood${day.mood === i + 1 ? ' on' : ''}`} onClick={() => update((d) => ({ ...d, mood: d.mood === i + 1 ? undefined : i + 1 }))}>
+                  {e}
+                </button>
+              ))}
+            </div>
+          </Card>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Impegni and Da ricordare side by side when adjacent.
+  const rendered: React.ReactNode[] = [];
+  for (let i = 0; i < order.length; i++) {
+    const id = order[i];
+    const next = order[i + 1];
+    if ((id === 'agenda' && next === 'todos') || (id === 'todos' && next === 'agenda')) {
+      rendered.push(
+        <div key="pair" className="two-col">
+          {renderBlock(id)}
+          {renderBlock(next)}
+        </div>,
+      );
+      i++;
+    } else rendered.push(renderBlock(id));
+  }
+
+  const saveOrder = (o: string[]) => store.saveSettings({ ...settings, dayLayout: o });
 
   return (
     <div className="page day-page">
       <header className="page-head">
-        <button className="icon-btn" aria-label="Giorno precedente" onClick={() => nav(`/giorno/${addDays(date, -1)}`)}>
+        <button className="icon-btn no-print" aria-label="Giorno precedente" onClick={() => nav(`/giorno/${addDays(date, -1)}`)}>
           <GlyphPrev />
         </button>
         <div className="page-title">
           <h1>{formatLong(date)}</h1>
           {date !== today() && (
-            <Link to={`/giorno/${today()}`} className="link-quiet">
+            <Link to={`/giorno/${today()}`} className="link-quiet no-print">
               vai a oggi
             </Link>
           )}
         </div>
-        <button className="icon-btn" aria-label="Giorno successivo" onClick={() => nav(`/giorno/${addDays(date, 1)}`)}>
+        <button className="icon-btn no-print" aria-label="Ordina le sezioni" title="Ordina le sezioni" onClick={() => setOrdering(true)}>
+          <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 4v16M4.5 7.5L8 4l3.5 3.5M16 20V4M12.5 16.5L16 20l3.5-3.5" />
+          </svg>
+        </button>
+        <PrintButton sections={DAY_PRINT_SECTIONS} title={`Logbook ${date}`} />
+        <button className="icon-btn no-print" aria-label="Giorno successivo" onClick={() => nav(`/giorno/${addDays(date, 1)}`)}>
           <GlyphNext />
         </button>
       </header>
 
-      <Card
-        id="day.shift"
-        icon={<IconShift />}
-        title="Turno"
-        style={shiftType ? ({ '--tint': shiftType.color } as React.CSSProperties) : undefined}
-        summary={day.shift ? `${shiftType?.name ?? 'Turno'} · ${day.shift.start}–${day.shift.end}${day.shift.colleagueIds.length ? ` · ${day.shift.colleagueIds.length} colleghi` : ''}` : 'Nessun turno'}
-        actions={
-          <>
-            {hours > 0 && <span className="badge">{hours} h</span>}
-            {day.shift?.gcalEventId && (
-              <span className="badge badge-sync" title="Sincronizzato con Google Calendar">
-                G
-              </span>
-            )}
-          </>
-        }
-      >
-        {suggestion && (
-          <div className="suggest">
-            <span>
-              Dal tabellone: <strong>{myCodes.map(codeShort).join(' · ')}</strong> ({suggestion.start}–{suggestion.end})
-            </span>
-            <button className="btn small" onClick={() => setShift(suggestion)}>
-              Usa
-            </button>
-          </div>
-        )}
-        <div className="grid">
-          <Field label="Tipo di turno">
-            <ShiftTypeSelect types={settings.shiftTypes} value={day.shift?.shiftTypeId} onChange={chooseShiftType} />
-          </Field>
-          {day.shift && (
-            <>
-              <Field label="Dalle">
-                <input type="time" value={day.shift.start} onChange={(e) => setShift({ ...day.shift!, start: e.target.value })} />
-              </Field>
-              <Field label="Alle">
-                <input type="time" value={day.shift.end} onChange={(e) => setShift({ ...day.shift!, end: e.target.value })} />
-              </Field>
-              <Field label="Reparto / sede">
-                <input value={day.shift.place ?? ''} onChange={(e) => setShift({ ...day.shift!, place: e.target.value })} />
-              </Field>
-              <div className="field field-wide">
-                <span className="field-label">In turno con</span>
-                <ColleaguePicker colleagues={settings.colleagues} selected={day.shift.colleagueIds} onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })} />
-              </div>
-              <Field label="Note sul turno" wide>
-                <input value={day.shift.note ?? ''} onChange={(e) => setShift({ ...day.shift!, note: e.target.value })} />
-              </Field>
-            </>
-          )}
-        </div>
-      </Card>
-
-      <RosterCard
-        date={date}
-        onJoin={(names) => {
-          const base = dayRef.current.shift ?? (myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null);
-          if (!base) return;
-          const ids = idsForNames(names, settings.colleagues);
-          setShift({ ...base, colleagueIds: [...new Set([...base.colleagueIds, ...ids])] });
-        }}
-      />
-
-      <div className="two-col">
-        <Card
-          id="day.agenda"
-          icon={<IconAppointment />}
-          title="Impegni"
-          summary={agenda.length ? `${agenda.length} impegni` : 'Nessuno'}
-          actions={
-            <button
-              className="icon-btn"
-              aria-label="Aggiungi impegno"
-              onClick={() => update((d) => ({ ...d, appointments: [...d.appointments, { id: uid(), title: '', start: '09:00', end: '10:00' }] }))}
-            >
-              <GlyphPlus />
-            </button>
-          }
-        >
-          {agenda.length === 0 && <Empty>Nessun impegno.</Empty>}
-          <ul className="agenda">
-            {agenda.map((item) =>
-              'a' in item && item.a ? (
-                <li key={item.key} className="agenda-row">
-                  <input type="time" value={item.a.start} onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, start: e.target.value } : x)) }))} />
-                  <input type="time" value={item.a.end} onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, end: e.target.value } : x)) }))} />
-                  <input
-                    className="grow"
-                    value={item.a.title}
-                    placeholder="Impegno"
-                    onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, title: e.target.value } : x)) }))}
-                  />
-                  {catSelect(item.a.category, (category) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, category } : x)) })))}
-                  {item.a.gcalEventId && (
-                    <span className="badge badge-sync" title="Su Google Calendar">
-                      G
-                    </span>
-                  )}
-                  <button className="icon-btn small" aria-label="Elimina impegno" onClick={() => update((d) => ({ ...d, appointments: d.appointments.filter((x) => x.id !== item.a!.id) }))}>
-                    <GlyphTrash />
-                  </button>
-                </li>
-              ) : (
-                <li key={item.key} className="agenda-row gcal">
-                  <span className="time">{'e' in item && item.e && (eventLocal(item.e.start).time ?? 'tutto il giorno')}</span>
-                  <span className="grow">{'e' in item && item.e?.summary}</span>
-                  <span className="badge badge-sync" title="Evento di Google Calendar">
-                    G
-                  </span>
-                </li>
-              ),
-            )}
-          </ul>
-        </Card>
-
-        <Card
-          id="day.todos"
-          icon={<IconTodo />}
-          title="Da ricordare"
-          summary={day.todos.length ? `${openTodos} da fare su ${day.todos.length}` : 'Niente'}
-          actions={
-            <button className="icon-btn" aria-label="Aggiungi promemoria" onClick={() => update((d) => ({ ...d, todos: [...d.todos, { id: uid(), text: '', done: false }] }))}>
-              <GlyphPlus />
-            </button>
-          }
-        >
-          {day.todos.length === 0 && <Empty>Niente da ricordare.</Empty>}
-          <ul className="todos">
-            {day.todos.map((t) => (
-              <li key={t.id} className={`todo${t.done ? ' done' : ''}`}>
-                <input type="checkbox" checked={t.done} aria-label="Fatto" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, done: e.target.checked } : x)) }))} />
-                <input className="grow" value={t.text} placeholder="Cosa ricordare…" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, text: e.target.value } : x)) }))} />
-                {catSelect(t.category, (category) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, category } : x)) })))}
-                <input
-                  type="time"
-                  value={t.time ?? ''}
-                  title="Con orario viene aggiunto a Google Calendar"
-                  onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: e.target.value || undefined } : x)) }))}
-                />
-                <button className="icon-btn small" aria-label="Elimina" onClick={() => update((d) => ({ ...d, todos: d.todos.filter((x) => x.id !== t.id) }))}>
-                  <GlyphTrash />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </div>
-
-      <div className="modules">
-        {day.modules.map((m) => {
-          const meta = metaOf(m.kind);
-          const open = openId === m.id;
-          return (
-            <Card
-              key={m.id}
-              id={`module.${m.id}`}
-              className={`module module-${m.kind}`}
-              icon={<meta.Icon />}
-              title={meta.label}
-              summary={summarize(m)}
-              open={open}
-              onToggle={() => setOpenId(open ? null : m.id)}
-              actions={
-                <>
-                  {m.kind === 'note' && !open && m.category && <span className="badge">{labelOf(CATEGORIES, m.category)}</span>}
-                  <button className="icon-btn small" aria-label="Elimina scheda" onClick={() => window.confirm(`Eliminare la scheda “${meta.label}”?`) && removeModule(m)}>
-                    <GlyphTrash />
-                  </button>
-                </>
-              }
-            >
-              <ModuleEditor value={m} onChange={setModule} date={date} />
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card
-        id="day.mood"
-        className="mood-card"
-        icon={<IconMood />}
-        title="Com’è andata"
-        summary={day.mood ? MOODS[day.mood - 1] : undefined}
-      >
-        <div className="moods" role="radiogroup" aria-label="Umore della giornata">
-          {MOODS.map((e, i) => (
-            <button key={i} role="radio" aria-checked={day.mood === i + 1} className={`mood${day.mood === i + 1 ? ' on' : ''}`} onClick={() => update((d) => ({ ...d, mood: d.mood === i + 1 ? undefined : i + 1 }))}>
-              {e}
-            </button>
-          ))}
-        </div>
-      </Card>
+      {rendered}
 
       {adding ? (
-        <div className="palette" role="dialog" aria-label="Aggiungi scheda">
+        <div className="palette no-print" role="dialog" aria-label="Aggiungi scheda">
           <div className="palette-head">
             <h2>Aggiungi una scheda</h2>
             <button className="icon-btn" aria-label="Chiudi" onClick={() => setAdding(false)}>
@@ -319,14 +386,56 @@ export default function DayPage() {
                     <span className="palette-hint">{m.hint}</span>
                   </button>
                 ))}
+                {area === 'personale' && (
+                  <Link className="palette-item" to={`/alimentazione/${date}`}>
+                    <IconFood size={48} />
+                    <span className="palette-label">Alimentazione</span>
+                    <span className="palette-hint">Pasti, calorie e proteine</span>
+                  </Link>
+                )}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <button className="btn-add" onClick={() => setAdding(true)}>
+        <button className="btn-add no-print" onClick={() => setAdding(true)}>
           <GlyphPlus /> Aggiungi scheda
         </button>
+      )}
+
+      {ordering && (
+        <div className="sheet-backdrop" onClick={() => setOrdering(false)}>
+          <div className="sheet" role="dialog" aria-label="Ordine delle sezioni" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <h2>Ordine delle sezioni</h2>
+              <button className="icon-btn" aria-label="Chiudi" onClick={() => setOrdering(false)}>
+                <GlyphClose />
+              </button>
+            </div>
+            <p className="muted small">Le nuove schede si inseriscono da sole nella loro sezione (es. gli interventi con il lavoro, le note in fondo).</p>
+            <ol className="order-list">
+              {order.map((id, i) => (
+                <li key={id}>
+                  <span>{DAY_BLOCKS.find((b) => b.id === id)?.label}</span>
+                  <button className="icon-btn small" aria-label="Sposta su" disabled={i === 0} onClick={() => saveOrder(order.map((x, k) => (k === i - 1 ? id : k === i ? order[i - 1] : x)))}>
+                    <GlyphPrev />
+                  </button>
+                  <button className="icon-btn small" aria-label="Sposta giù" disabled={i === order.length - 1} onClick={() => saveOrder(order.map((x, k) => (k === i + 1 ? id : k === i ? order[i + 1] : x)))}>
+                    <GlyphNext />
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <div className="sheet-foot">
+              <button className="btn-ghost small" onClick={() => saveOrder(DAY_BLOCKS.map((b) => b.id))}>
+                Ripristina ordine
+              </button>
+              <button className="btn" onClick={() => setOrdering(false)}>
+                Fatto
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

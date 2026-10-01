@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { HashRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
-import { IconDay, IconMonth, IconMood, IconSettings, IconStats, IconSync, IconWeek, IconWorkout } from './components/icons';
+import { GlyphClose, GlyphMenu, IconFood, IconMonth, IconMood, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
@@ -12,17 +12,78 @@ import { today } from './lib/dates';
 import { MonthPage, WeekPage } from './pages/CalendarPages';
 import DayPage from './pages/DayPage';
 import GymPage from './pages/GymPage';
+import NutritionPage from './pages/NutritionPage';
+import WorkoutPage from './pages/WorkoutPage';
 import SettingsPage from './pages/SettingsPage';
 import StatsPage from './pages/StatsPage';
 
 const NAV = [
   { to: '/mese', label: 'Mese', Icon: IconMonth },
   { to: '/settimana', label: 'Settimana', Icon: IconWeek },
-  { to: '/giorno', label: 'Oggi', Icon: IconDay },
+  { to: '/giorno', label: 'Oggi', Icon: IconToday },
   { to: '/palestra', label: 'Palestra', Icon: IconWorkout },
+  { to: '/alimentazione', label: 'Alimentazione', Icon: IconFood },
   { to: '/statistiche', label: 'Statistiche', Icon: IconStats },
   { to: '/impostazioni', label: 'Impostazioni', Icon: IconSettings },
 ];
+
+function useCurrentTitle() {
+  const loc = useLocation();
+  return NAV.find((n) => loc.pathname.startsWith(n.to))?.label ?? '';
+}
+
+function NavDrawer({ onClose }: { onClose: () => void }) {
+  const loc = useLocation();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="drawer-backdrop left" onClick={onClose}>
+      <nav className="drawer nav-drawer" aria-label="Menu" onClick={(e) => e.stopPropagation()}>
+        <div className="nav-drawer-head">
+          <span className="brand">
+            <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={30} height={30} />
+            The Logbook
+          </span>
+          <button className="icon-btn small" aria-label="Chiudi menu" onClick={onClose}>
+            <GlyphClose />
+          </button>
+        </div>
+        {NAV.map(({ to, label, Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            onClick={onClose}
+            className={() => `nav-item${loc.pathname.startsWith(to) ? ' active' : ''}`}
+          >
+            <Icon size={40} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+function Topbar({ onMenu, onBody }: { onMenu: () => void; onBody: () => void }) {
+  const title = useCurrentTitle();
+  return (
+    <header className="topbar">
+      <button className="brand brand-btn" onClick={onMenu} aria-label="Apri il menu">
+        <GlyphMenu />
+        <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={28} height={28} />
+        <span className="brand-name">The Logbook</span>
+      </button>
+      {title && <span className="topbar-title">{title}</span>}
+      <GoogleStatus />
+      <button className="btn-ghost small body-toggle" onClick={onBody} aria-label="Apri corpo e riepilogo">
+        <IconMood size={20} /> Corpo
+      </button>
+    </header>
+  );
+}
 
 function GoogleStatus() {
   const { gcal, settings, connectGoogle } = useStore();
@@ -38,28 +99,12 @@ function GoogleStatus() {
 
 function Shell({ userEmail }: { userEmail?: string }) {
   const [bodyOpen, setBodyOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <HashRouter>
       <RestTimerProvider>
         <div className="app">
-          <header className="topbar">
-            <span className="brand">
-              <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={28} height={28} />
-              <span className="brand-name">The Logbook</span>
-            </span>
-            <nav className="nav">
-              {NAV.map(({ to, label, Icon }) => (
-                <NavLink key={to} to={to} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-                  <Icon size={30} />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
-            </nav>
-            <GoogleStatus />
-            <button className="btn-ghost small body-toggle" onClick={() => setBodyOpen(true)} aria-label="Apri corpo e riepilogo">
-              <IconMood size={20} /> Corpo
-            </button>
-          </header>
+          <Topbar onMenu={() => setMenuOpen(true)} onBody={() => setBodyOpen(true)} />
           <div className="layout">
             <main>
               <Routes>
@@ -68,6 +113,8 @@ function Shell({ userEmail }: { userEmail?: string }) {
                 <Route path="/settimana/:date?" element={<WeekPage />} />
                 <Route path="/giorno/:date?" element={<DayPage />} />
                 <Route path="/palestra" element={<GymPage />} />
+                <Route path="/palestra/allenamento/:date/:id" element={<WorkoutPage />} />
+                <Route path="/alimentazione/:date?" element={<NutritionPage />} />
                 <Route path="/statistiche" element={<StatsPage />} />
                 <Route path="/impostazioni" element={<SettingsPage userEmail={userEmail} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
@@ -77,6 +124,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
               <BodySidebar />
             </div>
           </div>
+          {menuOpen && <NavDrawer onClose={() => setMenuOpen(false)} />}
           {bodyOpen && (
             <div className="drawer-backdrop" onClick={() => setBodyOpen(false)}>
               <div className="drawer" onClick={(e) => e.stopPropagation()}>

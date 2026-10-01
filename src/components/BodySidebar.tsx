@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { addDays, formatLong, fromISO, shiftMinutes, today } from '../lib/dates';
 import { useStore } from '../lib/store/StoreContext';
+import { dayIntake } from '../lib/nutrition/foods';
 import { workingSets, workoutVolume } from '../lib/training/analytics';
 import type { BodyGoals, BodyLog, DayEntry, ISODate } from '../lib/types';
 import { fmt } from './charts';
 import { GlyphClose, IconMood, IconShift, IconWorkout } from './icons';
 import { NumberInput, useCollapsible, Chevron } from './ui';
 
-const FIELDS: { key: keyof BodyLog; label: string; unit: string; step: number; goal?: keyof BodyGoals }[] = [
+type FieldDef = { key: keyof BodyLog; label: string; unit: string; step: number; goal?: keyof BodyGoals };
+
+const FIELDS: FieldDef[] = [
   { key: 'weightKg', label: 'Peso', unit: 'kg', step: 0.1, goal: 'weightKg' },
   { key: 'bodyFatPct', label: 'Massa grassa', unit: '%', step: 0.1 },
   { key: 'sleepH', label: 'Sonno', unit: 'h', step: 0.25, goal: 'sleepH' },
@@ -17,7 +20,7 @@ const FIELDS: { key: keyof BodyLog; label: string; unit: string; step: number; g
   { key: 'waterL', label: 'Acqua', unit: 'L', step: 0.25, goal: 'waterL' },
 ];
 
-const NUTRITION: { key: keyof BodyLog; label: string; unit: string; step: number; goal?: keyof BodyGoals }[] = [
+const NUTRITION: FieldDef[] = [
   { key: 'kcalIn', label: 'Calorie assunte', unit: 'kcal', step: 50, goal: 'kcalIn' },
   { key: 'kcalOut', label: 'Calorie attive', unit: 'kcal', step: 50 },
   { key: 'proteinG', label: 'Proteine', unit: 'g', step: 5, goal: 'proteinG' },
@@ -112,7 +115,7 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
   const prev7 = recent.slice(7, 14);
   const w7 = avg(last7.map((d) => d.body?.weightKg));
   const wPrev = avg(prev7.map((d) => d.body?.weightKg));
-  const kcal7 = avg(last7.map((d) => d.body?.kcalIn));
+  const kcal7 = avg(last7.map((d) => dayIntake(d).kcal));
   const steps7 = avg(last7.map((d) => d.body?.steps));
   const sleep7 = avg(last7.map((d) => d.body?.sleepH));
 
@@ -121,9 +124,10 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
   const surgeries = day.modules.filter((m) => m.kind === 'surgery' && m.procedureId).length;
   const clinical = day.modules.reduce((n, m) => n + (m.kind === 'clinical' ? m.count : 0), 0);
   const study = day.modules.reduce((n, m) => n + (m.kind === 'study' ? m.durationMin : 0), 0);
-  const balance = body.kcalIn !== undefined && body.kcalOut !== undefined ? body.kcalIn - body.kcalOut : undefined;
+  const intake = dayIntake(day);
+  const balance = intake.kcal !== undefined && body.kcalOut !== undefined ? intake.kcal - body.kcalOut : undefined;
 
-  const input = (f: (typeof FIELDS)[number]) => (
+  const input = (f: FieldDef) => (
     <label key={f.key} className="side-field">
       <span className="side-label">
         {f.label}
@@ -195,13 +199,38 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
 
       <section className="side-section">
         <h3 className="sub">Calorie</h3>
-        <div className="side-grid">{NUTRITION.map(input)}</div>
+        {intake.fromLog ? (
+          <>
+            <div className="side-grid">
+              <div className="side-field">
+                <span className="side-label">Assunte (diario)</span>
+                <strong>{fmt(intake.kcal ?? 0)} kcal</strong>
+                <Meter value={intake.kcal} goal={goals.kcalIn} unit="kcal" />
+              </div>
+              <div className="side-field">
+                <span className="side-label">Proteine (diario)</span>
+                <strong>{fmt(intake.protein ?? 0)} g</strong>
+                <Meter value={intake.protein} goal={goals.proteinG} unit="g" />
+              </div>
+              {input(NUTRITION[1])}
+            </div>
+            <Link className="link-quiet small" to={`/alimentazione/${date}`}>
+              apri il diario alimentare
+            </Link>
+          </>
+        ) : (
+          <>
+            <div className="side-grid">{NUTRITION.map(input)}</div>
+            <Link className="link-quiet small" to={`/alimentazione/${date}`}>
+              oppure registra i pasti nel diario alimentare
+            </Link>
+          </>
+        )}
         {balance !== undefined && (
           <p className="small">
             Bilancio: <strong>{balance > 0 ? '+' : ''}{fmt(balance)} kcal</strong> <span className="muted">(assunte − attive)</span>
           </p>
         )}
-        <p className="muted small">Il diario alimentare arriverà con il modulo dieta.</p>
       </section>
 
       <section className="side-section">
@@ -243,6 +272,8 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
                 ['weightKg', 'Peso obiettivo', 'kg', 0.5],
                 ['kcalIn', 'Calorie giornaliere', 'kcal', 50],
                 ['proteinG', 'Proteine', 'g', 5],
+                ['carbsG', 'Carboidrati', 'g', 5],
+                ['fatG', 'Grassi', 'g', 5],
                 ['steps', 'Passi', '', 500],
                 ['sleepH', 'Sonno', 'h', 0.5],
                 ['waterL', 'Acqua', 'L', 0.25],

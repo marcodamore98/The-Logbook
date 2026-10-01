@@ -190,6 +190,48 @@ export interface Routine {
   updatedAt: number;
 }
 
+// ---- Alimentazione ----
+
+export type MealId = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+/** Nutritional values per 100 g (or 100 ml). */
+export interface Food {
+  id: string;
+  name: string;
+  brand?: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  portionG?: number; // porzione tipica
+  portionName?: string; // es. "1 vasetto"
+  category?: string; // vocab FOOD_CATEGORIES
+  barcode?: string;
+  source: 'builtin' | 'custom' | 'off';
+}
+
+export interface FoodEntry {
+  id: string;
+  foodId?: string; // assente per l'aggiunta rapida
+  name: string;
+  brand?: string;
+  grams: number;
+  kcal: number; // già calcolati sulla quantità
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  time?: HHMM;
+}
+
+export interface FoodLog {
+  meals: Partial<Record<MealId, FoodEntry[]>>;
+  waterMl?: number;
+  notes?: string;
+}
+
 // ---- Corpo ----
 
 export interface BodyLog {
@@ -208,6 +250,8 @@ export interface BodyGoals {
   weightKg?: number;
   kcalIn?: number;
   proteinG?: number;
+  carbsG?: number;
+  fatG?: number;
   steps?: number;
   sleepH?: number;
   waterL?: number;
@@ -242,6 +286,7 @@ export interface DayEntry {
   modules: Module[];
   mood?: number; // 1-5
   body?: BodyLog;
+  food?: FoodLog;
   gcalTrash?: string[]; // eventi Google da eliminare alla prossima sincronizzazione
   updatedAt: number;
 }
@@ -257,6 +302,9 @@ export interface Settings {
   exercises?: ExerciseDef[]; // esercizi personalizzati
   routines?: Routine[];
   goals?: BodyGoals;
+  foods?: Food[]; // alimenti personali e salvati da Open Food Facts
+  favoriteFoods?: string[];
+  dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno
   seed?: number; // versione dei dati predefiniti già applicata (vedi migrateSettings)
   updatedAt: number;
 }

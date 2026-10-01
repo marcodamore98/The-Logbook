@@ -49,6 +49,7 @@ export function RosterCard({ date, onJoin }: { date: ISODate; onJoin?: (names: s
   return (
     <Card
       id="day.roster"
+      print="lavoro"
       className="roster"
       defaultOpen={false}
       icon={<IconPeople />}

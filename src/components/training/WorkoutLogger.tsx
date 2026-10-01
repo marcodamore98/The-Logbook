@@ -81,7 +81,8 @@ function ExerciseBlock({
   onRemove: () => void;
   onLink: () => void;
   onUnlink: () => void;
-  onSetDone: () => void;
+  /** Called instead of onChange when a set gets ticked, so the parent can start timers in the same update. */
+  onSetDone: (e: WorkoutExercise) => void;
 }) {
   const { settings, history } = useStore();
   const def = exerciseDef(ex.exerciseId, settings.exercises);
@@ -193,8 +194,9 @@ function ExerciseBlock({
                     aria-label={s.done ? 'Segna come non fatta' : 'Segna come fatta'}
                     aria-pressed={!!s.done}
                     onClick={() => {
-                      setAt(k, { ...s, done: !s.done });
-                      if (!s.done) onSetDone();
+                      const next = { ...ex, sets: ex.sets.map((x, i) => (i === k ? { ...s, done: !s.done } : x)) };
+                      if (s.done) onChange(next);
+                      else onSetDone(next);
                     }}
                   >
                     <GlyphCheck />
@@ -338,8 +340,9 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
           onRemove={() => setExercises(unlink(w.exercises, i).filter((_, k) => k !== i))}
           onLink={() => setExercises(linkNext(w.exercises, i))}
           onUnlink={() => setExercises(unlink(w.exercises, i))}
-          onSetDone={() => {
-            if (!w.startedAt) set({ startedAt: Date.now() });
+          onSetDone={(e) => {
+            // One update: the ticked set and, on the first set, the start time.
+            onChange({ ...w, startedAt: w.startedAt ?? Date.now(), exercises: w.exercises.map((x, k) => (k === i ? e : x)) });
             // In a superset, rest only after the last exercise of the group.
             const next = w.exercises[i + 1];
             if (ex.supersetId && next?.supersetId === ex.supersetId) return;

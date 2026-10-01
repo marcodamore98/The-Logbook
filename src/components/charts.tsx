@@ -32,7 +32,7 @@ export function BarList({ data, unit = '', max = 8 }: { data: Count[]; unit?: st
 
 export function Columns({ buckets, unit }: { buckets: { label: string; full: string; value: number }[]; unit: string }) {
   const [hover, setHover] = useState<number | null>(null);
-  const W = 640, H = 180, pad = { l: 28, r: 8, t: 12, b: 22 };
+  const W = 640, H = 180, pad = { l: 42, r: 8, t: 12, b: 22 };
   const max = Math.max(1, ...buckets.map((b) => b.value));
   const niceMax = max <= 5 ? Math.ceil(max) : Math.ceil(max / 5) * 5;
   const bw = (W - pad.l - pad.r) / buckets.length;

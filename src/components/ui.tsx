@@ -235,6 +235,7 @@ export function Card({
   children,
   open: controlledOpen,
   onToggle,
+  print,
 }: {
   id: string;
   icon?: ReactNode;
@@ -247,12 +248,14 @@ export function Card({
   children: ReactNode;
   open?: boolean;
   onToggle?: () => void;
+  /** Print section this card belongs to (see PrintDialog). */
+  print?: string;
 }) {
   const [stored, toggleStored] = useCollapsible(id, defaultOpen);
   const open = controlledOpen ?? stored;
   const toggle = onToggle ?? toggleStored;
   return (
-    <section className={`card ${className}${open ? '' : ' collapsed'}`} style={style}>
+    <section className={`card ${className}${open ? '' : ' collapsed'}`} style={style} data-print={print}>
       <div className="card-head">
         {icon}
         <button type="button" className="card-title-btn" onClick={toggle} aria-expanded={open}>
@@ -264,7 +267,10 @@ export function Card({
           <Chevron open={open} />
         </button>
       </div>
-      {open && children}
+      {/* Body stays mounted (hidden) so printing can include closed cards. */}
+      <div className="card-body" hidden={!open}>
+        {children}
+      </div>
     </section>
   );
 }

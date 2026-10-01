@@ -222,3 +222,35 @@ export const GlyphSheriff = ({ size = 14 }: { size?: number }) => (
     <circle cx="12" cy="12" r="2.6" fill="var(--surface)" />
   </svg>
 );
+
+/** Calendar page showing today's day number. */
+export const IconToday = ({ size = 36, day = new Date().getDate() }: { size?: number; day?: number }) => (
+  <Art pigment="terra" blot={2} size={size}>
+    <path d="M9.5 11.2c6.8-.4 14.3-.3 21 .1.6 6 .5 13.6 0 19.6-6.9.4-14.3.4-20.9 0-.5-6.2-.6-13.7-.1-19.7z" />
+    <path d="M9.7 16c6.9-.3 13.9-.2 20.8.1M15 8.6v4.6M25 8.5v4.7" />
+    <text x="20.1" y="27.6" textAnchor="middle" className="today-num" stroke="none">
+      {day}
+    </text>
+  </Art>
+);
+
+export const IconFood = (p: { size?: number }) => (
+  <Art pigment="sage" blot={0} {...p}>
+    <path d="M9 20.5c0 6.2 5 10.6 11 10.6s11-4.4 11-10.6z" />
+    <path d="M8 20.5h24" />
+    <path d="M16.5 17.2c-.3-2.2 1.2-4.3 3.4-4.6M21.3 16.8c.2-3 2.4-5.6 5.4-6.1" strokeWidth="1.2" />
+    <path d="M14 15.3c1.5-.3 2.6.5 2.9 1.8" strokeWidth="1.2" />
+  </Art>
+);
+
+export const GlyphMenu = () => (
+  <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <path d="M4 7h16M4 12h16M4 17h10" />
+  </svg>
+);
+
+export const GlyphPrint = () => (
+  <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 8V4h10v4M6 17H4.5A1.5 1.5 0 0 1 3 15.5v-5A1.5 1.5 0 0 1 4.5 9h15a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H18M7 14h10v6H7z" />
+  </svg>
+);
