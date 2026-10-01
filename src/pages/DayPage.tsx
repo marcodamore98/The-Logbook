@@ -13,7 +13,9 @@ import {
   IconShift,
   IconTodo,
 } from '../components/icons';
-import { Chips, Empty, Field, uid } from '../components/ui';
+import { RosterCard } from '../components/RosterCard';
+import { ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
+import { codeShort, idsForNames, rosterFor, ROSTER_SELF, shiftFromCodes } from '../lib/roster';
 import { addDays, formatLong, shiftMinutes, today } from '../lib/dates';
 import { eventLocal } from '../lib/google/calendar';
 import { useStore } from '../lib/store/StoreContext';
@@ -47,6 +49,8 @@ export default function DayPage() {
     setShift({ colleagueIds: [], ...day.shift, shiftTypeId: id, start: t.start, end: t.end });
   };
   const shiftType = settings.shiftTypes.find((t) => t.id === day.shift?.shiftTypeId);
+  const myCodes = rosterFor(date)?.residents[ROSTER_SELF] ?? [];
+  const suggestion = !day.shift && myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null;
 
   // ---- Agenda (appuntamenti + eventi Google) ----
   const gEvents = store.eventsOn(date);
@@ -97,16 +101,19 @@ export default function DayPage() {
           )}
           {day.shift?.gcalEventId && <span className="badge badge-sync" title="Sincronizzato con Google Calendar">G</span>}
         </div>
+        {suggestion && (
+          <div className="suggest">
+            <span>
+              Dal tabellone: <strong>{myCodes.map(codeShort).join(' · ')}</strong> ({suggestion.start}–{suggestion.end})
+            </span>
+            <button className="btn small" onClick={() => setShift(suggestion)}>
+              Usa
+            </button>
+          </div>
+        )}
         <div className="grid">
           <Field label="Tipo di turno">
-            <select value={day.shift?.shiftTypeId ?? ''} onChange={(e) => chooseShiftType(e.target.value)}>
-              <option value="">Nessun turno</option>
-              {settings.shiftTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <ShiftTypeSelect types={settings.shiftTypes} value={day.shift?.shiftTypeId} onChange={chooseShiftType} />
           </Field>
           {day.shift && (
             <>
@@ -121,21 +128,11 @@ export default function DayPage() {
               </Field>
               <div className="field field-wide">
                 <span className="field-label">In turno con</span>
-                {settings.colleagues.length ? (
-                  <Chips
-                    items={settings.colleagues}
-                    selected={day.shift.colleagueIds}
-                    label={(c) => c.name}
-                    onToggle={(id) => {
-                      const ids = day.shift!.colleagueIds;
-                      setShift({ ...day.shift!, colleagueIds: ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id] });
-                    }}
-                  />
-                ) : (
-                  <Empty>
-                    Nessun collega salvato. <Link to="/impostazioni">Aggiungili nelle impostazioni</Link>.
-                  </Empty>
-                )}
+                <ColleaguePicker
+                  colleagues={settings.colleagues}
+                  selected={day.shift.colleagueIds}
+                  onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })}
+                />
               </div>
               <Field label="Note sul turno" wide>
                 <input value={day.shift.note ?? ''} onChange={(e) => setShift({ ...day.shift!, note: e.target.value })} />
@@ -144,6 +141,16 @@ export default function DayPage() {
           )}
         </div>
       </section>
+
+      <RosterCard
+        date={date}
+        onJoin={(names) => {
+          const base = dayRef.current.shift ?? (myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null);
+          if (!base) return;
+          const ids = idsForNames(names, settings.colleagues);
+          setShift({ ...base, colleagueIds: [...new Set([...base.colleagueIds, ...ids])] });
+        }}
+      />
 
       <div className="two-col">
         {/* Agenda */}

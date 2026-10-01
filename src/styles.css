@@ -380,3 +380,24 @@ textarea { resize: vertical; }
 .login { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; text-align: center; padding: 1rem; }
 .login h1 { font-size: 2rem; }
 .login p { max-width: 26rem; }
+
+/* ---- Roster (tabellone) ---- */
+.btn.small { padding: 0.3rem 0.9rem; font-size: 0.85rem; }
+.segmented.small { margin-left: auto; }
+.segmented.small button { padding: 0.2rem 0.7rem; font-size: 0.8rem; }
+.suggest {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+  padding: 0.5rem 0.75rem; border-radius: 10px; background: var(--accent-soft); font-size: 0.9rem;
+}
+.picker { display: flex; flex-direction: column; gap: 0.5rem; }
+.picker select { max-width: 22rem; }
+.roster-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.35rem 1rem; }
+.roster-list li { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.3rem 0.4rem; border-radius: 10px; }
+.roster-list li.mine { background: var(--accent-soft); }
+.roster-code {
+  flex: none; min-width: 3.2rem; text-align: center; font-size: 0.75rem; font-weight: 600;
+  padding: 0.15rem 0.4rem; border-radius: 6px; background: var(--surface-2); color: var(--ink-2);
+}
+.roster-names { flex: 1; min-width: 0; font-size: 0.88rem; display: flex; flex-direction: column; }
+.roster-label { font-size: 0.75rem; color: var(--muted); }
+.roster-list .icon-btn.small { margin-left: auto; }

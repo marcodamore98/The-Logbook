@@ -2,7 +2,8 @@
 // lists, so weekly/monthly/yearly statistics group reliably. Labels can be
 // reworded freely; ids must never change once data exists.
 
-import type { Colleague, Settings, ShiftType } from './types';
+import { ROSTER_COLLEAGUES, ROSTER_SHIFT_TYPES } from './roster';
+import type { Settings, ShiftType } from './types';
 
 export interface VocabItem {
   id: string;
@@ -253,33 +254,44 @@ export const OUTING_TYPES: VocabItem[] = [
 
 // ---------- Default settings ----------
 
-export const DEFAULT_SHIFT_TYPES: ShiftType[] = [
-  { id: 'mattino', name: 'Mattino', start: '08:00', end: '14:00', color: '#e9c46a', countsAsWork: true },
-  { id: 'pomeriggio', name: 'Pomeriggio', start: '14:00', end: '20:00', color: '#f4a261', countsAsWork: true },
-  { id: 'giornata', name: 'Giornata', start: '08:00', end: '17:00', color: '#8ab17d', countsAsWork: true },
-  { id: 'notte', name: 'Notte', start: '20:00', end: '08:00', color: '#6d78b3', countsAsWork: true },
-  { id: 'guardia-24', name: 'Guardia 24h', start: '08:00', end: '08:00', color: '#b56576', countsAsWork: true },
-  { id: 'sala-operatoria', name: 'Sala operatoria', start: '08:00', end: '16:00', color: '#5c9ead', countsAsWork: true },
-  { id: 'sala-parto', name: 'Sala parto', start: '08:00', end: '20:00', color: '#d4a5a5', countsAsWork: true },
-  { id: 'ambulatorio', name: 'Ambulatorio', start: '08:30', end: '14:00', color: '#a3b18a', countsAsWork: true },
-  { id: 'reperibilita', name: 'Reperibilità', start: '20:00', end: '08:00', color: '#9a8c98', countsAsWork: false },
-  { id: 'ca-notturno', name: 'Guardia medica notturna', start: '20:00', end: '08:00', color: '#4a4e69', countsAsWork: true },
-  { id: 'ca-prefestivo', name: 'Guardia medica prefestivo', start: '08:00', end: '20:00', color: '#7a8fa6', countsAsWork: true },
-  { id: 'ca-festivo', name: 'Guardia medica festivo', start: '08:00', end: '20:00', color: '#8d7aa6', countsAsWork: true },
-  { id: 'smonto', name: 'Smonto notte', start: '08:00', end: '08:00', color: '#c9c4bb', countsAsWork: false },
-  { id: 'riposo', name: 'Riposo', start: '00:00', end: '00:00', color: '#d9d4ca', countsAsWork: false },
-  { id: 'ferie', name: 'Ferie', start: '00:00', end: '00:00', color: '#b7d3c0', countsAsWork: false },
+/** Guardia medica (continuità assistenziale), fuori dal tabellone di reparto. */
+const CA_SHIFT_TYPES: ShiftType[] = [
+  { id: 'ca-notturno', name: 'Guardia medica notturna', start: '20:00', end: '08:00', color: '#4a4e69', countsAsWork: true, group: 'Guardia medica' },
+  { id: 'ca-prefestivo', name: 'Guardia medica prefestivo', start: '08:00', end: '20:00', color: '#7a8fa6', countsAsWork: true, group: 'Guardia medica' },
+  { id: 'ca-festivo', name: 'Guardia medica festivo', start: '08:00', end: '20:00', color: '#8d7aa6', countsAsWork: true, group: 'Guardia medica' },
 ];
 
-export const DEFAULT_COLLEAGUES: Colleague[] = [];
+export const DEFAULT_SHIFT_TYPES: ShiftType[] = [...ROSTER_SHIFT_TYPES, ...CA_SHIFT_TYPES];
+
+/** Ids of the generic shift types shipped before the department roster (seed 1). */
+const SEED1_SHIFT_IDS = new Set([
+  'mattino', 'pomeriggio', 'giornata', 'notte', 'guardia-24', 'sala-operatoria', 'sala-parto', 'ambulatorio',
+  'reperibilita', 'ca-notturno', 'ca-prefestivo', 'ca-festivo', 'smonto', 'riposo', 'ferie',
+]);
+
+export const SEED_VERSION = 2;
 
 export function defaultSettings(): Settings {
   return {
-    colleagues: DEFAULT_COLLEAGUES,
+    colleagues: ROSTER_COLLEAGUES,
     shiftTypes: DEFAULT_SHIFT_TYPES,
     gcal: { enabled: false, calendarId: 'primary', readCalendarIds: ['primary'] },
+    seed: SEED_VERSION,
     updatedAt: 0,
   };
+}
+
+/**
+ * Brings saved settings up to the current defaults without losing user edits:
+ * seed 2 swaps the generic shift types for the department codes (custom types
+ * are kept) and adds the roster colleagues missing by name.
+ */
+export function migrateSettings(s: Settings): Settings {
+  if ((s.seed ?? 1) >= SEED_VERSION) return s;
+  const custom = s.shiftTypes.filter((t) => !SEED1_SHIFT_IDS.has(t.id) && !DEFAULT_SHIFT_TYPES.some((d) => d.id === t.id));
+  const known = new Set(s.colleagues.map((c) => c.name.trim().toLowerCase()));
+  const extra = ROSTER_COLLEAGUES.filter((c) => !known.has(c.name.toLowerCase()));
+  return { ...s, shiftTypes: [...DEFAULT_SHIFT_TYPES, ...custom], colleagues: [...extra, ...s.colleagues], seed: SEED_VERSION };
 }
 
 export function labelOf(list: VocabItem[], id: string | undefined): string {

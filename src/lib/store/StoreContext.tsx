@@ -3,7 +3,8 @@ import { rangeDays } from '../dates';
 import { authorize, disconnect, gcalConfigured, hasToken, listEvents, eventLocal, type GEvent } from '../google/calendar';
 import { linkedIds, pushDay, reconcile, trashRemoved } from '../google/sync';
 import { emptyDay, type DayEntry, type ISODate, type Settings } from '../types';
-import { defaultSettings } from '../vocab';
+import { myRosterDays, shiftFromCodes } from '../roster';
+import { defaultSettings, migrateSettings } from '../vocab';
 import type { Repo } from './repo';
 
 interface Store {
@@ -22,6 +23,8 @@ interface Store {
   /** Pushes every stored day to Google Calendar (items not yet linked, pending deletions). */
   syncAll(): Promise<number>;
   loadAll(): Promise<DayEntry[]>;
+  /** Fills the user's shift from the department roster on days that have none. */
+  importRoster(): Promise<{ added: number; kept: number }>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -85,7 +88,11 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
 
   useEffect(() => {
     repo.getSettings().then((s) => {
-      if (s) setSettings({ ...defaultSettings(), ...s, gcal: { ...defaultSettings().gcal, ...s.gcal } });
+      if (!s) return;
+      const migrated = migrateSettings(s);
+      const next = { ...defaultSettings(), ...migrated, gcal: { ...defaultSettings().gcal, ...migrated.gcal } };
+      setSettings(next);
+      if (migrated !== s) persist(repo, repo.saveSettings(next));
     });
   }, [repo]);
 
@@ -223,6 +230,25 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     return n;
   }, [repo, push]);
 
+  const importRoster = useCallback(async () => {
+    const mine = myRosterDays();
+    if (!mine.length) return { added: 0, kept: 0 };
+    await loadRange(mine[0].date, mine[mine.length - 1].date);
+    let added = 0;
+    let kept = 0;
+    for (const { date, codes } of mine) {
+      const cur = daysRef.current[date] ?? emptyDay(date);
+      const shift = shiftFromCodes(codes, date, settingsRef.current.colleagues);
+      if (cur.shift || !shift) {
+        kept++;
+        continue;
+      }
+      saveDay({ ...cur, shift });
+      added++;
+    }
+    return { added, kept };
+  }, [loadRange, saveDay]);
+
   const linked = useMemo(() => linkedIds(Object.values(days)), [days]);
 
   const store: Store = {
@@ -239,6 +265,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     disconnectGoogle,
     syncAll,
     loadAll: () => repo.getAll(),
+    importRoster,
   };
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

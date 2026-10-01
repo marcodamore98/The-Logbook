@@ -3,6 +3,7 @@ import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSett
 import { Empty, Field, uid } from '../components/ui';
 import { listCalendars, type GCalendar } from '../lib/google/calendar';
 import { firebaseConfigured, logOut } from '../lib/firebase';
+import { myRosterDays, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
 import type { Colleague, DayEntry, Settings, ShiftType } from '../lib/types';
 
@@ -13,6 +14,8 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
   const [calendars, setCalendars] = useState<GCalendar[]>([]);
   const [msg, setMsg] = useState<string>();
   const [bulk, setBulk] = useState('');
+  const [importing, setImporting] = useState(false);
+  const myDays = myRosterDays().length;
   const file = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -86,7 +89,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           </button>
           <input ref={file} type="file" accept="application/json" hidden onChange={(e) => importJson(e.target.files?.[0])} />
         </div>
-        {msg && <p className="muted small">{msg}</p>}
+        {msg && !msg.startsWith('Turni importati') && <p className="muted small">{msg}</p>}
       </section>
 
       <section className="card">
@@ -159,6 +162,33 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           </div>
         )}
         {gcal.error && <p className="error small">{gcal.error}</p>}
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <IconShift />
+          <h2>Tabellone di reparto</h2>
+        </div>
+        <p>
+          Contiene i turni di ottobre 2026 di specializzandi e strutturati. Ogni pagina giorno mostra chi fa cosa; qui puoi copiare i tuoi turni
+          ({ROSTER_SELF}, {myDays} giorni) nel logbook, con i colleghi che fanno la stessa attività. I giorni in cui hai già inserito un turno non
+          vengono toccati{gcal.connected ? ' e i nuovi turni vengono aggiunti a Google Calendar' : ''}.
+        </p>
+        <div className="row">
+          <button
+            className="btn"
+            disabled={importing}
+            onClick={async () => {
+              setImporting(true);
+              const r = await store.importRoster();
+              setImporting(false);
+              setMsg(`Turni importati: ${r.added}. Giorni lasciati invariati: ${r.kept}.`);
+            }}
+          >
+            {importing ? 'Importazione…' : 'Importa i miei turni'}
+          </button>
+        </div>
+        {msg?.startsWith('Turni importati') && <p className="muted small">{msg}</p>}
       </section>
 
       <section className="card">

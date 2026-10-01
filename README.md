@@ -21,6 +21,16 @@ I termini di lavoro e palestra usano **vocabolari standardizzati** (`src/lib/voc
 
 > **Privacy:** non inserire dati identificativi delle pazienti. Il logbook registra solo attività e tipologie di intervento.
 
+## Tabellone di reparto
+
+`src/data/roster-2026-10.ts` contiene i turni di ottobre 2026: gli specializzandi sono estratti dal PDF, gli strutturati sono trascritti dalla foto del tabellone. Le sigle sono normalizzate in `src/lib/roster.ts` (`ROSTER_CODES`), e gli stessi codici fanno da tipi di turno.
+
+- Ogni pagina giorno mostra il **Tabellone**, cioè chi fa cosa. Specializzandi e strutturati sono su due schede, e le tue attività sono evidenziate.
+- Se non hai ancora inserito un turno, l'app propone quello del tabellone con i colleghi che fanno la stessa attività (pulsante **Usa**).
+- *Impostazioni → Tabellone di reparto → Importa i miei turni* copia tutti i tuoi turni del mese, senza toccare i giorni già compilati.
+
+Per un nuovo mese si aggiunge un file `roster-AAAA-MM.ts` e lo si registra in `ROSTERS`.
+
 ## Avvio in locale
 
 ```bash

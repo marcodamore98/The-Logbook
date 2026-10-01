@@ -12,7 +12,8 @@ const config = {
   appId: env.VITE_FIREBASE_APP_ID || FIREBASE_CONFIG.appId,
 };
 
-export const firebaseConfigured = Boolean(config.apiKey && config.projectId);
+// VITE_LOCAL_ONLY=1 forces local mode (handy for testing without logging in).
+export const firebaseConfigured = !env.VITE_LOCAL_ONLY && Boolean(config.apiKey && config.projectId);
 
 let app: FirebaseApp | undefined;
 let firestore: Firestore | undefined;

@@ -17,6 +17,7 @@ export interface ShiftType {
   end: HHMM; // may be < start for overnight shifts
   color: string; // hex, used as a soft tint
   countsAsWork: boolean; // false for riposo/ferie/smonto
+  group?: string; // raggruppamento nel menu
 }
 
 export interface ShiftAssignment {
@@ -160,6 +161,7 @@ export interface Settings {
     calendarId: string; // 'primary' o id di un calendario dedicato
     readCalendarIds: string[]; // calendari mostrati in lettura
   };
+  seed?: number; // versione dei dati predefiniti già applicata (vedi migrateSettings)
   updatedAt: number;
 }
 
