@@ -19,12 +19,18 @@ import type { DayEntry, ISODate } from '../lib/types';
 
 function ShiftChip({ day }: { day: DayEntry }) {
   const { settings } = useStore();
-  if (!day.shift) return null;
-  const t = settings.shiftTypes.find((x) => x.id === day.shift!.shiftTypeId);
   return (
-    <span className="shift-chip" style={{ '--tint': t?.color ?? '#ccc' } as React.CSSProperties}>
-      {t?.name ?? 'Turno'}
-    </span>
+    <>
+      {[day.shift, day.guardia].map((sh, i) => {
+        if (!sh) return null;
+        const t = settings.shiftTypes.find((x) => x.id === sh.shiftTypeId);
+        return (
+          <span key={i} className="shift-chip" style={{ '--tint': t?.color ?? '#ccc' } as React.CSSProperties}>
+            {t?.name ?? 'Turno'}
+          </span>
+        );
+      })}
+    </>
   );
 }
 
@@ -155,10 +161,13 @@ export function WeekPage() {
                 <span className="week-num">{fromISO(d).getDate()}</span>
               </div>
               <ShiftChip day={day} />
-              {day.shift && (
-                <span className="week-time">
-                  {day.shift.start}–{day.shift.end}
-                </span>
+              {[day.shift, day.guardia].map(
+                (sh, k) =>
+                  sh && (
+                    <span key={k} className="week-time">
+                      {sh.start}–{sh.end}
+                    </span>
+                  ),
               )}
               <ul className="week-items">
                 {items.map((it) => (

@@ -59,7 +59,8 @@ Nella pagina del giorno compare solo il riepilogo, centrato su calorie e protein
 
 ## Pagina del giorno
 
-- Le sezioni sono in quest'ordine: lavoro, impegni, allenamento, alimentazione, passi e corpo, vita privata, note.
+- Le sezioni sono in quest'ordine: lavoro, impegni, allenamento, alimentazione, vita privata, note. Il **turno** è sempre aperto e comprende anche la **guardia medica** (secondo lavoro), che finisce su Google Calendar e nelle statistiche come gli altri turni.
+- Le schede aggiungibili sono solo attività chirurgica, attività clinica, studio, gita/uscita, immagini e note: allenamento e alimentazione si registrano nelle loro pagine.
 - Con il pulsante ⇅ le riordini come vuoi. Le nuove schede si inseriscono da sole nella sezione giusta.
 - Da chiusa, ogni scheda mostra un riassunto; aperta mostra i dettagli.
 - L'allenamento si registra nella sua pagina (*Palestra*); nel giorno resta il riepilogo con volume, serie e record.

@@ -9,13 +9,11 @@ import {
   GlyphPrev,
   GlyphTrash,
   IconAppointment,
-  IconFood,
-  IconMood,
   IconShift,
   IconTodo,
 } from '../components/icons';
 import { RosterCard } from '../components/RosterCard';
-import { BodyBlock, NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
+import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
 import { PrintButton } from '../components/PrintDialog';
 import { Card, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
 import { blockOrder, DAY_BLOCKS, DAY_PRINT_SECTIONS, MODULE_BLOCK } from '../lib/dayLayout';
@@ -25,8 +23,6 @@ import { addDays, formatLong, shiftMinutes, today } from '../lib/dates';
 import { eventLocal } from '../lib/google/calendar';
 import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
-
-const MOODS = ['😣', '😕', '😐', '🙂', '😄'];
 
 export default function DayPage() {
   const params = useParams();
@@ -50,6 +46,13 @@ export default function DayPage() {
 
   // ---- Shift ----
   const setShift = (s: ShiftAssignment | undefined) => update((d) => ({ ...d, shift: s }));
+  const setGuardia = (s: ShiftAssignment | undefined) => update((d) => ({ ...d, guardia: s }));
+  const guardiaTypes = settings.shiftTypes.filter((t) => t.group === 'Guardia medica');
+  const chooseGuardia = (id: string) => {
+    if (!id) return setGuardia(undefined);
+    const t = settings.shiftTypes.find((x) => x.id === id)!;
+    setGuardia({ colleagueIds: [], ...day.guardia, shiftTypeId: id, start: t.start, end: t.end });
+  };
   const chooseShiftType = (id: string) => {
     if (!id) return setShift(undefined);
     const t = settings.shiftTypes.find((x) => x.id === id)!;
@@ -92,7 +95,13 @@ export default function DayPage() {
     </select>
   );
   const openTodos = day.todos.filter((t) => !t.done).length;
-  const hours = day.shift && shiftType?.countsAsWork ? Math.round(shiftMinutes(day.shift.start, day.shift.end) / 6) / 10 : 0;
+  const hours =
+    Math.round(
+      [day.shift, day.guardia].reduce((n, sh) => {
+        if (!sh) return n;
+        return settings.shiftTypes.find((t) => t.id === sh.shiftTypeId)?.countsAsWork === false ? n : n + shiftMinutes(sh.start, sh.end) / 6;
+      }, 0),
+    ) / 10;
   const order = blockOrder(settings.dayLayout);
 
   const moduleCards = (block: string) =>
@@ -133,7 +142,7 @@ export default function DayPage() {
           <Card
             key="shift"
             id="day.shift"
-            defaultOpen={false}
+            collapsible={false}
             print="lavoro"
             icon={<IconShift />}
             title="Turno"
@@ -142,7 +151,7 @@ export default function DayPage() {
             actions={
               <>
                 {hours > 0 && <span className="badge">{hours} h</span>}
-                {day.shift?.gcalEventId && (
+                {(day.shift?.gcalEventId || day.guardia?.gcalEventId) && (
                   <span className="badge badge-sync" title="Sincronizzato con Google Calendar">
                     G
                   </span>
@@ -184,6 +193,34 @@ export default function DayPage() {
                   </Field>
                 </>
               )}
+            </div>
+            <div className="guardia">
+              <h3 className="sub">Guardia medica</h3>
+              <div className="grid">
+                <Field label="Tipo di guardia">
+                  <ShiftTypeSelect types={guardiaTypes} value={day.guardia?.shiftTypeId} onChange={chooseGuardia} empty="Nessuna guardia medica" />
+                </Field>
+                {day.guardia && (
+                  <>
+                    <Field label="Dalle">
+                      <input type="time" value={day.guardia.start} onChange={(e) => setGuardia({ ...day.guardia!, start: e.target.value })} />
+                    </Field>
+                    <Field label="Alle">
+                      <input type="time" value={day.guardia.end} onChange={(e) => setGuardia({ ...day.guardia!, end: e.target.value })} />
+                    </Field>
+                    <Field label="Sede">
+                      <input value={day.guardia.place ?? ''} onChange={(e) => setGuardia({ ...day.guardia!, place: e.target.value })} />
+                    </Field>
+                    <div className="field field-wide">
+                      <span className="field-label">In guardia con</span>
+                      <ColleaguePicker colleagues={settings.colleagues} selected={day.guardia.colleagueIds} onChange={(colleagueIds) => setGuardia({ ...day.guardia!, colleagueIds })} />
+                    </div>
+                    <Field label="Note sulla guardia" wide>
+                      <input value={day.guardia.note ?? ''} onChange={(e) => setGuardia({ ...day.guardia!, note: e.target.value })} />
+                    </Field>
+                  </>
+                )}
+              </div>
             </div>
           </Card>
         );
@@ -297,26 +334,12 @@ export default function DayPage() {
         return <TrainingBlock key="training" day={day} />;
       case 'nutrition':
         return <NutritionBlock key="nutrition" day={day} />;
-      case 'body':
-        return <BodyBlock key="body" day={day} />;
       case 'work':
       case 'private':
       case 'notes': {
         const cards = moduleCards(id);
         return cards.length ? <div key={id} className="modules">{cards}</div> : null;
       }
-      case 'mood':
-        return (
-          <Card key="mood" id="day.mood" print="diario" defaultOpen={false} className="mood-card" icon={<IconMood />} title="Com’è andata" summary={day.mood ? MOODS[day.mood - 1] : undefined}>
-            <div className="moods" role="radiogroup" aria-label="Umore della giornata">
-              {MOODS.map((e, i) => (
-                <button key={i} role="radio" aria-checked={day.mood === i + 1} className={`mood${day.mood === i + 1 ? ' on' : ''}`} onClick={() => update((d) => ({ ...d, mood: d.mood === i + 1 ? undefined : i + 1 }))}>
-                  {e}
-                </button>
-              ))}
-            </div>
-          </Card>
-        );
       default:
         return null;
     }
@@ -379,20 +402,13 @@ export default function DayPage() {
             <div key={area}>
               <h3 className="palette-area">{area === 'lavoro' ? 'Lavoro' : 'Vita privata'}</h3>
               <div className="palette-grid">
-                {MODULES.filter((m) => m.area === area).map((m) => (
+                {MODULES.filter((m) => m.area === area && m.kind !== 'workout').map((m) => (
                   <button key={m.kind} className="palette-item" onClick={() => addModule(m.kind)}>
                     <m.Icon size={48} />
                     <span className="palette-label">{m.label}</span>
                     <span className="palette-hint">{m.hint}</span>
                   </button>
                 ))}
-                {area === 'personale' && (
-                  <Link className="palette-item" to={`/alimentazione/${date}`}>
-                    <IconFood size={48} />
-                    <span className="palette-label">Alimentazione</span>
-                    <span className="palette-hint">Pasti, calorie e proteine</span>
-                  </Link>
-                )}
               </div>
             </div>
           ))}

@@ -6,6 +6,8 @@ import { addDays, minutesOf } from '../dates';
 import type { Appointment, DayEntry, Settings, ShiftAssignment, Todo } from '../types';
 import { deleteEvent, eventLocal, hasToken, upsertEvent, type EventInput, type GEvent } from './calendar';
 
+export const SHIFT_KEYS = ['shift', 'guardia'] as const;
+
 function shiftInput(day: DayEntry, s: ShiftAssignment, settings: Settings): EventInput {
   const type = settings.shiftTypes.find((t) => t.id === s.shiftTypeId);
   const names = s.colleagueIds
@@ -60,12 +62,14 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
   for (const id of out.gcalTrash ?? []) await deleteEvent(cal, id);
   out.gcalTrash = [];
 
-  // Shift
-  const prevShift = prev?.shift;
-  if (out.shift) {
-    const input = shiftInput(out, out.shift, settings);
-    if (force || !out.shift.gcalEventId || !same(input, prevShift && shiftInput(prev!, prevShift, settings))) {
-      out.shift.gcalEventId = await upsertEvent(cal, out.shift.gcalEventId, input);
+  // Shifts: hospital + guardia medica
+  for (const key of SHIFT_KEYS) {
+    const cur = out[key];
+    const old = prev?.[key];
+    if (!cur) continue;
+    const input = shiftInput(out, cur, settings);
+    if (force || !cur.gcalEventId || !same(input, old && shiftInput(prev!, old, settings))) {
+      cur.gcalEventId = await upsertEvent(cal, cur.gcalEventId, input);
     }
   }
 
@@ -100,11 +104,14 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
 export function trashRemoved(prev: DayEntry | undefined, next: DayEntry): DayEntry {
   if (!prev) return next;
   const keep = new Set<string>();
-  if (next.shift?.gcalEventId) keep.add(next.shift.gcalEventId);
+  for (const k of SHIFT_KEYS) if (next[k]?.gcalEventId) keep.add(next[k]!.gcalEventId!);
   next.appointments.forEach((a) => a.gcalEventId && keep.add(a.gcalEventId));
   next.todos.forEach((t) => t.gcalEventId && keep.add(t.gcalEventId));
   const gone: string[] = [];
-  if (prev.shift?.gcalEventId && !keep.has(prev.shift.gcalEventId)) gone.push(prev.shift.gcalEventId);
+  for (const k of SHIFT_KEYS) {
+    const id = prev[k]?.gcalEventId;
+    if (id && !keep.has(id)) gone.push(id);
+  }
   prev.appointments.forEach((a) => a.gcalEventId && !keep.has(a.gcalEventId) && gone.push(a.gcalEventId));
   prev.todos.forEach((t) => t.gcalEventId && !keep.has(t.gcalEventId) && gone.push(t.gcalEventId));
   if (!gone.length) return next;
@@ -121,11 +128,13 @@ export function reconcile(day: DayEntry, events: GEvent[]): DayEntry | null {
     const en = eventLocal(e.end);
     return s.date === day.date && s.time && en.time ? { start: s.time, end: en.time } : null;
   };
-  if (out.shift?.gcalEventId) {
-    const e = byId.get(out.shift.gcalEventId);
+  for (const k of SHIFT_KEYS) {
+    const sh = out[k];
+    if (!sh?.gcalEventId) continue;
+    const e = byId.get(sh.gcalEventId);
     const t = e && times(e);
-    if (t && (t.start !== out.shift.start || t.end !== out.shift.end)) {
-      Object.assign(out.shift, t);
+    if (t && (t.start !== sh.start || t.end !== sh.end)) {
+      Object.assign(sh, t);
       changed = true;
     }
   }
@@ -153,7 +162,7 @@ export function reconcile(day: DayEntry, events: GEvent[]): DayEntry | null {
 export function linkedIds(days: DayEntry[]): Set<string> {
   const s = new Set<string>();
   for (const d of days) {
-    if (d.shift?.gcalEventId) s.add(d.shift.gcalEventId);
+    for (const k of SHIFT_KEYS) if (d[k]?.gcalEventId) s.add(d[k]!.gcalEventId!);
     d.appointments.forEach((a) => a.gcalEventId && s.add(a.gcalEventId));
     d.todos.forEach((t) => t.gcalEventId && s.add(t.gcalEventId));
   }

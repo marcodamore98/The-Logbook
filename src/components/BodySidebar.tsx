@@ -6,7 +6,7 @@ import { dayIntake } from '../lib/nutrition/foods';
 import { workingSets, workoutVolume } from '../lib/training/analytics';
 import type { BodyGoals, BodyLog, DayEntry, ISODate } from '../lib/types';
 import { fmt } from './charts';
-import { GlyphClose, IconMood, IconShift, IconWorkout } from './icons';
+import { GlyphClose, IconShift, IconWorkout } from './icons';
 import { NumberInput, useCollapsible, Chevron } from './ui';
 
 type FieldDef = { key: keyof BodyLog; label: string; unit: string; step: number; goal?: keyof BodyGoals };
@@ -119,7 +119,10 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
   const steps7 = avg(last7.map((d) => d.body?.steps));
   const sleep7 = avg(last7.map((d) => d.body?.sleepH));
 
-  const shiftType = settings.shiftTypes.find((t) => t.id === day.shift?.shiftTypeId);
+  const hoursToday = [day.shift, day.guardia].reduce((n, sh) => {
+    if (!sh) return n;
+    return settings.shiftTypes.find((t) => t.id === sh.shiftTypeId)?.countsAsWork === false ? n : n + shiftMinutes(sh.start, sh.end) / 60;
+  }, 0);
   const workouts = day.modules.filter((m) => m.kind === 'workout');
   const surgeries = day.modules.filter((m) => m.kind === 'surgery' && m.procedureId).length;
   const clinical = day.modules.reduce((n, m) => n + (m.kind === 'clinical' ? m.count : 0), 0);
@@ -160,8 +163,15 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
         <ul className="side-summary">
           <li>
             <IconShift size={22} />
-            <span>{day.shift ? `${shiftType?.name ?? 'Turno'} · ${day.shift.start}–${day.shift.end}` : 'Nessun turno'}</span>
-            {day.shift && shiftType?.countsAsWork && <span className="muted">{fmt(shiftMinutes(day.shift.start, day.shift.end) / 60, 1)} h</span>}
+            <span>
+              {day.shift || day.guardia
+                ? [day.shift, day.guardia]
+                    .filter((sh): sh is NonNullable<typeof sh> => !!sh)
+                    .map((sh) => `${settings.shiftTypes.find((t) => t.id === sh.shiftTypeId)?.name ?? 'Turno'} · ${sh.start}–${sh.end}`)
+                    .join(' + ')
+                : 'Nessun turno'}
+            </span>
+            {hoursToday > 0 && <span className="muted">{fmt(hoursToday, 1)} h</span>}
           </li>
           {(surgeries > 0 || clinical > 0 || study > 0) && (
             <li className="muted small">
@@ -178,12 +188,6 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
                 : 'Nessun allenamento'}
             </span>
           </li>
-          {day.mood && (
-            <li>
-              <IconMood size={22} />
-              <span>Umore {day.mood}/5</span>
-            </li>
-          )}
         </ul>
         {!loc.pathname.startsWith('/giorno') && (
           <Link className="link-quiet small" to={`/giorno/${date}`}>

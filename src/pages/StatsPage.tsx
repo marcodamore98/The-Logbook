@@ -165,7 +165,7 @@ export default function StatsPage() {
         <div className="tile" data-print="privato">
           <IconOuting size={32} />
           <span className="tile-value">{stats.outings.total}</span>
-          <span className="tile-label">gite e uscite{stats.mood ? ` · umore ${stats.mood}/5` : ''}</span>
+          <span className="tile-label">gite e uscite</span>
         </div>
       </div>
 

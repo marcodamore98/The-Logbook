@@ -54,7 +54,9 @@ function persist(repo: Repo, p: Promise<void>) {
 /** Copies Google ids from a pushed snapshot onto the latest local version of the same day. */
 function mergeIds(latest: DayEntry, pushed: DayEntry, trashed: string[]): DayEntry {
   const out = structuredClone(latest);
-  if (out.shift && pushed.shift && !out.shift.gcalEventId) out.shift.gcalEventId = pushed.shift.gcalEventId;
+  for (const k of ['shift', 'guardia'] as const) {
+    if (out[k] && pushed[k] && !out[k]!.gcalEventId) out[k]!.gcalEventId = pushed[k]!.gcalEventId;
+  }
   for (const a of out.appointments) a.gcalEventId ??= pushed.appointments.find((x) => x.id === a.id)?.gcalEventId;
   for (const t of out.todos) {
     const p = pushed.todos.find((x) => x.id === t.id);
@@ -231,6 +233,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
       const needs =
         (d.gcalTrash?.length ?? 0) > 0 ||
         (d.shift && !d.shift.gcalEventId) ||
+        (d.guardia && !d.guardia.gcalEventId) ||
         d.appointments.some((a) => !a.gcalEventId) ||
         d.todos.some((t) => t.time && !t.gcalEventId);
       if (needs) {

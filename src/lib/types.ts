@@ -300,7 +300,8 @@ export type ModuleKind = Module['kind'];
 
 export interface DayEntry {
   date: ISODate;
-  shift?: ShiftAssignment;
+  shift?: ShiftAssignment; // lavoro principale (ospedale)
+  guardia?: ShiftAssignment; // secondo lavoro: guardia medica
   todos: Todo[];
   appointments: Appointment[];
   modules: Module[];

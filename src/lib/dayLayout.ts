@@ -15,10 +15,8 @@ export const DAY_BLOCKS: BlockDef[] = [
   { id: 'todos', label: 'Da ricordare', print: 'agenda' },
   { id: 'training', label: 'Allenamento', print: 'palestra' },
   { id: 'nutrition', label: 'Alimentazione', print: 'alimentazione' },
-  { id: 'body', label: 'Passi e corpo', print: 'corpo' },
   { id: 'private', label: 'Gite, uscite e foto', print: 'privato' },
   { id: 'notes', label: 'Note', print: 'diario' },
-  { id: 'mood', label: 'Com’è andata', print: 'diario' },
 ];
 
 export const DAY_PRINT_SECTIONS = [
@@ -26,9 +24,8 @@ export const DAY_PRINT_SECTIONS = [
   { id: 'agenda', label: 'Impegni e promemoria' },
   { id: 'palestra', label: 'Allenamento' },
   { id: 'alimentazione', label: 'Alimentazione' },
-  { id: 'corpo', label: 'Passi e corpo' },
   { id: 'privato', label: 'Gite, uscite e foto' },
-  { id: 'diario', label: 'Note e umore' },
+  { id: 'diario', label: 'Note' },
 ];
 
 export const MODULE_BLOCK: Record<ModuleKind, string> = {

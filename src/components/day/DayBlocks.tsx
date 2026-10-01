@@ -3,11 +3,11 @@ import { dayIntake, MEALS, totalsOf } from '../../lib/nutrition/foods';
 import { useStore } from '../../lib/store/StoreContext';
 import { bestsBefore, countsSet, e1rm, prsOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import { exerciseDef } from '../../lib/training/exercises';
-import type { BodyLog, DayEntry, ISODate, WorkoutModule } from '../../lib/types';
+import type { DayEntry, ISODate, WorkoutModule } from '../../lib/types';
 import { labelOf, WORKOUT_TYPES } from '../../lib/vocab';
 import { fmt } from '../charts';
-import { GlyphPlus, IconFood, IconMood, IconWorkout } from '../icons';
-import { Card, NumberInput, uid } from '../ui';
+import { GlyphPlus, IconFood, IconWorkout } from '../icons';
+import { Card, uid } from '../ui';
 
 function prCount(w: WorkoutModule, date: ISODate, h: ReturnType<typeof useStore>['history']) {
   let n = 0;
@@ -143,50 +143,6 @@ export function NutritionBlock({ day }: { day: DayEntry }) {
       <Link className="btn-ghost small" to={`/alimentazione/${day.date}`}>
         Apri il diario alimentare
       </Link>
-    </Card>
-  );
-}
-
-const QUICK: { key: keyof BodyLog; label: string; unit: string; step: number }[] = [
-  { key: 'steps', label: 'Passi', unit: '', step: 500 },
-  { key: 'weightKg', label: 'Peso', unit: 'kg', step: 0.1 },
-  { key: 'sleepH', label: 'Sonno', unit: 'h', step: 0.25 },
-  { key: 'kcalOut', label: 'Calorie attive', unit: 'kcal', step: 50 },
-];
-
-/** Steps and a few body numbers; full details in the "Corpo" sidebar. */
-export function BodyBlock({ day }: { day: DayEntry }) {
-  const store = useStore();
-  const goals = store.settings.goals ?? {};
-  const b = day.body ?? {};
-  const parts = [
-    b.steps !== undefined ? `${fmt(b.steps)} passi` : '',
-    b.weightKg !== undefined ? `${fmt(b.weightKg, 1)} kg` : '',
-    b.sleepH !== undefined ? `${fmt(b.sleepH, 1)} h di sonno` : '',
-  ].filter(Boolean);
-  return (
-    <Card id="day.body" print="corpo" icon={<IconMood />} title="Passi e corpo" defaultOpen={false} summary={parts.join(' · ') || 'Niente registrato'}>
-      {goals.steps && b.steps !== undefined ? (
-        <div className="steps-bar">
-          <span className="meter">
-            <span className="meter-fill" style={{ width: `${Math.min(100, (b.steps / goals.steps) * 100)}%` }} />
-          </span>
-          <span className="muted small">
-            {fmt(b.steps)} / {fmt(goals.steps)} passi
-          </span>
-        </div>
-      ) : null}
-      <div className="side-grid quick-body">
-        {QUICK.map((f) => (
-          <label key={f.key} className="side-field">
-            <span className="side-label">{f.label}</span>
-            <span className="side-input">
-              <NumberInput value={b[f.key]} step={f.step} onChange={(v) => store.updateDay(day.date, (d) => ({ ...d, body: { ...d.body, [f.key]: v } }))} />
-              <span className="unit">{f.unit}</span>
-            </span>
-          </label>
-        ))}
-      </div>
     </Card>
   );
 }

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import instructions from '../../../docs/personal-trainer-claude.md?raw';
 import { applyProgram, exportForCoach, extractJson } from '../../lib/coach';
 import { useStore } from '../../lib/store/StoreContext';
 import { GlyphDownload, GlyphUpload, IconWorkout } from '../icons';
-import { uid } from '../ui';
+import { Card, uid } from '../ui';
 
 const projectText = instructions.split('\n---\n').slice(1).join('\n---\n').trim();
 
@@ -24,6 +25,8 @@ export function CoachCard() {
   const [msg, setMsg] = useState<string>();
   const [err, setErr] = useState<string>();
   const file = useRef<HTMLInputElement>(null);
+  const loc = useLocation();
+  const [open, setOpen] = useState(loc.hash === '#personal-trainer');
 
   function importText(t: string) {
     setErr(undefined);
@@ -43,11 +46,16 @@ export function CoachCard() {
   }, [store]);
 
   return (
-    <section className="card coach" id="personal-trainer">
-      <div className="card-head">
-        <IconWorkout />
-        <h2>Personal trainer (Progetto Claude)</h2>
-      </div>
+    <div id="personal-trainer">
+    <Card
+      id="settings.coach"
+      className="coach"
+      icon={<IconWorkout />}
+      title="Personal trainer (Progetto Claude)"
+      summary="Importa programmi di allenamento e dieta"
+      open={open}
+      onToggle={() => setOpen((o) => !o)}
+    >
       <ol className="steps">
         <li>
           Su claude.ai crea un <strong>Progetto</strong> (es. “Personal trainer”) e incolla nelle sue istruzioni il testo qui sotto.
@@ -128,6 +136,7 @@ export function CoachCard() {
           <p className="small">Le schede sono in Palestra → Schede; i piani alimentari si applicano dalla pagina Alimentazione.</p>
         </div>
       )}
-    </section>
+    </Card>
+    </div>
   );
 }

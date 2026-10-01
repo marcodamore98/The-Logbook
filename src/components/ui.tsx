@@ -236,6 +236,7 @@ export function Card({
   open: controlledOpen,
   onToggle,
   print,
+  collapsible = true,
 }: {
   id: string;
   icon?: ReactNode;
@@ -250,22 +251,30 @@ export function Card({
   onToggle?: () => void;
   /** Print section this card belongs to (see PrintDialog). */
   print?: string;
+  /** false: always open, no arrow. */
+  collapsible?: boolean;
 }) {
   const [stored, toggleStored] = useCollapsible(id, defaultOpen);
-  const open = controlledOpen ?? stored;
+  const open = !collapsible || (controlledOpen ?? stored);
   const toggle = onToggle ?? toggleStored;
   return (
     <section className={`card ${className}${open ? '' : ' collapsed'}`} style={style} data-print={print}>
       <div className="card-head">
         {icon}
-        <button type="button" className="card-title-btn" onClick={toggle} aria-expanded={open}>
+        {collapsible ? (
+          <button type="button" className="card-title-btn" onClick={toggle} aria-expanded={open}>
+            <h2>{title}</h2>
+            {!open && summary && <span className="card-summary">{summary}</span>}
+          </button>
+        ) : (
           <h2>{title}</h2>
-          {!open && summary && <span className="card-summary">{summary}</span>}
-        </button>
+        )}
         {actions}
-        <button type="button" className="icon-btn small chevron-btn" onClick={toggle} aria-label={open ? 'Riduci' : 'Espandi'} aria-expanded={open}>
-          <Chevron open={open} />
-        </button>
+        {collapsible && (
+          <button type="button" className="icon-btn small chevron-btn" onClick={toggle} aria-label={open ? 'Riduci' : 'Espandi'} aria-expanded={open}>
+            <Chevron open={open} />
+          </button>
+        )}
       </div>
       {/* Body stays mounted (hidden) so printing can include closed cards. */}
       <div className="card-body" hidden={!open}>

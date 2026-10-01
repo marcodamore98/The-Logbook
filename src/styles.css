@@ -673,3 +673,11 @@ textarea { resize: vertical; }
 .import-result ul { margin: 0.3rem 0 0.6rem; padding-left: 1.1rem; }
 .plan-row select { width: auto; max-width: 100%; }
 a.btn-ghost { text-decoration: none; }
+
+.guardia { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.4rem; padding-top: 0.8rem; border-top: 1px dashed var(--line); }
+.guardia h3.sub { margin: 0; }
+
+.group { display: flex; flex-direction: column; gap: 0.5rem; border-top: 1px solid var(--line); padding-top: 0.5rem; }
+.group-toggle { width: 100%; padding: 0.2rem 0; }
+.list-edit select { width: auto; max-width: 9rem; }
+.guardia .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }

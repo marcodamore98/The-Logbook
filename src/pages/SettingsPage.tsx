@@ -1,14 +1,29 @@
 import { useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSettings, IconShift, IconSync, IconWorkout } from '../components/icons';
-import { Empty, Field, uid } from '../components/ui';
+import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSettings, IconShift, IconSync } from '../components/icons';
+import { Card, Chevron, Empty, Field, uid, useCollapsible } from '../components/ui';
 import { listCalendars, type GCalendar } from '../lib/google/calendar';
 import { firebaseConfigured, logOut } from '../lib/firebase';
 import { CoachCard } from '../components/coach/CoachCard';
-import { parseHevyCsv } from '../lib/hevy';
 import { myRosterDays, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
 import type { Colleague, DayEntry, Settings, ShiftType } from '../lib/types';
+
+/** Sub-list with its own arrow, closed by default (remembered on this device). */
+function Group({ id, title, count, children }: { id: string; title: string; count: number; children: React.ReactNode }) {
+  const [open, toggle] = useCollapsible(id, false);
+  return (
+    <div className="group">
+      <button type="button" className="side-toggle group-toggle" onClick={toggle} aria-expanded={open}>
+        <h3 className="sub">
+          {title} <span className="muted">· {count}</span>
+        </h3>
+        <Chevron open={open} />
+      </button>
+      {open && children}
+    </div>
+  );
+}
 
 export default function SettingsPage({ userEmail }: { userEmail?: string }) {
   const store = useStore();
@@ -18,8 +33,6 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
   const [msg, setMsg] = useState<string>();
   const [bulk, setBulk] = useState('');
   const [importing, setImporting] = useState(false);
-  const [hevyMsg, setHevyMsg] = useState<string>();
-  const hevyFile = useRef<HTMLInputElement>(null);
   const myDays = myRosterDays().length;
   const file = useRef<HTMLInputElement>(null);
 
@@ -174,11 +187,13 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
         {gcal.error && <p className="error small">{gcal.error}</p>}
       </section>
 
-      <section className="card">
-        <div className="card-head">
-          <IconShift />
-          <h2>Tabellone di reparto</h2>
-        </div>
+      <Card
+        id="settings.roster"
+        icon={<IconShift />}
+        title="Tabellone di reparto"
+        summary={`${myDays} tuoi turni da importare`}
+        defaultOpen={false}
+      >
         <p>
           Contiene i turni di ottobre 2026 di specializzandi e strutturati. Ogni pagina giorno mostra chi fa cosa; qui puoi copiare i tuoi turni
           ({ROSTER_SELF}, {myDays} giorni) nel logbook, con i colleghi che fanno la stessa attività. I giorni in cui hai già inserito un turno non
@@ -199,106 +214,95 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           </button>
         </div>
         {msg?.startsWith('Turni importati') && <p className="muted small">{msg}</p>}
-      </section>
+      </Card>
 
       <CoachCard />
 
-      <section className="card">
-        <div className="card-head">
-          <IconWorkout />
-          <h2>Allenamenti da Hevy</h2>
-        </div>
-        <p>
-          In Hevy apri <strong>Profilo → ⚙ Impostazioni → Esporta e importa dati → Esporta allenamenti</strong> e carica qui il file CSV. Ogni allenamento
-          diventa una scheda nel giorno giusto, con esercizi, serie e carichi; il tipo (Push / Pull / Legs) è ricavato dal nome della routine. Puoi
-          reimportare quando vuoi: gli allenamenti già presenti vengono aggiornati, non duplicati.
-        </p>
-        <div className="row">
-          <button className="btn" disabled={importing} onClick={() => hevyFile.current?.click()}>
-            Carica CSV di Hevy
-          </button>
-          <input
-            ref={hevyFile}
-            type="file"
-            accept=".csv,text/csv"
-            hidden
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (!f) return;
-              setImporting(true);
-              try {
-                const list = parseHevyCsv(await f.text());
-                const r = await store.importWorkouts(list);
-                setHevyMsg(`Allenamenti importati: ${r.added} nuovi, ${r.updated} aggiornati.`);
-              } catch (err) {
-                setHevyMsg(String(err instanceof Error ? err.message : err));
-              } finally {
-                setImporting(false);
-              }
-            }}
-          />
-        </div>
-        {hevyMsg && <p className="muted small">{hevyMsg}</p>}
-      </section>
-
-      <section className="card">
-        <div className="card-head">
-          <IconPeople />
-          <h2>Colleghi</h2>
+      <Card
+        id="settings.colleagues"
+        icon={<IconPeople />}
+        title="Colleghi"
+        summary={`${settings.colleagues.length} colleghi`}
+        defaultOpen={false}
+        actions={
           <button className="icon-btn" aria-label="Aggiungi collega" onClick={() => save({ colleagues: [...settings.colleagues, { id: uid(), name: '' }] })}>
             <GlyphPlus />
           </button>
-        </div>
+        }
+      >
         {settings.colleagues.length === 0 && <Empty>Nessun collega. Aggiungili uno per uno o incolla un elenco qui sotto.</Empty>}
-        <ul className="list-edit">
-          {settings.colleagues.map((c) => (
-            <li key={c.id}>
-              <input className="grow" value={c.name} placeholder="Cognome Nome" onChange={(e) => setColleague({ ...c, name: e.target.value })} />
-              <input value={c.role ?? ''} placeholder="Ruolo" onChange={(e) => setColleague({ ...c, role: e.target.value })} />
-              <button className="icon-btn small" aria-label="Elimina collega" onClick={() => save({ colleagues: settings.colleagues.filter((x) => x.id !== c.id) })}>
-                <GlyphTrash />
-              </button>
-            </li>
-          ))}
-        </ul>
+        {[...new Set(settings.colleagues.map((c) => c.role || 'Altri'))].map((role) => {
+          const list = settings.colleagues.filter((c) => (c.role || 'Altri') === role);
+          return (
+            <Group key={role} id={`settings.colleagues.${role}`} title={role} count={list.length}>
+              <ul className="list-edit">
+                {list.map((c) => (
+                  <li key={c.id}>
+                    <input className="grow" value={c.name} placeholder="Cognome Nome" onChange={(e) => setColleague({ ...c, name: e.target.value })} />
+                    <input value={c.role ?? ''} placeholder="Ruolo" onChange={(e) => setColleague({ ...c, role: e.target.value })} />
+                    <button className="icon-btn small" aria-label="Elimina collega" onClick={() => save({ colleagues: settings.colleagues.filter((x) => x.id !== c.id) })}>
+                      <GlyphTrash />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Group>
+          );
+        })}
         <Field label="Aggiungi più colleghi (uno per riga o separati da virgola)" wide>
           <textarea rows={2} value={bulk} onChange={(e) => setBulk(e.target.value)} />
         </Field>
         <button className="btn-ghost" disabled={!bulk.trim()} onClick={addBulk}>
           <GlyphPlus /> Aggiungi elenco
         </button>
-      </section>
+      </Card>
 
-      <section className="card">
-        <div className="card-head">
-          <IconShift />
-          <h2>Tipi di turno</h2>
+      <Card
+        id="settings.shifttypes"
+        icon={<IconShift />}
+        title="Tipi di turno"
+        summary={`${settings.shiftTypes.length} tipi`}
+        defaultOpen={false}
+        actions={
           <button
             className="icon-btn"
             aria-label="Aggiungi tipo di turno"
-            onClick={() => save({ shiftTypes: [...settings.shiftTypes, { id: uid(), name: 'Nuovo turno', start: '08:00', end: '14:00', color: '#b8b2a7', countsAsWork: true }] })}
+            onClick={() => save({ shiftTypes: [...settings.shiftTypes, { id: uid(), name: 'Nuovo turno', start: '08:00', end: '14:00', color: '#b8b2a7', countsAsWork: true, group: 'Altri turni' }] })}
           >
             <GlyphPlus />
           </button>
-        </div>
-        <ul className="list-edit shift-types">
-          {settings.shiftTypes.map((t) => (
-            <li key={t.id}>
-              <input type="color" value={t.color} aria-label="Colore" onChange={(e) => setShiftType({ ...t, color: e.target.value })} />
-              <input className="grow" value={t.name} onChange={(e) => setShiftType({ ...t, name: e.target.value })} />
-              <input type="time" value={t.start} aria-label="Inizio" onChange={(e) => setShiftType({ ...t, start: e.target.value })} />
-              <input type="time" value={t.end} aria-label="Fine" onChange={(e) => setShiftType({ ...t, end: e.target.value })} />
-              <label className="check">
-                <input type="checkbox" checked={t.countsAsWork} onChange={(e) => setShiftType({ ...t, countsAsWork: e.target.checked })} /> lavoro
-              </label>
-              <button className="icon-btn small" aria-label="Elimina tipo di turno" onClick={() => save({ shiftTypes: settings.shiftTypes.filter((x) => x.id !== t.id) })}>
-                <GlyphTrash />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+        }
+      >
+        <p className="muted small">I tipi del gruppo “Guardia medica” compaiono nella sezione Guardia medica del giorno, gli altri nel turno principale.</p>
+        {[...new Set(settings.shiftTypes.map((t) => t.group ?? 'Altri turni'))].map((group) => {
+          const list = settings.shiftTypes.filter((t) => (t.group ?? 'Altri turni') === group);
+          return (
+            <Group key={group} id={`settings.shifttypes.${group}`} title={group} count={list.length}>
+              <ul className="list-edit shift-types">
+                {list.map((t) => (
+                  <li key={t.id}>
+                    <input type="color" value={t.color} aria-label="Colore" onChange={(e) => setShiftType({ ...t, color: e.target.value })} />
+                    <input className="grow" value={t.name} onChange={(e) => setShiftType({ ...t, name: e.target.value })} />
+                    <input type="time" value={t.start} aria-label="Inizio" onChange={(e) => setShiftType({ ...t, start: e.target.value })} />
+                    <input type="time" value={t.end} aria-label="Fine" onChange={(e) => setShiftType({ ...t, end: e.target.value })} />
+                    <select value={t.group ?? 'Altri turni'} aria-label="Gruppo" onChange={(e) => setShiftType({ ...t, group: e.target.value })}>
+                      {[...new Set([...settings.shiftTypes.map((x) => x.group ?? 'Altri turni'), 'Guardia medica'])].map((g) => (
+                        <option key={g}>{g}</option>
+                      ))}
+                    </select>
+                    <label className="check">
+                      <input type="checkbox" checked={t.countsAsWork} onChange={(e) => setShiftType({ ...t, countsAsWork: e.target.checked })} /> lavoro
+                    </label>
+                    <button className="icon-btn small" aria-label="Elimina tipo di turno" onClick={() => save({ shiftTypes: settings.shiftTypes.filter((x) => x.id !== t.id) })}>
+                      <GlyphTrash />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Group>
+          );
+        })}
+      </Card>
     </div>
   );
 }

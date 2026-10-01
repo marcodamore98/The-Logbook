@@ -76,15 +76,16 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   const bodyVals: Record<'weight' | 'kcalIn' | 'steps' | 'sleepH', number[]> = { weight: [], kcalIn: [], steps: [], sleepH: [] };
 
   for (const d of days) {
-    if (d.shift) {
-      const t = settings.shiftTypes.find((x) => x.id === d.shift!.shiftTypeId);
-      shiftT.add(t?.name ?? d.shift.shiftTypeId);
+    for (const sh of [d.shift, d.guardia]) {
+      if (!sh) continue;
+      const t = settings.shiftTypes.find((x) => x.id === sh.shiftTypeId);
+      shiftT.add(t?.name ?? sh.shiftTypeId);
       if (t?.countsAsWork !== false) {
         s.work.shifts++;
-        s.work.hours += shiftMinutes(d.shift.start, d.shift.end) / 60;
-        if (d.shift.end <= d.shift.start && d.shift.start >= '18:00') s.work.nights++;
+        s.work.hours += shiftMinutes(sh.start, sh.end) / 60;
+        if (sh.end <= sh.start && sh.start >= '18:00') s.work.nights++;
       }
-      for (const id of d.shift.colleagueIds) {
+      for (const id of sh.colleagueIds) {
         const c = settings.colleagues.find((x) => x.id === id);
         if (c) colleagues.add(c.name);
       }
@@ -201,9 +202,11 @@ export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Se
     case 'surgery':
       return day.modules.filter((m) => m.kind === 'surgery' && m.procedureId).length;
     case 'hours': {
-      if (!day.shift) return 0;
-      const t = settings.shiftTypes.find((x) => x.id === day.shift!.shiftTypeId);
-      return t?.countsAsWork === false ? 0 : shiftMinutes(day.shift.start, day.shift.end) / 60;
+      return [day.shift, day.guardia].reduce((n, sh) => {
+        if (!sh) return n;
+        const t = settings.shiftTypes.find((x) => x.id === sh.shiftTypeId);
+        return t?.countsAsWork === false ? n : n + shiftMinutes(sh.start, sh.end) / 60;
+      }, 0);
     }
     case 'study':
       return day.modules.reduce((n, m) => n + (m.kind === 'study' ? m.durationMin / 60 : 0), 0);
