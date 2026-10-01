@@ -58,7 +58,8 @@ const ROWS: Row[] = [
   ['decline-bench', 'Panca declinata', 'Petto', 'Bilanciere', 'weight_reps', ['Tricipiti']],
   ['chest-press-machine', 'Chest press', 'Petto', 'Macchina', 'weight_reps', ['Tricipiti']],
   ['incline-press-machine', 'Chest press inclinata', 'Petto', 'Macchina', 'weight_reps', ['Spalle']],
-  ['smith-bench', 'Panca alla Smith', 'Petto', 'Smith', 'weight_reps', ['Tricipiti']],
+  ['smith-bench', 'Panca piana al multipower', 'Petto', 'Smith', 'weight_reps', ['Tricipiti']],
+  ['smith-incline', 'Panca inclinata al multipower', 'Petto', 'Smith', 'weight_reps', ['Spalle', 'Tricipiti']],
   ['pec-deck', 'Pectoral machine (pec deck)', 'Petto', 'Macchina'],
   ['db-fly', 'Croci con manubri', 'Petto', 'Manubri'],
   ['dips-weighted', 'Dip zavorrati', 'Petto', 'Corpo libero', 'weighted_bodyweight', ['Tricipiti']],
@@ -68,6 +69,8 @@ const ROWS: Row[] = [
   ['pull-up-assisted', 'Trazioni assistite', 'Dorsali', 'Macchina', 'assisted_bodyweight', ['Bicipiti']],
   ['chin-up', 'Trazioni presa supina', 'Dorsali', 'Corpo libero', 'bodyweight_reps', ['Bicipiti']],
   ['lat-pulldown-close', 'Lat machine presa stretta', 'Dorsali', 'Cavi', 'weight_reps', ['Bicipiti']],
+  ['lat-pulldown-machine', 'Lat machine (macchina a dischi)', 'Dorsali', 'Macchina', 'weight_reps', ['Bicipiti']],
+  ['cable-row-wide', 'Pulley basso presa larga', 'Dorsali', 'Cavi', 'weight_reps', ['Spalle', 'Bicipiti']],
   ['db-row', 'Rematore con manubrio', 'Dorsali', 'Manubri', 'weight_reps', ['Bicipiti']],
   ['t-bar-row', 'T-bar row', 'Dorsali', 'Bilanciere', 'weight_reps', ['Bicipiti']],
   ['machine-row', 'Rematore alla macchina', 'Dorsali', 'Macchina', 'weight_reps', ['Bicipiti']],
@@ -89,6 +92,7 @@ const ROWS: Row[] = [
   // Braccia
   ['db-curl', 'Curl con manubri', 'Bicipiti', 'Manubri'],
   ['hammer-curl', 'Hammer curl', 'Bicipiti', 'Manubri', 'weight_reps', ['Avambracci']],
+  ['cross-hammer-curl', 'Hammer curl incrociato', 'Bicipiti', 'Manubri', 'weight_reps', ['Avambracci']],
   ['preacher-curl', 'Curl alla panca Scott', 'Bicipiti', 'Macchina'],
   ['cable-curl', 'Curl ai cavi', 'Bicipiti', 'Cavi'],
   ['incline-curl', 'Curl su panca inclinata', 'Bicipiti', 'Manubri'],
@@ -101,7 +105,7 @@ const ROWS: Row[] = [
 
   // Gambe
   ['hack-squat', 'Hack squat', 'Quadricipiti', 'Macchina', 'weight_reps', ['Glutei']],
-  ['smith-squat', 'Squat alla Smith', 'Quadricipiti', 'Smith', 'weight_reps', ['Glutei']],
+  ['smith-squat', 'Squat al multipower', 'Quadricipiti', 'Smith', 'weight_reps', ['Glutei']],
   ['goblet-squat', 'Goblet squat', 'Quadricipiti', 'Kettlebell', 'weight_reps', ['Glutei']],
   ['bulgarian-split', 'Bulgarian split squat', 'Quadricipiti', 'Manubri', 'weight_reps', ['Glutei']],
   ['pendulum-squat', 'Pendulum squat', 'Quadricipiti', 'Macchina', 'weight_reps', ['Glutei']],

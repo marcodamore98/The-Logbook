@@ -83,16 +83,23 @@ function Routines() {
             e.target.value = '';
             if (!f) return;
             try {
-              const latest = new Map<string, WorkoutModule>();
+              // Per routine name: the most complete session (most exercises), the most recent on ties.
+              const best = new Map<string, WorkoutModule>();
               for (const { module } of parseHevyCsv(await f.text()).sort((a, b) => a.date.localeCompare(b.date))) {
-                if (module.title) latest.set(module.title, module);
+                if (!module.title) continue;
+                const cur = best.get(module.title);
+                if (!cur || module.exercises.length >= cur.exercises.length) best.set(module.title, module);
               }
               const names = new Set(routines.map((r) => r.name.toLowerCase()));
-              const created = [...latest.values()]
+              const created = [...best.values()]
                 .filter((w) => !names.has(w.title!.toLowerCase()))
-                .map((w) => ({ ...routineFromWorkout(w, uid(), w.title!), folder: 'Da Hevy' }));
+                .map((w) => {
+                  const r = routineFromWorkout(w, uid(), w.title!);
+                  // Leave weights empty: each workout proposes the last weight actually used.
+                  return { ...r, folder: 'Da Hevy', exercises: r.exercises.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s, kg: undefined })) })) };
+                });
               save([...routines, ...created]);
-              setMsg(`Schede create: ${created.length} (dall'ultimo allenamento di ogni routine). Controllale e spostale nella cartella che preferisci.`);
+              setMsg(`Schede create: ${created.length} (dalla sessione più completa di ogni routine). Controllale e spostale nella cartella che preferisci.`);
             } catch (err) {
               setMsg(String(err instanceof Error ? err.message : err));
             }
@@ -194,7 +201,7 @@ function Exercises() {
                 <span className="ex-name">{e.name}</span>
                 <span className="ex-meta">
                   {e.muscle} · {e.equipment}
-                  {done(e.id) ? ` · ${done(e.id)} sessioni` : ''}
+                  {done(e.id) ? ` · ${done(e.id)} ${done(e.id) === 1 ? 'sessione' : 'sessioni'}` : ''}
                   {e.custom ? ' · personale' : ''}
                 </span>
               </button>

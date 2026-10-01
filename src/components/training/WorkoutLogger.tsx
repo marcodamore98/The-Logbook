@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { today } from '../../lib/dates';
 import { useStore } from '../../lib/store/StoreContext';
 import { bestsBefore, matchingSet, previousSession, prsOf, SET_TYPES, setTypeOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import { exerciseDef, usesDistance, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
@@ -276,11 +277,11 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
               Termina allenamento
             </button>
           </>
-        ) : (
+        ) : date === today() ? (
           <button type="button" className="btn small" onClick={() => set({ startedAt: Date.now(), finishedAt: undefined })}>
             {w.finishedAt ? 'Riprendi' : 'Inizia allenamento'}
           </button>
-        )}
+        ) : null}
         <span className="muted small">
           {Math.round(volume).toLocaleString('it-IT')} kg · {sets} serie{w.durationMin ? ` · ${w.durationMin}′` : ''}
         </span>

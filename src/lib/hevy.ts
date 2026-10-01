@@ -57,39 +57,153 @@ export function parseHevyDate(s: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// Hevy exercise names → standardized ids (vocab EXERCISES). Unmapped names are kept as "hevy:<name>".
+// Hevy exercise names (Italian and English app language) → standardized ids
+// (training/exercises.ts). Exact names first, then patterns; unmapped names
+// are kept as "hevy:<name>" so their history still groups correctly.
+
+const norm = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+
+const EXACT: Record<string, string> = {
+  // Italiano
+  'panca piana bilanciere': 'bench',
+  'panca piana manubrio': 'bench-db',
+  'panca piana multipower': 'smith-bench',
+  'panca inclinata bilanciere': 'incline-bench',
+  'panca inclinata manubrio': 'incline-db',
+  'panca inclinata multipower': 'smith-incline',
+  'chest press convergente macchina': 'chest-press-machine',
+  'chest press macchina': 'chest-press-machine',
+  'croci macchina': 'pec-deck',
+  'croci manubrio': 'db-fly',
+  'croci al cavo': 'chest-fly',
+  'trazione': 'pull-up',
+  'trazioni': 'pull-up',
+  'trazione verticale macchina': 'lat-pulldown-machine',
+  'trazione verticale cavo': 'lat-pulldown',
+  'lat machine cavo': 'lat-pulldown',
+  'rematore al cavo da seduto presa larga': 'cable-row-wide',
+  'rematore al cavo da seduto': 'cable-row',
+  'rematore con bilanciere': 'barbell-row',
+  'rematore manubrio': 'db-row',
+  'chest supported t bar row': 't-bar-row',
+  'squat multipower': 'smith-squat',
+  'squat bilanciere': 'squat',
+  'leg press macchina': 'leg-press',
+  'leg extension macchina': 'leg-extension',
+  'leg curl sdraiato macchina': 'leg-curl',
+  'leg curl seduto macchina': 'seated-leg-curl',
+  'stacco da terra rumeno bilanciere': 'rdl',
+  'stacco da terra rumeno manubrio': 'db-rdl',
+  'stacco da terra bilanciere': 'deadlift',
+  'calf raise seduto': 'seated-calf',
+  'calf raise in piedi': 'calf',
+  'aperture laterali macchina': 'machine-lateral',
+  'aperture laterali manubrio': 'lateral-raise',
+  'aperture laterali cavo': 'cable-lateral',
+  'lento in avanti seduto macchina': 'shoulder-press-machine',
+  'lento in avanti manubrio': 'db-shoulder-press',
+  'croci inverse deltoide posteriore macchina': 'rear-delt-fly',
+  'skullcrusher bilanciere': 'skullcrusher',
+  'pushdown tricipiti con corda': 'rope-pushdown',
+  'pushdown tricipiti': 'triceps',
+  'preacher curl bilanciere': 'preacher-curl',
+  'preacher curl macchina': 'preacher-curl',
+  'curl bicipiti cavo': 'cable-curl',
+  'curl bicipiti manubrio': 'db-curl',
+  'curl bicipiti bilanciere': 'curl',
+  'bicipiti martello incrociato': 'cross-hammer-curl',
+  'curl a martello manubrio': 'hammer-curl',
+  'hip thrust bilanciere': 'hip-thrust',
+  'face pull': 'face-pull',
+  // English
+  'bench press barbell': 'bench',
+  'bench press dumbbell': 'bench-db',
+  'bench press smith machine': 'smith-bench',
+  'incline bench press barbell': 'incline-bench',
+  'incline bench press dumbbell': 'incline-db',
+  'incline bench press smith machine': 'smith-incline',
+  'squat smith machine': 'smith-squat',
+  'lat pulldown cable': 'lat-pulldown',
+  'lat pulldown machine': 'lat-pulldown-machine',
+  'seated cable row v grip cable': 'cable-row',
+  'seated calf raise': 'seated-calf',
+  'lateral raise machine': 'machine-lateral',
+  'lateral raise dumbbell': 'lateral-raise',
+  'lateral raise cable': 'cable-lateral',
+  'triceps rope pushdown': 'rope-pushdown',
+  'preacher curl barbell': 'preacher-curl',
+  'bicep curl cable': 'cable-curl',
+  'bicep curl dumbbell': 'db-curl',
+  'bicep curl barbell': 'curl',
+  'skullcrusher barbell': 'skullcrusher',
+  'chest fly machine': 'pec-deck',
+  'butterfly pec deck': 'pec-deck',
+  'rear delt reverse fly machine': 'rear-delt-fly',
+  'shoulder press machine': 'shoulder-press-machine',
+  'romanian deadlift barbell': 'rdl',
+  'leg extension machine': 'leg-extension',
+  'lying leg curl machine': 'leg-curl',
+  'seated leg curl machine': 'seated-leg-curl',
+  'leg press machine': 'leg-press',
+  'pull up': 'pull-up',
+};
+
 const EXERCISE_RULES: [RegExp, string][] = [
-  [/^front squat/, 'front-squat'],
-  [/^(squat|hack squat|smith machine squat|goblet squat|pendulum squat)/, 'squat'],
-  [/^leg press/, 'leg-press'],
-  [/lunge|split squat/, 'lunge'],
-  [/^romanian deadlift|^stiff leg/, 'rdl'],
+  [/front squat/, 'front-squat'],
+  [/hack squat/, 'hack-squat'],
+  [/(squat|accosciata).*(multipower|smith)/, 'smith-squat'],
+  [/^(squat|goblet squat|pendulum squat)/, 'squat'],
+  [/leg press/, 'leg-press'],
+  [/lunge|affond|split squat/, 'lunge'],
+  [/(romanian deadlift|stacco.*rumeno|stiff leg)/, 'rdl'],
+  [/leg curl.*(seduto|seated)/, 'seated-leg-curl'],
   [/leg curl/, 'leg-curl'],
-  [/^leg extension/, 'leg-extension'],
-  [/^hip thrust|glute bridge/, 'hip-thrust'],
+  [/leg extension/, 'leg-extension'],
+  [/hip thrust|glute bridge|ponte glutei/, 'hip-thrust'],
+  [/calf.*(seduto|seated)/, 'seated-calf'],
   [/calf/, 'calf'],
-  [/^deadlift|^sumo deadlift|^trap bar deadlift/, 'deadlift'],
-  [/^(pull up|chin up)/, 'pull-up'],
-  [/^lat pulldown|^pulldown/, 'lat-pulldown'],
-  [/^(bent over row|pendlay row|t bar row|dumbbell row|seal row)/, 'barbell-row'],
-  [/^(seated cable row|seated row|cable row|chest supported|iso-lateral row|low row)/, 'cable-row'],
-  [/^incline (bench|chest) press/, 'incline-bench'],
-  [/^(bench press|chest press|decline bench press)/, 'bench'],
+  [/^(deadlift|stacco da terra)/, 'deadlift'],
+  [/^(pull up|chin up|trazion[ei]$)/, 'pull-up'],
+  [/(lat pulldown|pulldown|trazione verticale|lat machine)/, 'lat-pulldown'],
+  [/t bar row/, 't-bar-row'],
+  [/(bent over row|pendlay row|rematore.*bilanciere)/, 'barbell-row'],
+  [/(dumbbell row|rematore.*manubri)/, 'db-row'],
+  [/(seated cable row|seated row|cable row|rematore al cavo|pulley)/, 'cable-row'],
+  [/(iso lateral row|low row|rematore.*macchina)/, 'machine-row'],
+  [/(incline|inclinata).*(smith|multipower)/, 'smith-incline'],
+  [/(incline|inclinata).*(dumbbell|manubri)/, 'incline-db'],
+  [/(incline|inclinata).*(bench|panca|press)/, 'incline-bench'],
+  [/(bench press|panca piana).*(smith|multipower)/, 'smith-bench'],
+  [/(bench press|panca piana).*(dumbbell|manubri)/, 'bench-db'],
+  [/(chest press)/, 'chest-press-machine'],
+  [/(^bench press|panca piana|decline bench)/, 'bench'],
   [/dip/, 'dips'],
-  [/^push up/, 'push-up'],
-  [/fly|butterfly|pec deck|crossover/, 'chest-fly'],
-  [/^(overhead press|shoulder press|seated overhead press|arnold press|military press)/, 'ohp'],
-  [/lateral raise/, 'lateral-raise'],
-  [/^face pull|rear delt/, 'face-pull'],
+  [/(push up|piegament)/, 'push-up'],
+  [/(reverse fly|rear delt|croci inverse|deltoide posteriore)/, 'rear-delt-fly'],
+  [/(butterfly|pec deck|croci.*macchina|chest fly.*machine)/, 'pec-deck'],
+  [/(fly|croci|crossover)/, 'chest-fly'],
+  [/(overhead press|shoulder press|military press|lento avanti|lento in avanti|arnold)/, 'ohp'],
+  [/(lateral raise|alzate laterali|aperture laterali).*(machine|macchina)/, 'machine-lateral'],
+  [/(lateral raise|alzate laterali|aperture laterali).*(cable|cavo)/, 'cable-lateral'],
+  [/(lateral raise|alzate laterali|aperture laterali)/, 'lateral-raise'],
+  [/face pull/, 'face-pull'],
+  [/(preacher|scott)/, 'preacher-curl'],
+  [/(hammer|martello)/, 'hammer-curl'],
+  [/(curl).*(cable|cavo)/, 'cable-curl'],
+  [/(curl).*(dumbbell|manubri)/, 'db-curl'],
+  [/(skullcrusher|french press)/, 'skullcrusher'],
+  [/(rope|corda).*(pushdown|tricipiti)|(pushdown|push down).*(rope|corda)/, 'rope-pushdown'],
+  [/(triceps|tricipiti|pushdown|push down)/, 'triceps'],
   [/curl/, 'curl'],
-  [/triceps|tricep|skullcrusher|pushdown/, 'triceps'],
   [/^plank/, 'plank'],
-  [/crunch|sit up/, 'crunch'],
-  [/leg raise|knee raise/, 'hanging-leg'],
+  [/(crunch|sit up)/, 'crunch'],
+  [/(leg raise|knee raise)/, 'hanging-leg'],
 ];
 
 export function mapExercise(title: string): string {
-  const t = title.toLowerCase().trim();
+  const t = norm(title);
+  if (EXACT[t]) return EXACT[t];
   for (const [re, id] of EXERCISE_RULES) if (re.test(t)) return id;
   return `hevy:${title.trim()}`;
 }
@@ -137,8 +251,12 @@ export function parseHevyCsv(text: string): ImportedWorkout[] {
     let kg = num(get(r, lbs ? 'weight_lbs' : 'weight_kg'));
     if (kg !== undefined && lbs) kg = Math.round(kg * 0.4536 * 10) / 10;
     const reps = num(get(r, 'reps')) ?? 0;
-    const warmup = get(r, 'set_type').toLowerCase() === 'warmup';
-    w.exercises.get(exTitle)!.sets.push({ reps, kg, ...(warmup ? { warmup: true } : {}) });
+    const st = get(r, 'set_type').toLowerCase();
+    const type = st === 'warmup' ? 'warmup' : st === 'dropset' || st === 'drop' ? 'drop' : st === 'failure' ? 'failure' : 'normal';
+    const seconds = num(get(r, 'duration_seconds'));
+    w.exercises.get(exTitle)!.sets.push({ reps, kg, type, done: true, ...(seconds ? { seconds } : {}) });
+    const ss = get(r, 'superset_id');
+    if (ss !== '') w.exercises.get(exTitle)!.supersetId = `hevy-${ss}`;
     const rpe = num(get(r, 'rpe'));
     if (rpe) w.rpe.push(rpe);
     const dist = num(get(r, miles ? 'distance_miles' : 'distance_km'));
