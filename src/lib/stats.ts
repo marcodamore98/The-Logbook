@@ -12,6 +12,7 @@ import {
   STUDY_TYPES,
   SURGICAL_ROLES,
   WORKOUT_TYPES,
+  exerciseLabel,
   type VocabItem,
 } from './vocab';
 
@@ -26,7 +27,7 @@ export interface Stats {
   surgery: { total: number; byGroup: Count[]; byProcedure: Count[]; byRole: Count[]; byApproach: Count[]; bySetting: Count[]; complications: number; minutes: number };
   clinical: { total: number; byActivity: Count[] };
   study: { minutes: number; byArea: Count[]; byType: Count[] };
-  workout: { sessions: number; minutes: number; volumeKg: number; km: number; byType: Count[] };
+  workout: { sessions: number; minutes: number; volumeKg: number; km: number; sets: number; byType: Count[]; byExercise: Count[] };
   outings: { total: number; byType: Count[] };
   photos: number;
   mood?: number;
@@ -47,14 +48,14 @@ const by = (list: VocabItem[]) => (id: string) => labelOf(list, id);
 export function computeStats(days: DayEntry[], settings: Settings): Stats {
   const shiftT = new Tally(), colleagues = new Tally();
   const sGroup = new Tally(), sProc = new Tally(), sRole = new Tally(), sAppr = new Tally(), sSet = new Tally();
-  const clin = new Tally(), stArea = new Tally(), stType = new Tally(), wType = new Tally(), oType = new Tally();
+  const clin = new Tally(), stArea = new Tally(), stType = new Tally(), wType = new Tally(), wEx = new Tally(), oType = new Tally();
   const s: Stats = {
     days: days.length,
     work: { shifts: 0, hours: 0, nights: 0, byType: [], colleagues: [] },
     surgery: { total: 0, byGroup: [], byProcedure: [], byRole: [], byApproach: [], bySetting: [], complications: 0, minutes: 0 },
     clinical: { total: 0, byActivity: [] },
     study: { minutes: 0, byArea: [], byType: [] },
-    workout: { sessions: 0, minutes: 0, volumeKg: 0, km: 0, byType: [] },
+    workout: { sessions: 0, minutes: 0, volumeKg: 0, km: 0, sets: 0, byType: [], byExercise: [] },
     outings: { total: 0, byType: [] },
     photos: 0,
   };
@@ -106,7 +107,15 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
           s.workout.minutes += m.durationMin;
           s.workout.km += m.distanceKm ?? 0;
           wType.add(m.type);
-          for (const ex of m.exercises) for (const set of ex.sets) s.workout.volumeKg += set.reps * (set.kg ?? 0);
+          for (const ex of m.exercises) {
+            for (const set of ex.sets) {
+              if (set.warmup) continue;
+              const v = set.reps * (set.kg ?? 0);
+              s.workout.volumeKg += v;
+              s.workout.sets++;
+              wEx.add(ex.exerciseId, v);
+            }
+          }
           break;
         case 'outing':
           s.outings.total++;
@@ -133,6 +142,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   s.study.byArea = stArea.list(by(STUDY_AREAS));
   s.study.byType = stType.list(by(STUDY_TYPES));
   s.workout.byType = wType.list(by(WORKOUT_TYPES));
+  s.workout.byExercise = wEx.list(exerciseLabel).filter((c) => c.value > 0);
   s.workout.volumeKg = Math.round(s.workout.volumeKg);
   s.workout.km = Math.round(s.workout.km * 10) / 10;
   s.outings.byType = oType.list(by(OUTING_TYPES));

@@ -324,10 +324,18 @@ export default function StatsPage() {
             <IconWorkout />
             <h2>Allenamento</h2>
           </div>
+          <h3 className="sub">Sessioni per tipo</h3>
           <BarList data={stats.workout.byType} />
+          {stats.workout.byExercise.length > 0 && (
+            <>
+              <h3 className="sub">Volume per esercizio (kg)</h3>
+              <BarList data={stats.workout.byExercise} />
+            </>
+          )}
           {(stats.workout.volumeKg > 0 || stats.workout.km > 0) && (
             <p className="muted small">
-              Volume sollevato {fmt(stats.workout.volumeKg)} kg · distanza {fmt(stats.workout.km, 1)} km
+              Volume sollevato {fmt(stats.workout.volumeKg)} kg in {stats.workout.sets} serie
+              {stats.workout.km > 0 ? ` · distanza ${fmt(stats.workout.km, 1)} km` : ''}
             </p>
           )}
         </section>

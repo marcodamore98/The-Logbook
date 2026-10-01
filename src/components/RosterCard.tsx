@@ -1,53 +1,74 @@
-import { useState } from 'react';
 import { byCode, codeLabel, codeShort, IDLE_CODES, rosterFor, ROSTER_SELF } from '../lib/roster';
 import type { ISODate } from '../lib/types';
-import { GlyphPlus, IconPeople } from './icons';
+import { GlyphPlus, GlyphSheriff, IconPeople } from './icons';
 
-/** Who does what today, from the department roster. */
+interface Person {
+  name: string;
+  staff: boolean;
+}
+
+/** Who does what today: one list per activity, staff (★) first, then residents. */
 export function RosterCard({ date, onJoin }: { date: ISODate; onJoin?: (names: string[]) => void }) {
   const roster = rosterFor(date);
-  const [tab, setTab] = useState<'residents' | 'staff'>('residents');
   if (!roster) return null;
-  const row = tab === 'residents' ? roster.residents : roster.staff;
-  const groups = byCode(row);
+
+  const people = new Map<string, Person[]>();
+  const add = (row: Record<string, string[]>, staff: boolean) => {
+    for (const [code, names] of byCode(row)) {
+      if (!people.has(code)) people.set(code, []);
+      people.get(code)!.push(...names.map((name) => ({ name, staff })));
+    }
+  };
+  add(roster.staff, true);
+  add(roster.residents, false);
+  // byCode order for the merged set (guards and theatre first, idle last).
+  const order = byCode(Object.fromEntries([...people.keys()].map((c, i) => [String(i), [c]])));
+  const codes = order.map(([c]) => c);
+
   const mine = roster.residents[ROSTER_SELF] ?? [];
-  const active = groups.filter(([c]) => !IDLE_CODES.has(c));
-  // Someone on night duty is marked "/" for the day: list as idle only who has nothing else.
-  const busy = new Set(active.flatMap(([, names]) => names));
-  const idle = groups
-    .filter(([c]) => IDLE_CODES.has(c))
-    .map(([c, names]) => [c, names.filter((n) => !busy.has(n))] as [string, string[]])
-    .filter(([, names]) => names.length > 0);
+  const active = codes.filter((c) => !IDLE_CODES.has(c));
+  const busy = new Set(active.flatMap((c) => people.get(c)!.map((p) => p.name)));
+  const idle = codes
+    .filter((c) => IDLE_CODES.has(c))
+    .map((c) => [c, people.get(c)!.filter((p) => !busy.has(p.name))] as const)
+    .filter(([, ps]) => ps.length > 0);
+
+  const name = (p: Person) =>
+    p.staff ? (
+      <strong key={p.name} className="staff">
+        <GlyphSheriff />
+        {p.name}
+      </strong>
+    ) : (
+      <span key={p.name} className={p.name === ROSTER_SELF ? 'me' : ''}>
+        {p.name === ROSTER_SELF ? 'Tu' : p.name}
+      </span>
+    );
 
   return (
     <section className="card roster">
       <div className="card-head">
         <IconPeople />
         <h2>Tabellone</h2>
-        <div className="segmented small" role="tablist">
-          <button role="tab" aria-selected={tab === 'residents'} className={tab === 'residents' ? 'on' : ''} onClick={() => setTab('residents')}>
-            Specializzandi
-          </button>
-          <button role="tab" aria-selected={tab === 'staff'} className={tab === 'staff' ? 'on' : ''} onClick={() => setTab('staff')}>
-            Strutturati
-          </button>
-        </div>
+        <span className="legend muted small">
+          <GlyphSheriff /> strutturato
+        </span>
       </div>
-      {groups.length === 0 ? (
+      {active.length === 0 ? (
         <p className="empty">Nessuna assegnazione per oggi.</p>
       ) : (
         <ul className="roster-list">
-          {active.map(([code, names]) => {
-            const others = names.filter((n) => !(tab === 'residents' && n === ROSTER_SELF));
-            const isMine = mine.includes(code);
+          {active.map((code) => {
+            const ps = people.get(code)!;
+            const others = ps.filter((p) => p.name !== ROSTER_SELF).map((p) => p.name);
             return (
-              <li key={code} className={isMine ? 'mine' : ''}>
+              <li key={code} className={mine.includes(code) ? 'mine' : ''}>
                 <span className="roster-code" title={codeLabel(code)}>
                   {codeShort(code)}
                 </span>
                 <span className="roster-names">
                   <span className="roster-label">{codeLabel(code)}</span>
-                  {names.map((n) => (n === ROSTER_SELF && tab === 'residents' ? 'Tu' : n)).join(', ')}
+                  <span className="roster-people">{ps.map(name)}</span>
                 </span>
                 {onJoin && others.length > 0 && (
                   <button
@@ -66,7 +87,7 @@ export function RosterCard({ date, onJoin }: { date: ISODate; onJoin?: (names: s
       )}
       {idle.length > 0 && (
         <p className="muted small">
-          {idle.map(([code, names]) => `${codeLabel(code)}: ${names.map((n) => (n === ROSTER_SELF && tab === 'residents' ? 'tu' : n)).join(', ')}`).join(' · ')}
+          {idle.map(([code, ps]) => `${codeLabel(code)}: ${ps.map((p) => (p.name === ROSTER_SELF ? 'tu' : p.name)).join(', ')}`).join(' · ')}
         </p>
       )}
     </section>

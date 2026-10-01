@@ -401,3 +401,9 @@ textarea { resize: vertical; }
 .roster-names { flex: 1; min-width: 0; font-size: 0.88rem; display: flex; flex-direction: column; }
 .roster-label { font-size: 0.75rem; color: var(--muted); }
 .roster-list .icon-btn.small { margin-left: auto; }
+.roster .legend { margin-left: auto; display: inline-flex; align-items: center; gap: 0.25rem; }
+.roster-people { display: flex; flex-wrap: wrap; gap: 0 0.55rem; }
+.roster-people .staff { display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 600; }
+.roster-people .me { font-weight: 600; color: var(--accent); }
+.sheriff { color: color-mix(in srgb, var(--ochre) 70%, var(--ink)); flex: none; }
+.set.warmup { opacity: 0.6; }

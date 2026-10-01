@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSettings, IconShift, IconSync } from '../components/icons';
+import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSettings, IconShift, IconSync, IconWorkout } from '../components/icons';
 import { Empty, Field, uid } from '../components/ui';
 import { listCalendars, type GCalendar } from '../lib/google/calendar';
 import { firebaseConfigured, logOut } from '../lib/firebase';
+import { parseHevyCsv } from '../lib/hevy';
 import { myRosterDays, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
 import type { Colleague, DayEntry, Settings, ShiftType } from '../lib/types';
@@ -15,6 +16,8 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
   const [msg, setMsg] = useState<string>();
   const [bulk, setBulk] = useState('');
   const [importing, setImporting] = useState(false);
+  const [hevyMsg, setHevyMsg] = useState<string>();
+  const hevyFile = useRef<HTMLInputElement>(null);
   const myDays = myRosterDays().length;
   const file = useRef<HTMLInputElement>(null);
 
@@ -189,6 +192,45 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           </button>
         </div>
         {msg?.startsWith('Turni importati') && <p className="muted small">{msg}</p>}
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <IconWorkout />
+          <h2>Allenamenti da Hevy</h2>
+        </div>
+        <p>
+          In Hevy apri <strong>Profilo → ⚙ Impostazioni → Esporta e importa dati → Esporta allenamenti</strong> e carica qui il file CSV. Ogni allenamento
+          diventa una scheda nel giorno giusto, con esercizi, serie e carichi; il tipo (Push / Pull / Legs) è ricavato dal nome della routine. Puoi
+          reimportare quando vuoi: gli allenamenti già presenti vengono aggiornati, non duplicati.
+        </p>
+        <div className="row">
+          <button className="btn" disabled={importing} onClick={() => hevyFile.current?.click()}>
+            Carica CSV di Hevy
+          </button>
+          <input
+            ref={hevyFile}
+            type="file"
+            accept=".csv,text/csv"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              setImporting(true);
+              try {
+                const list = parseHevyCsv(await f.text());
+                const r = await store.importWorkouts(list);
+                setHevyMsg(`Allenamenti importati: ${r.added} nuovi, ${r.updated} aggiornati.`);
+              } catch (err) {
+                setHevyMsg(String(err instanceof Error ? err.message : err));
+              } finally {
+                setImporting(false);
+              }
+            }}
+          />
+        </div>
+        {hevyMsg && <p className="muted small">{hevyMsg}</p>}
       </section>
 
       <section className="card">

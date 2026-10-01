@@ -29,7 +29,18 @@ I termini di lavoro e palestra usano **vocabolari standardizzati** (`src/lib/voc
 - Se non hai ancora inserito un turno, l'app propone quello del tabellone con i colleghi che fanno la stessa attività (pulsante **Usa**).
 - *Impostazioni → Tabellone di reparto → Importa i miei turni* copia tutti i tuoi turni del mese, senza toccare i giorni già compilati.
 
+Nel tabellone ogni attività mostra insieme strutturati (in grassetto con la stella da sceriffo ★) e specializzandi.
+
 Per un nuovo mese si aggiunge un file `roster-AAAA-MM.ts` e lo si registra in `ROSTERS`.
+
+## Allenamenti da Hevy
+
+In Hevy apri *Profilo → ⚙ Impostazioni → Esporta e importa dati → Esporta allenamenti*, poi carica il CSV in *Impostazioni → Allenamenti da Hevy*.
+- Ogni allenamento diventa una scheda *Allenamento* nel giorno giusto.
+- Il tipo (Push / Pull / Legs) viene dal nome della routine.
+- Gli esercizi più comuni sono mappati sui nomi standard (`src/lib/hevy.ts`); gli altri mantengono il nome di Hevy.
+- Le serie di riscaldamento sono escluse dal volume.
+- Reimportare lo stesso file aggiorna gli allenamenti, senza duplicarli.
 
 ## Avvio in locale
 
@@ -51,7 +62,7 @@ GitHub e Firebase non vanno collegati direttamente. GitHub **pubblica il sito**,
 3. Vai in **Firestore Database → Regole**, incolla il contenuto di [`firestore.rules`](firestore.rules) e premi **Pubblica**. Ogni utente vedrà solo i propri dati.
 4. Vai in **⚙ Impostazioni progetto → Generali → Le tue app → Configurazione SDK** e copia i valori `apiKey`, `authDomain`, `projectId` e `appId` in [`src/lib/config.ts`](src/lib/config.ts).
 
-Firebase Storage **non** serve: le foto vengono compresse e salvate in Firestore, quindi resti nel piano gratuito Spark.
+Firebase Storage **non** serve, perché per i progetti nuovi richiede il piano Blaze a pagamento. Le foto vengono compresse (circa 350 KB l'una) e salvate in Firestore, che nel piano gratuito Spark offre 1 GiB: circa 2500 foto, oltre ai dati del diario.
 
 ### 2. GitHub (una volta sola)
 1. In **Settings → General → Danger Zone → Change visibility → Make public** rendi pubblico il repository. È pubblico solo il codice: i dati personali stanno in Firestore.

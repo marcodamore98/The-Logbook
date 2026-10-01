@@ -15,6 +15,7 @@ import {
   CLAVIEN,
   CLINICAL_ACTIVITIES,
   EXERCISES,
+  exerciseLabel,
   OUTING_TYPES,
   PROCEDURES,
   SETTINGS_URGENCY,
@@ -115,6 +116,9 @@ function WorkoutEditor({ value: m, onChange }: Props<WorkoutModule>) {
     set({ exercises: m.exercises.map((e, j) => (j === i ? ex : e)) });
   return (
     <div className="grid">
+      {m.source === 'hevy' && (
+        <p className="field-wide muted small">Importato da Hevy{m.title ? ` · ${m.title}` : ''}. Una nuova importazione aggiorna questa scheda.</p>
+      )}
       <Field label="Tipo">
         <VocabSelect items={WORKOUT_TYPES} value={m.type} onChange={(type) => set({ type })} />
       </Field>
@@ -134,14 +138,18 @@ function WorkoutEditor({ value: m, onChange }: Props<WorkoutModule>) {
           {m.exercises.map((ex, i) => (
             <div key={i} className="exercise">
               <div className="exercise-head">
-                <VocabSelect items={EXERCISES} value={ex.exerciseId} onChange={(exerciseId) => setEx(i, { ...ex, exerciseId })} />
+                <VocabSelect
+                  items={EXERCISES.some((e) => e.id === ex.exerciseId) ? EXERCISES : [...EXERCISES, { id: ex.exerciseId, label: exerciseLabel(ex.exerciseId), group: 'Da Hevy' }]}
+                  value={ex.exerciseId}
+                  onChange={(exerciseId) => setEx(i, { ...ex, exerciseId })}
+                />
                 <button type="button" className="icon-btn" aria-label="Rimuovi esercizio" onClick={() => set({ exercises: m.exercises.filter((_, j) => j !== i) })}>
                   <GlyphTrash />
                 </button>
               </div>
               <div className="sets">
                 {ex.sets.map((s, k) => (
-                  <span key={k} className="set">
+                  <span key={k} className={`set${s.warmup ? ' warmup' : ''}`} title={s.warmup ? 'Riscaldamento' : undefined}>
                     <NumberInput value={s.reps} placeholder="rip" onChange={(reps) => setEx(i, { ...ex, sets: ex.sets.map((x, z) => (z === k ? { ...x, reps: reps ?? 0 } : x)) })} />
                     <span className="set-x">×</span>
                     <NumberInput value={s.kg} step={0.5} placeholder="kg" onChange={(kg) => setEx(i, { ...ex, sets: ex.sets.map((x, z) => (z === k ? { ...x, kg } : x)) })} />
@@ -194,7 +202,7 @@ function OutingEditor({ value: m, onChange }: Props<OutingModule>) {
 /** Resizes and re-encodes to JPEG, shrinking until it fits comfortably in a Firestore document. */
 async function compress(file: File): Promise<Blob> {
   const bmp = await createImageBitmap(file);
-  let max = 1600;
+  let max = 1400;
   let quality = 0.8;
   for (;;) {
     const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
@@ -205,7 +213,7 @@ async function compress(file: File): Promise<Blob> {
     const blob = await new Promise<Blob>((res, rej) =>
       canvas.toBlob((b) => (b ? res(b) : rej(new Error('Compressione fallita'))), 'image/jpeg', quality),
     );
-    if (blob.size < 600_000 || max <= 640) return blob;
+    if (blob.size < 350_000 || max <= 640) return blob;
     max = Math.round(max * 0.8);
     quality = Math.max(0.6, quality - 0.05);
   }

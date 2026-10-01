@@ -3,6 +3,7 @@ import { rangeDays } from '../dates';
 import { authorize, disconnect, gcalConfigured, hasToken, listEvents, eventLocal, type GEvent } from '../google/calendar';
 import { linkedIds, pushDay, reconcile, trashRemoved } from '../google/sync';
 import { emptyDay, type DayEntry, type ISODate, type Settings } from '../types';
+import type { ImportedWorkout } from '../hevy';
 import { myRosterDays, shiftFromCodes } from '../roster';
 import { defaultSettings, migrateSettings } from '../vocab';
 import type { Repo } from './repo';
@@ -25,6 +26,8 @@ interface Store {
   loadAll(): Promise<DayEntry[]>;
   /** Fills the user's shift from the department roster on days that have none. */
   importRoster(): Promise<{ added: number; kept: number }>;
+  /** Adds Hevy workouts to their days; a workout imported again replaces its earlier copy. */
+  importWorkouts(list: ImportedWorkout[]): Promise<{ added: number; updated: number }>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -249,6 +252,35 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     return { added, kept };
   }, [loadRange, saveDay]);
 
+  const importWorkouts = useCallback(
+    async (list: ImportedWorkout[]) => {
+      if (!list.length) return { added: 0, updated: 0 };
+      const dates = list.map((w) => w.date).sort();
+      await loadRange(dates[0], dates[dates.length - 1]);
+      let added = 0;
+      let updated = 0;
+      const byDate = new Map<ISODate, ImportedWorkout[]>();
+      for (const w of list) byDate.set(w.date, [...(byDate.get(w.date) ?? []), w]);
+      for (const [date, ws] of byDate) {
+        const cur = daysRef.current[date] ?? emptyDay(date);
+        const modules = [...cur.modules];
+        for (const { module } of ws) {
+          const i = modules.findIndex((m) => m.id === module.id);
+          if (i >= 0) {
+            modules[i] = module;
+            updated++;
+          } else {
+            modules.push(module);
+            added++;
+          }
+        }
+        saveDay({ ...cur, modules });
+      }
+      return { added, updated };
+    },
+    [loadRange, saveDay],
+  );
+
   const linked = useMemo(() => linkedIds(Object.values(days)), [days]);
 
   const store: Store = {
@@ -266,6 +298,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     syncAll,
     loadAll: () => repo.getAll(),
     importRoster,
+    importWorkouts,
   };
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

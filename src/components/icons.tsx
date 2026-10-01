@@ -203,3 +203,22 @@ export const GlyphTrash = () => <Glyph d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" />
 export const GlyphCheck = () => <Glyph d="M5.5 12.5l4 4 9-9.5" />;
 export const GlyphDownload = () => <Glyph d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14" />;
 export const GlyphUpload = () => <Glyph d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 19.5h14" />;
+
+/** Sheriff's badge: marks staff physicians (strutturati) in the roster. */
+export const GlyphSheriff = ({ size = 14 }: { size?: number }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" className="sheriff">
+    <path
+      d="M12 3.2l2.6 4.5 5.2.1-2.6 4.2 2.6 4.2-5.2.1L12 20.8l-2.6-4.5-5.2-.1 2.6-4.2-2.6-4.2 5.2-.1z"
+      fill="currentColor"
+    />
+    <g fill="currentColor">
+      <circle cx="12" cy="2.6" r="1.5" />
+      <circle cx="20.4" cy="7.6" r="1.5" />
+      <circle cx="20.4" cy="16.4" r="1.5" />
+      <circle cx="12" cy="21.4" r="1.5" />
+      <circle cx="3.6" cy="16.4" r="1.5" />
+      <circle cx="3.6" cy="7.6" r="1.5" />
+    </g>
+    <circle cx="12" cy="12" r="2.6" fill="var(--surface)" />
+  </svg>
+);

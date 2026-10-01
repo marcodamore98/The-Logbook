@@ -4,7 +4,7 @@ import type { DayEntry, Settings } from '../types';
 import { blobToDataURL, type Repo } from './repo';
 
 // Layout: users/{uid}/meta/settings, users/{uid}/days/{YYYY-MM-DD}, users/{uid}/photos/{id}.
-// Photos live in Firestore (compressed JPEG data URLs, < 1 MiB each) instead of
+// Photos live in Firestore (compressed JPEG data URLs, ~350 KB each, Firestore max 1 MiB) instead of
 // Cloud Storage, so the project stays on the free Spark plan.
 export function cloudRepo(uid: string): Repo {
   const days = () => collection(db(), 'users', uid, 'days');

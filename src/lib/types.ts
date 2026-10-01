@@ -103,6 +103,7 @@ export interface NoteModule {
 export interface WorkoutSet {
   reps: number;
   kg?: number;
+  warmup?: boolean; // serie di riscaldamento: escluse dal volume
 }
 
 export interface WorkoutExercise {
@@ -113,6 +114,8 @@ export interface WorkoutExercise {
 export interface WorkoutModule {
   kind: 'workout';
   id: string;
+  source?: 'hevy';
+  title?: string; // es. nome della routine Hevy
   type: string; // vocab.WORKOUT_TYPES
   durationMin: number;
   rpe?: number; // 1-10

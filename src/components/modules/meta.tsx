@@ -84,7 +84,7 @@ export function summarize(m: Module): string {
     case 'study':
       return m.title || labelOf(STUDY_TYPES, m.type);
     case 'workout':
-      return `${labelOf(WORKOUT_TYPES, m.type)} · ${m.durationMin}′`;
+      return `${m.title || labelOf(WORKOUT_TYPES, m.type)} · ${m.durationMin}′`;
     case 'outing':
       return m.title || labelOf(OUTING_TYPES, m.type);
     case 'photos':

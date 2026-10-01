@@ -195,6 +195,9 @@ export const STUDY_AREAS: VocabItem[] = [
 // ---------- Palestra ----------
 
 export const WORKOUT_TYPES: VocabItem[] = [
+  { id: 'push', label: 'Push' },
+  { id: 'pull', label: 'Pull' },
+  { id: 'legs', label: 'Legs' },
   { id: 'strength', label: 'Pesi / forza' },
   { id: 'hypertrophy', label: 'Ipertrofia' },
   { id: 'functional', label: 'Funzionale / cross training' },
@@ -292,6 +295,11 @@ export function migrateSettings(s: Settings): Settings {
   const known = new Set(s.colleagues.map((c) => c.name.trim().toLowerCase()));
   const extra = ROSTER_COLLEAGUES.filter((c) => !known.has(c.name.toLowerCase()));
   return { ...s, shiftTypes: [...DEFAULT_SHIFT_TYPES, ...custom], colleagues: [...extra, ...s.colleagues], seed: SEED_VERSION };
+}
+
+/** Exercise label: standardized Italian name, or the Hevy name for unmapped exercises. */
+export function exerciseLabel(id: string): string {
+  return id.startsWith('hevy:') ? id.slice(5) : labelOf(EXERCISES, id);
 }
 
 export function labelOf(list: VocabItem[], id: string | undefined): string {
