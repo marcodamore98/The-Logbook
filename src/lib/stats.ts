@@ -33,6 +33,7 @@ export interface Stats {
   study: { minutes: number; byArea: Count[]; byType: Count[] };
   workout: { sessions: number; minutes: number; volumeKg: number; km: number; sets: number; byType: Count[]; byExercise: Count[] };
   outings: { total: number; byType: Count[] };
+  run: { sessions: number; km: number; minutes: number; byMode: Count[] };
   photos: number;
   mood?: number;
   categories: { appointments: Count[]; todos: Count[]; todosDone: number; todosTotal: number };
@@ -56,7 +57,7 @@ const by = (list: VocabItem[]) => (id: string) => labelOf(list, id);
 export function computeStats(days: DayEntry[], settings: Settings): Stats {
   const shiftT = new Tally(), colleagues = new Tally();
   const sGroup = new Tally(), sProc = new Tally(), sRole = new Tally(), sAppr = new Tally(), sSet = new Tally();
-  const clin = new Tally(), stArea = new Tally(), stType = new Tally(), wType = new Tally(), wEx = new Tally(), oType = new Tally();
+  const clin = new Tally(), stArea = new Tally(), stType = new Tally(), wType = new Tally(), wEx = new Tally(), oType = new Tally(), runMode = new Tally();
   const s: Stats = {
     days: days.length,
     work: { shifts: 0, hours: 0, nights: 0, byType: [], colleagues: [] },
@@ -65,6 +66,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
     study: { minutes: 0, byArea: [], byType: [] },
     workout: { sessions: 0, minutes: 0, volumeKg: 0, km: 0, sets: 0, byType: [], byExercise: [] },
     outings: { total: 0, byType: [] },
+    run: { sessions: 0, km: 0, minutes: 0, byMode: [] },
     photos: 0,
     categories: { appointments: [], todos: [], todosDone: 0, todosTotal: 0 },
     muscles: [],
@@ -142,6 +144,12 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
           stArea.add(m.area, m.durationMin);
           stType.add(m.type, m.durationMin);
           break;
+        case 'run':
+          s.run.sessions++;
+          s.run.km += m.distanceM / 1000;
+          s.run.minutes += m.durationSec / 60;
+          runMode.add(m.mode === 'intervals' ? 'A intervalli' : 'Continua');
+          break;
         case 'workout':
           s.workout.sessions++;
           s.workout.minutes += m.durationMin;
@@ -183,6 +191,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   s.workout.volumeKg = Math.round(s.workout.volumeKg);
   s.workout.km = Math.round(s.workout.km * 10) / 10;
   s.outings.byType = oType.list(by(OUTING_TYPES));
+  s.run.byMode = runMode.list((k) => k);
   s.categories.appointments = apCat.list(by(CATEGORIES));
   s.categories.todos = tdCat.list(by(CATEGORIES));
   s.muscles = [...setsPerMuscle(days, settings.exercises ?? []).entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
@@ -193,7 +202,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   return s;
 }
 
-export type Metric = 'surgery' | 'hours' | 'study' | 'workout' | 'volume' | 'kcal';
+export type Metric = 'surgery' | 'hours' | 'study' | 'workout' | 'run' | 'volume' | 'kcal';
 
 export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Settings): number {
   if (!day) return 0;
@@ -211,6 +220,8 @@ export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Se
       return day.modules.reduce((n, m) => n + (m.kind === 'study' ? m.durationMin / 60 : 0), 0);
     case 'workout':
       return day.modules.filter((m) => m.kind === 'workout').length;
+    case 'run':
+      return day.modules.reduce((n, m) => n + (m.kind === 'run' ? m.distanceM / 1000 : 0), 0);
     case 'volume':
       return day.modules.reduce((n, m) => n + (m.kind === 'workout' ? m.exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + setVolume(s), 0), 0) : 0), 0);
     case 'kcal':

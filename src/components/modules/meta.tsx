@@ -1,8 +1,14 @@
 import type { ComponentType } from 'react';
 import type { Module, ModuleKind } from '../../lib/types';
 import { APPROACHES, labelOf, SURGICAL_ROLES, CLINICAL_ACTIVITIES, OUTING_TYPES, PROCEDURES, STUDY_TYPES, WORKOUT_TYPES } from '../../lib/vocab';
-import { IconClinical, IconNote, IconOuting, IconPhotos, IconStudy, IconSurgery, IconWorkout } from '../icons';
+import { IconClinical, IconNote, IconOuting, IconRun, IconPhotos, IconStudy, IconSurgery, IconWorkout } from '../icons';
 import { uid } from '../ui';
+import { fmtDuration, fmtKm, fmtPace } from '../../lib/running/geo';
+
+export const runLine = (m: Extract<Module, { kind: 'run' }>) =>
+  [m.title || (m.mode === 'intervals' ? m.planName ?? 'Intervalli' : 'Corsa'), m.distanceM ? `${fmtKm(m.distanceM)} km` : '', m.durationSec ? fmtDuration(m.durationSec) : '', m.distanceM && m.durationSec ? `${fmtPace(m.distanceM, m.durationSec)}/km` : '']
+    .filter(Boolean)
+    .join(' · ');
 
 export interface ModuleMeta {
   kind: ModuleKind;
@@ -47,6 +53,14 @@ export const MODULES: ModuleMeta[] = [
     create: () => ({ kind: 'workout', id: uid(), type: 'strength', durationMin: 60, exercises: [] }),
   },
   {
+    kind: 'run',
+    label: 'Corsa',
+    hint: 'Corsa continua o a intervalli, con percorso e GPS',
+    area: 'personale',
+    Icon: IconRun,
+    create: () => ({ kind: 'run', id: uid(), mode: 'continuous', distanceM: 0, durationSec: 0 }),
+  },
+  {
     kind: 'outing',
     label: 'Gita / uscita',
     hint: 'Viaggi, cene, eventi',
@@ -85,6 +99,8 @@ export function summarize(m: Module): string {
       return `${m.title || labelOf(STUDY_TYPES, m.type)} · ${m.durationMin}′`;
     case 'workout':
       return `${m.title || labelOf(WORKOUT_TYPES, m.type)} · ${m.durationMin}′`;
+    case 'run':
+      return runLine(m);
     case 'outing':
       return [m.title || labelOf(OUTING_TYPES, m.type), m.place].filter(Boolean).join(' · ');
     case 'photos':

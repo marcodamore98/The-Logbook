@@ -82,6 +82,38 @@ export interface StudyModule {
   notes?: string;
 }
 
+/** One step of a running session: by time (seconds) or by distance (metres). */
+export interface RunStep {
+  id: string;
+  kind: 'warmup' | 'work' | 'rest' | 'cooldown';
+  by: 'time' | 'distance';
+  value: number;
+}
+
+export interface RunPlan {
+  id: string;
+  name: string;
+  steps: RunStep[];
+}
+
+/** [lat, lon, seconds from start] */
+export type TrackPoint = [number, number, number];
+
+export interface RunModule {
+  kind: 'run';
+  id: string;
+  title?: string;
+  mode: 'continuous' | 'intervals';
+  planName?: string;
+  steps?: RunStep[];
+  distanceM: number;
+  durationSec: number;
+  startedAt?: number;
+  routeName?: string;
+  track?: TrackPoint[];
+  notes?: string;
+}
+
 export interface PhotoItem {
   id: string;
   src: string; // data URL (locale) o URL di download (cloud)
@@ -294,6 +326,7 @@ export type Module =
   | PhotoModule
   | NoteModule
   | WorkoutModule
+  | RunModule
   | OutingModule;
 
 export type ModuleKind = Module['kind'];
@@ -333,6 +366,7 @@ export interface Settings {
   foods?: Food[]; // alimenti personali e salvati da Open Food Facts
   favoriteFoods?: string[];
   dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno
+  runPlans?: RunPlan[]; // sessioni a intervalli salvate
   hiddenBlocks?: string[]; // blocchi eliminati dalla pagina del giorno (es. il tabellone)
   seed?: number; // versione dei dati predefiniti già applicata (vedi migrateSettings)
   updatedAt: number;

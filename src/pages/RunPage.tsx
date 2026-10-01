@@ -1,0 +1,326 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { fmt } from '../components/charts';
+import { GlyphTrash, IconRun } from '../components/icons';
+import { PlanBuilder } from '../components/running/PlanBuilder';
+import { RunMap } from '../components/running/RunMap';
+import { Card, Field, uid } from '../components/ui';
+import { formatLong, today } from '../lib/dates';
+import { useRunSession } from '../lib/running/engine';
+import { fmtDuration, fmtKm, fmtPace, gmapsDirections, gmapsSearch, kmSplits, KIND_LABEL, planSummary, stepLabel } from '../lib/running/geo';
+import { presetPlans } from '../lib/running/plans';
+import { suggestRoutes, type SuggestedRoute } from '../lib/running/routes';
+import { useStore } from '../lib/store/StoreContext';
+import type { RunModule, RunPlan, RunStep } from '../lib/types';
+
+const KIND_ICON: Record<SuggestedRoute['kind'], string> = { route: 'Percorso', track: 'Pista', park: 'Parco' };
+
+export default function RunPage() {
+  const store = useStore();
+  const { settings } = store;
+  const [mode, setMode] = useState<'continuous' | 'intervals'>('continuous');
+  const [steps, setSteps] = useState<RunStep[]>(() => presetPlans()[0].steps.map((s) => ({ ...s })));
+  const [planName, setPlanName] = useState<string>(presetPlans()[0].name);
+  const [useGps, setUseGps] = useState(true);
+  const plans: RunPlan[] = useMemo(() => [...presetPlans(), ...(settings.runPlans ?? [])], [settings.runPlans]);
+
+  const activeSteps = mode === 'intervals' ? steps : undefined;
+  const run = useRunSession(activeSteps, useGps);
+  const { state } = run;
+  const liveRef = useRef<HTMLElement>(null);
+  const active = state.phase === 'running' || state.phase === 'paused';
+
+  // Routes near me
+  const [routes, setRoutes] = useState<SuggestedRoute[]>([]);
+  const [routeState, setRouteState] = useState<'idle' | 'locating' | 'loading' | 'done' | 'error'>('idle');
+  const [routeErr, setRouteErr] = useState('');
+  const [selected, setSelected] = useState<string | null>(null);
+  const [here, setHere] = useState<[number, number] | null>(null);
+  const [viewTrack, setViewTrack] = useState<[number, number][] | undefined>();
+
+  const findRoutes = () => {
+    setRouteErr('');
+    setRouteState('locating');
+    if (!('geolocation' in navigator)) {
+      setRouteState('error');
+      setRouteErr('Questo dispositivo non fornisce la posizione.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (p) => {
+        const me: [number, number] = [p.coords.latitude, p.coords.longitude];
+        setHere(me);
+        setRouteState('loading');
+        try {
+          const r = await suggestRoutes(me[0], me[1]);
+          setRoutes(r);
+          setRouteState('done');
+        } catch {
+          setRouteState('error');
+          setRouteErr('Non riesco a caricare i percorsi (serve la connessione).');
+        }
+      },
+      () => {
+        setRouteState('error');
+        setRouteErr('Posizione non consentita: abilitala nelle impostazioni del sito.');
+      },
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+  };
+
+  const sel = routes.find((r) => r.id === selected);
+  const mapPos = state.position ?? here;
+
+  // Saving
+  const [title, setTitle] = useState('');
+  const [notes, setNotes] = useState('');
+  const [manualKm, setManualKm] = useState('');
+  const gpsKm = state.distance / 1000;
+  const finalKm = manualKm !== '' ? Number(manualKm.replace(',', '.')) : gpsKm;
+
+  const save = async () => {
+    const m: RunModule = {
+      kind: 'run',
+      id: uid(),
+      title: title.trim() || undefined,
+      mode,
+      planName: mode === 'intervals' ? planName : undefined,
+      steps: mode === 'intervals' ? steps : undefined,
+      distanceM: Math.round(finalKm * 1000),
+      durationSec: Math.round(state.elapsed),
+      startedAt: Date.now() - state.elapsed * 1000,
+      routeName: sel?.name,
+      track: run.finalTrack(),
+      notes: notes.trim() || undefined,
+    };
+    await store.updateDay(today(), (d) => ({ ...d, modules: [...d.modules, m] }));
+    run.reset();
+    setTitle('');
+    setNotes('');
+    setManualKm('');
+  };
+
+  // History
+  useEffect(() => store.ensureAllLoaded(), []);
+  const history = useMemo(
+    () =>
+      store.allDays
+        .flatMap((d) => d.modules.filter((m): m is RunModule => m.kind === 'run').map((m) => ({ date: d.date, m })))
+        .sort((a, b) => b.date.localeCompare(a.date) || (b.m.startedAt ?? 0) - (a.m.startedAt ?? 0)),
+    [store.allDays],
+  );
+  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  const wk = history.filter((h) => h.date >= weekAgo);
+  const wkKm = wk.reduce((n, h) => n + h.m.distanceM, 0) / 1000;
+  const wkSec = wk.reduce((n, h) => n + h.m.durationSec, 0);
+
+  const savePlan = () => {
+    const name = window.prompt('Nome della sessione', planName.startsWith('Ripetute') || planName.startsWith('Fartlek') ? '' : planName)?.trim();
+    if (!name) return;
+    const plan: RunPlan = { id: uid(), name, steps: steps.map((s) => ({ ...s })) };
+    store.saveSettings({ ...settings, runPlans: [...(settings.runPlans ?? []), plan] });
+    setPlanName(name);
+  };
+  const choosePlan = (id: string) => {
+    const p = plans.find((x) => x.id === id);
+    if (!p) return;
+    setSteps(p.steps.map((s) => ({ ...s, id: uid() })));
+    setPlanName(p.name);
+  };
+  const isSaved = (id: string) => (settings.runPlans ?? []).some((p) => p.id === id);
+
+  const cur = activeSteps?.[state.stepIdx];
+  const stepTotal = cur ? cur.value : 0;
+  const stepPct = cur && state.stepLeft !== null ? Math.min(100, Math.max(0, (1 - state.stepLeft / stepTotal) * 100)) : 0;
+  const stepText =
+    cur && state.stepLeft !== null ? (cur.by === 'time' ? fmtDuration(state.stepLeft) : `${Math.ceil(state.stepLeft)} m`) : '';
+  const trackPts = state.track.map((t) => [t[0], t[1]] as [number, number]);
+
+  return (
+    <div className="page run-page">
+      <header className="page-head">
+        <IconRun size={44} />
+        <div className="page-title">
+          <h1>Corsa</h1>
+          <span className="page-sub">
+            Ultimi 7 giorni: {fmt(wkKm, 1)} km · {fmtDuration(wkSec)}
+          </span>
+        </div>
+      </header>
+
+      <Card id="run.setup" icon={null} title="Che corsa fai?" summary={mode === 'continuous' ? 'Continua' : `Intervalli · ${planName}`} defaultOpen={true}>
+        <div className="segmented" role="tablist">
+          <button role="tab" aria-selected={mode === 'continuous'} className={mode === 'continuous' ? 'on' : ''} disabled={active} onClick={() => setMode('continuous')}>
+            Continua
+          </button>
+          <button role="tab" aria-selected={mode === 'intervals'} className={mode === 'intervals' ? 'on' : ''} disabled={active} onClick={() => setMode('intervals')}>
+            A intervalli
+          </button>
+        </div>
+        <label className="check">
+          <input type="checkbox" checked={useGps} disabled={active} onChange={(e) => setUseGps(e.target.checked)} /> Usa il GPS (disattivalo per il tapis roulant)
+        </label>
+        {mode === 'intervals' && !active && (
+          <>
+            <Field label="Sessione">
+              <select value={plans.find((p) => p.name === planName)?.id ?? ''} onChange={(e) => choosePlan(e.target.value)}>
+                <option value="">Personalizzata</option>
+                {plans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <PlanBuilder steps={steps} onChange={(s) => { setSteps(s); setPlanName('Personalizzata'); }} />
+            <div className="row">
+              <button className="btn-ghost small" disabled={!steps.length} onClick={savePlan}>
+                Salva questa sessione
+              </button>
+              {plans.filter((p) => isSaved(p.id) && p.name === planName).map((p) => (
+                <button key={p.id} className="btn-ghost small" onClick={() => window.confirm(`Eliminare “${p.name}”?`) && store.saveSettings({ ...settings, runPlans: (settings.runPlans ?? []).filter((x) => x.id !== p.id) })}>
+                  <GlyphTrash /> Elimina “{p.name}”
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </Card>
+
+      <section ref={liveRef} className={`card run-live phase-${state.phase}${state.stepKind ? ` kind-${state.stepKind}` : ''}`}>
+        {mode === 'intervals' && cur && state.phase !== 'idle' && state.phase !== 'done' && (
+          <div className="run-step" aria-live="polite">
+            <span className="run-step-kind">{KIND_LABEL[cur.kind]}</span>
+            <span className="run-step-left">{stepText}</span>
+            <span className="run-step-bar">
+              <span style={{ width: `${stepPct}%` }} />
+            </span>
+            <span className="muted small">
+              Fase {state.stepIdx + 1} di {steps.length}
+              {steps[state.stepIdx + 1] ? ` · poi ${stepLabel(steps[state.stepIdx + 1])}` : ' · ultima fase'}
+            </span>
+          </div>
+        )}
+        <div className="run-metrics">
+          <div>
+            <span className="run-big">{fmtDuration(state.elapsed)}</span>
+            <span className="run-cap">tempo</span>
+          </div>
+          <div>
+            <span className="run-big">{useGps ? fmtKm(state.distance) : '–'}</span>
+            <span className="run-cap">km</span>
+          </div>
+          <div>
+            <span className="run-big">{useGps ? fmtPace(state.distance, state.elapsed) : '–'}</span>
+            <span className="run-cap">min/km</span>
+          </div>
+        </div>
+        {useGps && state.phase !== 'idle' && (
+          <p className="muted small run-gps">
+            {state.gps === 'ok' ? `GPS ok${state.accuracy ? ` (±${Math.round(state.accuracy)} m)` : ''}` : state.gps === 'denied' ? 'GPS non disponibile: controlla i permessi di posizione' : 'Cerco il segnale GPS…'}
+          </p>
+        )}
+
+        {state.phase === 'idle' && (
+          <button className="btn run-btn" disabled={mode === 'intervals' && steps.length === 0} onClick={() => { run.start(); setTimeout(() => liveRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}>
+            Avvia
+          </button>
+        )}
+        {state.phase === 'running' && (
+          <div className="run-controls">
+            <button className="btn-ghost run-btn" onClick={run.pause}>Pausa</button>
+            {mode === 'intervals' && <button className="btn-ghost" onClick={run.skip}>Salta fase</button>}
+            <button className="btn-ghost danger" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>Fine</button>
+          </div>
+        )}
+        {state.phase === 'paused' && (
+          <div className="run-controls">
+            <button className="btn run-btn" onClick={run.resume}>Riprendi</button>
+            <button className="btn-ghost danger" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>Fine</button>
+          </div>
+        )}
+        {state.phase === 'done' && (
+          <div className="run-save">
+            <h3 className="sub">Corsa terminata</h3>
+            <div className="grid">
+              <Field label="Titolo">
+                <input value={title} placeholder="es. Giro del parco" onChange={(e) => setTitle(e.target.value)} />
+              </Field>
+              <Field label="Distanza (km)">
+                <input inputMode="decimal" value={manualKm} placeholder={gpsKm.toFixed(2)} onChange={(e) => setManualKm(e.target.value)} />
+              </Field>
+              <Field label="Note" wide>
+                <input value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </Field>
+            </div>
+            <div className="row">
+              <button className="btn" onClick={save}>Salva nella giornata di oggi</button>
+              <button className="btn-ghost" onClick={() => window.confirm('Scartare questa corsa?') && run.reset()}>Scarta</button>
+            </div>
+          </div>
+        )}
+        {state.phase === 'idle' && <p className="muted small">Lo schermo resta acceso durante la corsa. Il GPS e i segnali funzionano finché l’app è aperta in primo piano.</p>}
+      </section>
+
+      <Card id="run.map" icon={null} title="Mappa e percorsi vicino a te" summary={sel ? sel.name : 'Trova percorsi, piste e parchi'} defaultOpen={true}>
+        <RunMap position={mapPos} track={active || state.phase === 'done' ? trackPts : viewTrack} routes={routes} selectedId={selected} onSelect={setSelected} follow={active} />
+        <div className="row">
+          <button className="btn" disabled={routeState === 'locating' || routeState === 'loading'} onClick={findRoutes}>
+            {routeState === 'locating' ? 'Cerco la posizione…' : routeState === 'loading' ? 'Cerco i percorsi…' : routes.length ? 'Aggiorna' : 'Trova percorsi vicino a me'}
+          </button>
+          {mapPos && (
+            <a className="btn-ghost" href={gmapsSearch('percorsi per correre', mapPos[0], mapPos[1])} target="_blank" rel="noreferrer">
+              Cerca su Google Maps
+            </a>
+          )}
+        </div>
+        {routeErr && <p className="error small">{routeErr}</p>}
+        {routeState === 'done' && routes.length === 0 && <p className="muted small">Nessun percorso mappato nei dintorni: prova da un’altra zona o usa Google Maps.</p>}
+        {routes.length > 0 && (
+          <ul className="route-list">
+            {routes.map((r) => (
+              <li key={r.id} className={r.id === selected ? 'on' : ''}>
+                <button className="route-main" onClick={() => { setSelected(r.id); setViewTrack(undefined); }}>
+                  <strong>{r.name}</strong>
+                  <span className="muted small">
+                    {KIND_ICON[r.kind]}
+                    {r.lengthM && r.kind !== 'track' ? ` · ${fmt(r.lengthM / 1000, 1)} km` : ''} · a {r.away < 1000 ? `${Math.round(r.away)} m` : `${fmt(r.away / 1000, 1)} km`}
+                  </span>
+                </button>
+                <a className="btn-ghost small" href={gmapsDirections(r.start[0], r.start[1], mapPos ?? undefined)} target="_blank" rel="noreferrer">
+                  Google Maps
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="muted small">Mappa © OpenStreetMap. I percorsi sono quelli segnalati dagli utenti di OpenStreetMap vicino alla tua posizione.</p>
+      </Card>
+
+      <Card id="run.history" icon={null} title="Le tue corse" summary={`${history.length} registrate`} defaultOpen={false}>
+        {history.length === 0 ? (
+          <p className="muted small">Ancora nessuna corsa.</p>
+        ) : (
+          <ul className="run-history">
+            {history.slice(0, 40).map(({ date, m }) => (
+              <li key={m.id}>
+                <button className="route-main" onClick={() => { setViewTrack(m.track?.map((t) => [t[0], t[1]])); setSelected(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                  <strong>{m.title || (m.mode === 'intervals' ? m.planName ?? 'Intervalli' : 'Corsa continua')}</strong>
+                  <span className="muted small capitalize">
+                    {formatLong(date)} · {fmtKm(m.distanceM)} km · {fmtDuration(m.durationSec)} · {fmtPace(m.distanceM, m.durationSec)}/km
+                    {m.track && kmSplits(m.track).length ? ` · migliore ${fmtDuration(Math.min(...kmSplits(m.track)))}/km` : ''}
+                  </span>
+                  {m.mode === 'intervals' && m.steps && <span className="muted small">{planSummary(m.steps)}</span>}
+                </button>
+                <Link className="btn-ghost small" to={`/giorno/${date}`}>Giorno</Link>
+                <button className="icon-btn small" aria-label="Elimina corsa" onClick={() => window.confirm('Eliminare questa corsa?') && store.updateDay(date, (d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }))}>
+                  <GlyphTrash />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}

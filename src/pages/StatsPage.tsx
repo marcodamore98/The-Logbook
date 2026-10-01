@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconFlame, IconScale, IconOuting, IconTodo, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
+import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconFlame, IconScale, IconOuting, IconRun, IconTodo, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
 import { BarList, Columns, Donut, fmt, PALETTE, Ring } from '../components/charts';
 import { PrintButton } from '../components/PrintDialog';
 import { Empty } from '../components/ui';
@@ -62,6 +62,7 @@ const METRICS: { id: Metric; label: string; unit: string }[] = [
   { id: 'hours', label: 'Ore di turno', unit: ' h' },
   { id: 'study', label: 'Ore di studio', unit: ' h' },
   { id: 'workout', label: 'Allenamenti', unit: '' },
+  { id: 'run', label: 'Corsa (km)', unit: ' km' },
   { id: 'volume', label: 'Volume sollevato', unit: ' kg' },
   { id: 'kcal', label: 'Calorie attive', unit: ' kcal' },
 ];
@@ -280,6 +281,26 @@ export default function StatsPage() {
               Volume sollevato {fmt(stats.workout.volumeKg)} kg in {stats.workout.sets} serie
               {stats.workout.km > 0 ? ` · distanza ${fmt(stats.workout.km, 1)} km` : ''}
             </p>
+          )}
+        </section>
+        <section className="card" data-print="palestra">
+          <div className="card-head">
+            <IconRun />
+            <h2>Corsa</h2>
+          </div>
+          {stats.run.sessions === 0 ? (
+            <Empty>Nessuna corsa nel periodo.</Empty>
+          ) : (
+            <>
+              <dl className="side-stats">
+                <div><dt>Corse</dt><dd>{stats.run.sessions}</dd></div>
+                <div><dt>Distanza</dt><dd>{fmt(stats.run.km, 1)} km</dd></div>
+                <div><dt>Tempo</dt><dd>{fmt(stats.run.minutes / 60, 1)} h</dd></div>
+                <div><dt>Passo medio</dt><dd>{stats.run.km > 0 ? `${Math.floor(stats.run.minutes / stats.run.km)}:${String(Math.round(((stats.run.minutes / stats.run.km) % 1) * 60)).padStart(2, '0')}/km` : '—'}</dd></div>
+              </dl>
+              <h3 className="sub">Tipo di corsa</h3>
+              <Donut data={stats.run.byMode} />
+            </>
           )}
         </section>
         <section className="card" data-print="privato">

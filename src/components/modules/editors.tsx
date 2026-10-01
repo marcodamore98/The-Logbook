@@ -249,6 +249,8 @@ export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: 
       return <StudyEditor value={value} onChange={onChange} />;
     case 'workout':
       return <WorkoutLogger value={value} onChange={onChange} date={date} />;
+    case 'run':
+      return null; // le corse si registrano dalla pagina Corsa
     case 'outing':
       return <OutingEditor value={value} onChange={onChange} />;
     case 'photos':

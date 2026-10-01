@@ -118,6 +118,14 @@ export const IconWorkout = (p: P) => (
   </Art>
 );
 
+export const IconRun = (p: P) => (
+  <Art pigment="terra" blot={1} {...p}>
+    <circle cx="24.5" cy="10.8" r="2.7" />
+    <path d="M22.6 15.2l-4.4 3.3-1.3 4.2 4 2.2.6 5.3M22.6 15.2l4.6 3.4 3.3.4M19.6 19.6l-4.3-.6-2.6 2.6M21 24.9l-4.5 4.4-4 .2" />
+    <path d="M8 31.5h6" strokeWidth="1.1" />
+  </Art>
+);
+
 export const IconOuting = (p: P) => (
   <Art pigment="sage" blot={1} {...p}>
     <path d="M6.8 30.6c3.7-6 7-11.7 10.4-17.2 2.3 3.4 4.3 6.8 6.2 10.3 1.3-2.2 2.6-4.1 4-5.8 2.3 4.2 4.4 8.3 5.9 12.7-8.8.4-17.7.4-26.5 0z" />
