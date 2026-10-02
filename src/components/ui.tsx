@@ -51,11 +51,44 @@ export function VocabSelect({
   );
 }
 
+/**
+ * Text field for numbers. It keeps what is being typed as text, so the first digit can
+ * be deleted (the field goes empty instead of snapping back to 0), and it selects its
+ * content on focus so a new number can be typed straight away.
+ */
+function useDraft(value: number | undefined, commit: (raw: string) => void, fallback: (n: number | undefined) => string) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? fallback(value);
+  return {
+    value: shown,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value.replace(/[^0-9.,]/g, '');
+      setDraft(v);
+      commit(v);
+    },
+    onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+      const el = e.currentTarget;
+      el.dataset.fresh = '1';
+      el.select();
+      setTimeout(() => el.select(), 0);
+    },
+    // The tap that focuses the field would otherwise drop the caret and cancel the selection.
+    onMouseUp: (e: React.MouseEvent<HTMLInputElement>) => {
+      if (e.currentTarget.dataset.fresh) {
+        e.preventDefault();
+        delete e.currentTarget.dataset.fresh;
+      }
+    },
+    onBlur: () => setDraft(null),
+  };
+}
+
+const parse = (raw: string) => (raw.trim() === '' ? undefined : Number(raw.replace(',', '.')));
+
 export function NumberInput({
   value,
   onChange,
   min = 0,
-  step = 1,
   placeholder,
 }: {
   value: number | undefined;
@@ -64,17 +97,29 @@ export function NumberInput({
   step?: number;
   placeholder?: string;
 }) {
-  return (
-    <input
-      type="number"
-      inputMode="decimal"
-      min={min}
-      step={step}
-      value={value ?? ''}
-      placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
-    />
+  const d = useDraft(
+    value,
+    (raw) => {
+      const n = parse(raw);
+      if (n === undefined) onChange(undefined);
+      else if (Number.isFinite(n)) onChange(Math.max(min, n));
+    },
+    (n) => (n === undefined ? '' : String(n)),
   );
+  return <input type="text" inputMode="decimal" enterKeyHint="next" autoComplete="off" placeholder={placeholder} {...d} />;
+}
+
+/** Required number: emptying the field keeps the old value until a new one is typed. */
+export function NumField({ value, onChange, min = 0, max, label, className }: { value: number; onChange: (n: number) => void; min?: number; max?: number; label?: string; className?: string }) {
+  const d = useDraft(
+    value,
+    (raw) => {
+      const n = parse(raw);
+      if (n !== undefined && Number.isFinite(n)) onChange(Math.min(max ?? Infinity, Math.max(min, n)));
+    },
+    (n) => String(n ?? ''),
+  );
+  return <input type="text" inputMode="decimal" enterKeyHint="next" autoComplete="off" aria-label={label} className={className} {...d} />;
 }
 
 export function Chips<T extends { id: string }>({

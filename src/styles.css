@@ -868,9 +868,6 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; height: 100%; ov
 .blk { position: relative; min-width: 0; }
 .blk .card-head { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .is-dragging { user-select: none; -webkit-user-select: none; }
-.blk.dragging { z-index: 30; transition: none; filter: drop-shadow(0 14px 22px rgb(0 0 0 / 0.28)); opacity: 0.96; scale: 1.02; pointer-events: none; }
-.blk.drop-before::before, .drop-end { content: ''; display: block; height: 4px; border-radius: 4px; background: var(--lime); margin: -0.55rem 0 0.35rem; }
-.blk.drop-before::before { position: absolute; left: 0; right: 0; top: -0.6rem; margin: 0; }
 .order-list li.is-hidden { opacity: 0.6; }
 
 /* ---- Diary ---- */
@@ -981,3 +978,34 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; height: 100%; ov
 .route-list li.on { border-color: var(--accent); }
 .route-main { flex: 1; min-width: 0; text-align: left; background: none; border: none; display: flex; flex-direction: column; gap: 0.1rem; padding: 0.2rem 0.3rem; }
 .danger { color: #c0392b; }
+
+/* ---- Touch feel: no tap delay, no highlight flash, cheap compositing ---- */
+html { -webkit-tap-highlight-color: transparent; scroll-behavior: auto; }
+a, button, summary, label, select, input, textarea, [role='tab'], .card-head { touch-action: manipulation; }
+body { font-size: 16px; overscroll-behavior-y: none; }
+.card, .tile, .drawer, .sheet { backface-visibility: hidden; }
+.card-head, .btn, .btn-ghost, .icon-btn, .nav-item { -webkit-user-select: none; user-select: none; }
+.card-body textarea, .card-body input, textarea, input { -webkit-user-select: text; user-select: text; }
+input, select, textarea { font-size: 1rem; }
+@media (max-width: 600px) {
+  html { font-size: 15.5px; }
+  .btn, .btn-ghost, .icon-btn { min-height: 2.6rem; }
+  .icon-btn.small { min-height: 2.2rem; min-width: 2.2rem; }
+  .card-summary { font-size: 0.88rem; }
+  .nav-item { padding-top: 0.5rem; padding-bottom: 0.5rem; font-size: 1.05rem; }
+}
+
+/* ---- Day blocks sliding over each other while one is dragged ---- */
+.blk { transition: none; }
+.blk.shifting { transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
+.blk.settling, .blk.settling * { transition: none !important; }
+.blk.dragging { position: relative; z-index: 30; transition: none; pointer-events: none; opacity: 0.97; will-change: transform; box-shadow: 0 14px 28px rgb(0 0 0 / 0.25); border-radius: 22px; }
+.is-dragging .btn-add { opacity: 0.4; }
+
+/* ---- On-screen keyboard: sheets and pages stay usable ---- */
+.sheet { max-height: calc(100dvh - 0.5rem); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.sheet-backdrop { align-items: flex-end; }
+body.kb-open .rest-timer { display: none; }
+body.kb-open main { padding-bottom: 40dvh; }
+input:focus, textarea:focus, select:focus { scroll-margin-block: 30dvh; }
+.diary-text { scroll-margin-block: 20dvh; }

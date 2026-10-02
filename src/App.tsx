@@ -118,6 +118,31 @@ function Shell({ userEmail }: { userEmail?: string }) {
   const [bodyOpen, setBodyOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Keyboard: keep the focused field visible and give the page room to scroll.
+  useEffect(() => {
+    const isField = (t: EventTarget | null): t is HTMLElement => t instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && (t as HTMLInputElement).type !== 'checkbox';
+    let timer = 0;
+    const onIn = (e: FocusEvent) => {
+      if (!isField(e.target)) return;
+      document.body.classList.add('kb-open');
+      const el = e.target;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 320);
+    };
+    const onOut = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (!isField(document.activeElement)) document.body.classList.remove('kb-open');
+      }, 120);
+    };
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => {
+      document.removeEventListener('focusin', onIn);
+      document.removeEventListener('focusout', onOut);
+    };
+  }, []);
+
   // The page behind a drawer must not scroll.
   useEffect(() => {
     document.documentElement.classList.toggle('scroll-locked', menuOpen || bodyOpen);

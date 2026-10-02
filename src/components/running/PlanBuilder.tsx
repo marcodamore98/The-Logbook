@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GlyphPlus, GlyphTrash } from '../icons';
+import { NumField } from '../ui';
 import { KIND_LABEL, planSummary } from '../../lib/running/geo';
 import { repeats, step } from '../../lib/running/plans';
 import type { RunStep } from '../../lib/types';
@@ -25,12 +26,12 @@ function StepRow({ s, onChange, onRemove }: { s: RunStep; onChange: (s: RunStep)
       </select>
       {s.by === 'time' ? (
         <span className="plan-value">
-          <input type="number" inputMode="numeric" min={0} value={min} aria-label="Minuti" onChange={(e) => onChange({ ...s, value: Math.max(0, Number(e.target.value)) * 60 + sec })} />′
-          <input type="number" inputMode="numeric" min={0} max={59} value={sec} aria-label="Secondi" onChange={(e) => onChange({ ...s, value: min * 60 + Math.min(59, Math.max(0, Number(e.target.value))) })} />″
+          <NumField value={min} label="Minuti" onChange={(n) => onChange({ ...s, value: Math.round(n) * 60 + sec })} />′
+          <NumField value={sec} max={59} label="Secondi" onChange={(n) => onChange({ ...s, value: min * 60 + Math.round(n) })} />″
         </span>
       ) : (
         <span className="plan-value">
-          <input type="number" inputMode="numeric" min={50} step={50} value={s.value} aria-label="Metri" onChange={(e) => onChange({ ...s, value: Math.max(50, Number(e.target.value)) })} /> m
+          <NumField value={s.value} label="Metri" onChange={(n) => onChange({ ...s, value: Math.round(n) })} /> m
         </span>
       )}
       <button type="button" className="icon-btn small" aria-label="Elimina fase" onClick={onRemove}>
@@ -56,12 +57,12 @@ export function PlanBuilder({ steps, onChange }: { steps: RunStep[]; onChange: (
       <div className="plan-gen">
         <label className="field">
           <span className="field-label">Ripetizioni</span>
-          <input type="number" inputMode="numeric" min={1} max={50} value={n} onChange={(e) => setN(Math.max(1, Number(e.target.value)))} />
+          <NumField value={n} min={1} max={50} onChange={(v) => setN(Math.round(v))} />
         </label>
         <label className="field">
           <span className="field-label">Corsa veloce</span>
           <span className="plan-inline">
-            <input type="number" inputMode="numeric" min={1} value={workBy === 'time' ? workV / 60 : workV} onChange={(e) => setWorkV(workBy === 'time' ? Number(e.target.value) * 60 : Number(e.target.value))} />
+            <NumField value={workBy === 'time' ? workV / 60 : workV} onChange={(v) => setWorkV(workBy === 'time' ? Math.round(v * 60) : Math.round(v))} />
             <select value={workBy} onChange={(e) => { const by = e.target.value as RunStep['by']; setWorkBy(by); setWorkV(by === 'time' ? 60 : 400); }}>
               <option value="distance">metri</option>
               <option value="time">minuti</option>
@@ -70,15 +71,15 @@ export function PlanBuilder({ steps, onChange }: { steps: RunStep[]; onChange: (
         </label>
         <label className="field">
           <span className="field-label">Recupero (secondi)</span>
-          <input type="number" inputMode="numeric" min={5} step={5} value={restSec} onChange={(e) => setRestSec(Number(e.target.value))} />
+          <NumField value={restSec} onChange={(v) => setRestSec(Math.round(v))} />
         </label>
         <label className="field">
           <span className="field-label">Riscaldamento (min)</span>
-          <input type="number" inputMode="numeric" min={0} value={warm} onChange={(e) => setWarm(Number(e.target.value))} />
+          <NumField value={warm} onChange={setWarm} />
         </label>
         <label className="field">
           <span className="field-label">Defaticamento (min)</span>
-          <input type="number" inputMode="numeric" min={0} value={cool} onChange={(e) => setCool(Number(e.target.value))} />
+          <NumField value={cool} onChange={setCool} />
         </label>
         <button type="button" className="btn" onClick={generate}>
           Crea le fasi

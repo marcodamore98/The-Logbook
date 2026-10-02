@@ -3,17 +3,13 @@ import { Link } from 'react-router-dom';
 import { fmt } from '../components/charts';
 import { GlyphTrash, IconRun } from '../components/icons';
 import { PlanBuilder } from '../components/running/PlanBuilder';
-import { RunMap } from '../components/running/RunMap';
 import { Card, Field, uid } from '../components/ui';
 import { formatLong, today } from '../lib/dates';
 import { useRunSession } from '../lib/running/engine';
-import { fmtDuration, fmtKm, fmtPace, gmapsDirections, gmapsSearch, kmSplits, KIND_LABEL, planSummary, stepLabel } from '../lib/running/geo';
+import { fmtDuration, fmtKm, fmtPace, kmSplits, KIND_LABEL, planSummary, stepLabel } from '../lib/running/geo';
 import { presetPlans } from '../lib/running/plans';
-import { suggestRoutes, type SuggestedRoute } from '../lib/running/routes';
 import { useStore } from '../lib/store/StoreContext';
 import type { RunModule, RunPlan, RunStep } from '../lib/types';
-
-const KIND_ICON: Record<SuggestedRoute['kind'], string> = { route: 'Percorso', track: 'Pista', park: 'Parco' };
 
 export default function RunPage() {
   const store = useStore();
@@ -29,47 +25,6 @@ export default function RunPage() {
   const { state } = run;
   const liveRef = useRef<HTMLElement>(null);
   const active = state.phase === 'running' || state.phase === 'paused';
-
-  // Routes near me
-  const [routes, setRoutes] = useState<SuggestedRoute[]>([]);
-  const [routeState, setRouteState] = useState<'idle' | 'locating' | 'loading' | 'done' | 'error'>('idle');
-  const [routeErr, setRouteErr] = useState('');
-  const [selected, setSelected] = useState<string | null>(null);
-  const [here, setHere] = useState<[number, number] | null>(null);
-  const [viewTrack, setViewTrack] = useState<[number, number][] | undefined>();
-
-  const findRoutes = () => {
-    setRouteErr('');
-    setRouteState('locating');
-    if (!('geolocation' in navigator)) {
-      setRouteState('error');
-      setRouteErr('Questo dispositivo non fornisce la posizione.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      async (p) => {
-        const me: [number, number] = [p.coords.latitude, p.coords.longitude];
-        setHere(me);
-        setRouteState('loading');
-        try {
-          const r = await suggestRoutes(me[0], me[1]);
-          setRoutes(r);
-          setRouteState('done');
-        } catch {
-          setRouteState('error');
-          setRouteErr('Non riesco a caricare i percorsi (serve la connessione).');
-        }
-      },
-      () => {
-        setRouteState('error');
-        setRouteErr('Posizione non consentita: abilitala nelle impostazioni del sito.');
-      },
-      { enableHighAccuracy: true, timeout: 15000 },
-    );
-  };
-
-  const sel = routes.find((r) => r.id === selected);
-  const mapPos = state.position ?? here;
 
   // Saving
   const [title, setTitle] = useState('');
@@ -89,7 +44,6 @@ export default function RunPage() {
       distanceM: Math.round(finalKm * 1000),
       durationSec: Math.round(state.elapsed),
       startedAt: Date.now() - state.elapsed * 1000,
-      routeName: sel?.name,
       track: run.finalTrack(),
       notes: notes.trim() || undefined,
     };
@@ -134,7 +88,6 @@ export default function RunPage() {
   const stepPct = cur && state.stepLeft !== null ? Math.min(100, Math.max(0, (1 - state.stepLeft / stepTotal) * 100)) : 0;
   const stepText =
     cur && state.stepLeft !== null ? (cur.by === 'time' ? fmtDuration(state.stepLeft) : `${Math.ceil(state.stepLeft)} m`) : '';
-  const trackPts = state.track.map((t) => [t[0], t[1]] as [number, number]);
 
   return (
     <div className="page run-page">
@@ -259,43 +212,13 @@ export default function RunPage() {
             </div>
           </div>
         )}
+        {state.phase === 'idle' && (
+          <a className="link-quiet" href="https://www.google.com/maps/search/percorsi+per+correre+vicino+a+me" target="_blank" rel="noreferrer">
+            Cerca percorsi vicino a te su Google Maps
+          </a>
+        )}
         {state.phase === 'idle' && <p className="muted small">Lo schermo resta acceso durante la corsa. Il GPS e i segnali funzionano finché l’app è aperta in primo piano.</p>}
       </section>
-
-      <Card id="run.map" icon={null} title="Mappa e percorsi vicino a te" summary={sel ? sel.name : 'Trova percorsi, piste e parchi'} defaultOpen={true}>
-        <RunMap position={mapPos} track={active || state.phase === 'done' ? trackPts : viewTrack} routes={routes} selectedId={selected} onSelect={setSelected} follow={active} />
-        <div className="row">
-          <button className="btn" disabled={routeState === 'locating' || routeState === 'loading'} onClick={findRoutes}>
-            {routeState === 'locating' ? 'Cerco la posizione…' : routeState === 'loading' ? 'Cerco i percorsi…' : routes.length ? 'Aggiorna' : 'Trova percorsi vicino a me'}
-          </button>
-          {mapPos && (
-            <a className="btn-ghost" href={gmapsSearch('percorsi per correre', mapPos[0], mapPos[1])} target="_blank" rel="noreferrer">
-              Cerca su Google Maps
-            </a>
-          )}
-        </div>
-        {routeErr && <p className="error small">{routeErr}</p>}
-        {routeState === 'done' && routes.length === 0 && <p className="muted small">Nessun percorso mappato nei dintorni: prova da un’altra zona o usa Google Maps.</p>}
-        {routes.length > 0 && (
-          <ul className="route-list">
-            {routes.map((r) => (
-              <li key={r.id} className={r.id === selected ? 'on' : ''}>
-                <button className="route-main" onClick={() => { setSelected(r.id); setViewTrack(undefined); }}>
-                  <strong>{r.name}</strong>
-                  <span className="muted small">
-                    {KIND_ICON[r.kind]}
-                    {r.lengthM && r.kind !== 'track' ? ` · ${fmt(r.lengthM / 1000, 1)} km` : ''} · a {r.away < 1000 ? `${Math.round(r.away)} m` : `${fmt(r.away / 1000, 1)} km`}
-                  </span>
-                </button>
-                <a className="btn-ghost small" href={gmapsDirections(r.start[0], r.start[1], mapPos ?? undefined)} target="_blank" rel="noreferrer">
-                  Google Maps
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="muted small">Mappa © OpenStreetMap. I percorsi sono quelli segnalati dagli utenti di OpenStreetMap vicino alla tua posizione.</p>
-      </Card>
 
       <Card id="run.history" icon={null} title="Le tue corse" summary={`${history.length} registrate`} defaultOpen={false}>
         {history.length === 0 ? (
@@ -304,14 +227,14 @@ export default function RunPage() {
           <ul className="run-history">
             {history.slice(0, 40).map(({ date, m }) => (
               <li key={m.id}>
-                <button className="route-main" onClick={() => { setViewTrack(m.track?.map((t) => [t[0], t[1]])); setSelected(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                <div className="route-main">
                   <strong>{m.title || (m.mode === 'intervals' ? m.planName ?? 'Intervalli' : 'Corsa continua')}</strong>
                   <span className="muted small capitalize">
                     {formatLong(date)} · {fmtKm(m.distanceM)} km · {fmtDuration(m.durationSec)} · {fmtPace(m.distanceM, m.durationSec)}/km
                     {m.track && kmSplits(m.track).length ? ` · migliore ${fmtDuration(Math.min(...kmSplits(m.track)))}/km` : ''}
                   </span>
                   {m.mode === 'intervals' && m.steps && <span className="muted small">{planSummary(m.steps)}</span>}
-                </button>
+                </div>
                 <Link className="btn-ghost small" to={`/giorno/${date}`}>Giorno</Link>
                 <button className="icon-btn small" aria-label="Elimina corsa" onClick={() => window.confirm('Eliminare questa corsa?') && store.updateDay(date, (d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }))}>
                   <GlyphTrash />

@@ -399,20 +399,25 @@ export default function DayPage() {
 
   const hidden = settings.hiddenBlocks ?? [];
   const saveSettings = store.saveSettings;
-  const { drag, onPointerDown } = useBlockDrag(order, (o) => saveOrder(o));
+  const { drag, settling, onPointerDown } = useBlockDrag(order, (o) => saveOrder(o));
   const rendered: React.ReactNode[] = [];
   for (const id of order) {
     if (hidden.includes(id)) continue;
     const node = renderBlock(id);
     if (!node) continue;
-    const cls = drag ? (drag.id === id ? ' dragging' : drag.before === id ? ' drop-before' : '') : '';
+    const me = drag?.id === id;
+    const shift = drag && !me ? drag.shifts[id] ?? 0 : 0;
     rendered.push(
-      <div key={id} data-block={id} className={`blk${cls}`} style={drag?.id === id ? { transform: `translateY(${drag.dy}px)` } : undefined}>
+      <div
+        key={id}
+        data-block={id}
+        className={`blk${me ? ' dragging' : ''}${drag && !me ? ' shifting' : ''}${settling ? ' settling' : ''}`}
+        style={me ? { transform: `translate3d(0, ${drag!.dy}px, 0) scale(1.02)` } : shift ? { transform: `translate3d(0, ${shift}px, 0)` } : undefined}
+      >
         {node}
       </div>,
     );
   }
-  if (drag && drag.before === null) rendered.push(<div key="drop-end" className="drop-end" />);
 
   const saveOrder = (o: string[]) => store.saveSettings({ ...settings, dayLayout: o });
 
