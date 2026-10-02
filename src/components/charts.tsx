@@ -181,3 +181,52 @@ export function Ring({ value, of, label, display, color = PALETTE[0] }: { value:
     </figure>
   );
 }
+
+/** Line with dots across runs (or any series). `better` says which direction is an improvement. */
+export function Trend({ points, format, better = 'down', title }: { points: { label: string; value: number }[]; format: (v: number) => string; better?: 'up' | 'down'; title: string }) {
+  if (points.length < 2) return <Empty>Servono almeno due corse per vedere la progressione.</Empty>;
+  const W = 640, H = 170, pad = { l: 46, r: 12, t: 14, b: 24 };
+  const vals = points.map((p) => p.value);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const span = hi - lo || 1;
+  const x = (i: number) => pad.l + (i / (points.length - 1)) * (W - pad.l - pad.r);
+  // improvement is drawn upwards
+  const y = (v: number) => {
+    const t = (v - lo) / span;
+    return pad.t + (H - pad.t - pad.b) * (better === 'down' ? t : 1 - t);
+  };
+  const d = points.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p.value)}`).join(' ');
+  const first = vals[0], lastV = vals[vals.length - 1];
+  const improved = better === 'down' ? lastV < first : lastV > first;
+  const step = points.length > 8 ? Math.ceil(points.length / 6) : 1;
+  return (
+    <div className="columns-wrap">
+      <svg viewBox={`0 0 ${W} ${H}`} className="columns" role="img" aria-label={title}>
+        {[lo, (lo + hi) / 2, hi].map((g, i) => (
+          <g key={i}>
+            <line x1={pad.l} x2={W - pad.r} y1={y(g)} y2={y(g)} className="grid-line" />
+            <text x={pad.l - 6} y={y(g) + 3} className="axis-label" textAnchor="end">
+              {format(g)}
+            </text>
+          </g>
+        ))}
+        <path d={d} fill="none" stroke="var(--series-1)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+        {points.map((p, i) => (
+          <g key={i}>
+            <circle cx={x(i)} cy={y(p.value)} r={i === points.length - 1 ? 5 : 3.5} fill="var(--series-1)" stroke="var(--surface)" strokeWidth="2">
+              <title>{`${p.label}: ${format(p.value)}`}</title>
+            </circle>
+            {i % step === 0 && (
+              <text x={x(i)} y={H - 6} className="axis-label" textAnchor="middle">
+                {p.label}
+              </text>
+            )}
+          </g>
+        ))}
+      </svg>
+      <p className={`trend-note ${improved ? 'better' : 'worse'}`}>
+        {improved ? '▲ In miglioramento' : '▼ Più lento'}: da {format(first)} a {format(lastV)}
+      </p>
+    </div>
+  );
+}

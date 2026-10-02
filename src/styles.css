@@ -92,7 +92,7 @@ body {
   color: var(--ink);
   font: 15px/1.5 var(--font);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 h1, h2, h3 { font-weight: 600; margin: 0; }
 h1 { font-family: var(--serif); font-size: 1.55rem; letter-spacing: -0.01em; }
@@ -842,8 +842,8 @@ a.btn { display: inline-block; text-align: center; text-decoration: none; }
 .login .btn { background: var(--lime); color: #1d1d1f; }
 
 /* Phone fit: no sideways scroll, no auto text inflation, tighter scale */
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; max-width: 100%; }
-body { overflow-x: hidden; max-width: 100vw; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+.app { overflow-x: clip; }
 .app, .layout, main { max-width: 100%; }
 main img, main table, main select, main input, main textarea { max-width: 100%; }
 @media (max-width: 600px) {
@@ -856,12 +856,12 @@ main img, main table, main select, main input, main textarea { max-width: 100%; 
 }
 
 /* ---- Menu drawer: slides in, background page locked ---- */
-html.scroll-locked, html.scroll-locked body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+html.scroll-locked { overflow: hidden; }
 .drawer-backdrop, .sheet-backdrop { overscroll-behavior: contain; touch-action: none; }
 .drawer, .sheet { touch-action: pan-y; overscroll-behavior: contain; }
-.drawer-backdrop.left .nav-drawer { animation: drawer-in 0.22s ease-out; }
-@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
-@media (prefers-reduced-motion: reduce) { .drawer-backdrop.left .nav-drawer { animation: none; } }
+.drawer-backdrop.left { transition: background-color 0.24s ease; }
+.drawer-backdrop.left .nav-drawer { transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
+.drawer-backdrop.left.dragging, .drawer-backdrop.left.dragging .nav-drawer { transition: none; }
 
 /* ---- Movable day blocks (long-press the header, drag) ---- */
 .day-page { display: flex; flex-direction: column; gap: 0.9rem; }
@@ -981,9 +981,8 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; height: 100%; ov
 
 /* ---- Touch feel: no tap delay, no highlight flash, cheap compositing ---- */
 html { -webkit-tap-highlight-color: transparent; scroll-behavior: auto; }
-a, button, summary, label, select, input, textarea, [role='tab'], .card-head { touch-action: manipulation; }
-body { font-size: 16px; overscroll-behavior-y: none; }
-.card, .tile, .drawer, .sheet { backface-visibility: hidden; }
+a, button, summary, label, [role='tab'] { touch-action: manipulation; }
+body { font-size: 16px; }
 .card-head, .btn, .btn-ghost, .icon-btn, .nav-item { -webkit-user-select: none; user-select: none; }
 .card-body textarea, .card-body input, textarea, input { -webkit-user-select: text; user-select: text; }
 input, select, textarea { font-size: 1rem; }
@@ -1006,6 +1005,40 @@ input, select, textarea { font-size: 1rem; }
 .sheet { max-height: calc(100dvh - 0.5rem); overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .sheet-backdrop { align-items: flex-end; }
 body.kb-open .rest-timer { display: none; }
-body.kb-open main { padding-bottom: 40dvh; }
 input:focus, textarea:focus, select:focus { scroll-margin-block: 30dvh; }
 .diary-text { scroll-margin-block: 20dvh; }
+
+/* ---- Run: now, summary, trends ---- */
+html.modal-open { overflow: hidden; }
+.run-now { display: flex; flex-direction: column; align-items: center; padding: 0.5rem; border-radius: 16px; background: var(--surface-2); }
+.run-now-val { font-size: clamp(2rem, 11vw, 3rem); font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.run-summary { position: fixed; inset: 0; z-index: 60; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+.run-summary-inner { max-width: 640px; margin: 0 auto; padding: 1.2rem 1rem calc(2rem + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 1.1rem; }
+.run-win { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; text-align: center; padding: 1.2rem 1rem; border-radius: 26px; background: var(--lime); color: #1d1d1f; }
+.run-win h2 { margin: 0.3rem 0 0; font-size: 1.7rem; letter-spacing: -0.03em; }
+.run-win .muted { color: #1d1d1f; opacity: 0.7; margin: 0; }
+.run-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; margin-top: 0.4rem; }
+.run-badges .badge { background: #1d1d1f; color: var(--lime); }
+.run-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; text-align: center; }
+.run-hero > div { display: flex; flex-direction: column; background: var(--surface); border-radius: 22px; padding: 0.9rem 0.5rem; }
+.run-hero .run-big { font-size: clamp(2.2rem, 12vw, 3.2rem); }
+.run-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0; }
+.run-grid > div { background: var(--surface); border-radius: 18px; padding: 0.7rem 0.9rem; }
+.run-grid dt { color: var(--muted); font-size: 0.82rem; }
+.run-grid dd { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.run-grid small { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.run-compare { margin: 0; text-align: center; font-weight: 700; }
+.better { color: #2f9e44; }
+.worse { color: #c0392b; }
+.run-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.run-table th, .run-table td { text-align: left; padding: 0.35rem 0.3rem; border-bottom: 1px solid var(--line); }
+.run-table th { color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+.run-splits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.run-splits li { display: grid; grid-template-columns: 2rem 1fr 4rem; gap: 0.5rem; align-items: center; font-variant-numeric: tabular-nums; }
+.run-split-bar { height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.run-split-bar span { display: block; height: 100%; background: var(--series-1); border-radius: 6px; }
+.run-splits li.best .run-split-bar span { background: var(--lime); }
+.run-splits li.best { font-weight: 800; }
+.run-save { display: flex; flex-direction: column; gap: 0.7rem; }
+.delta { display: inline-block; margin-left: 0.4rem; font-size: 0.78rem; font-weight: 700; }
+.trend-note { margin: 0.2rem 0 0; font-weight: 700; font-size: 0.9rem; }

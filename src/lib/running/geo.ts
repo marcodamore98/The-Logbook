@@ -87,3 +87,33 @@ export function kmSplits(track: TrackPoint[]): number[] {
 export const gmapsDirections = (lat: number, lon: number, from?: [number, number]) =>
   `https://www.google.com/maps/dir/?api=1${from ? `&origin=${from[0]},${from[1]}` : ''}&destination=${lat},${lon}&travelmode=walking`;
 export const gmapsSearch = (q: string, lat: number, lon: number) => `https://www.google.com/maps/search/${encodeURIComponent(q)}/@${lat},${lon},14z`;
+
+/** Fastest speed held for at least `window` seconds, in km/h. */
+export function maxSpeedKmh(track: TrackPoint[], window = 15): number {
+  let best = 0;
+  let j = 0;
+  for (let i = 0; i < track.length; i++) {
+    if (j < i) j = i;
+    while (j < track.length - 1 && track[j][2] - track[i][2] < window) j++;
+    const dt = track[j][2] - track[i][2];
+    if (dt < window * 0.7) continue;
+    let d = 0;
+    for (let k = i + 1; k <= j; k++) d += haversine([track[k - 1][0], track[k - 1][1]], [track[k][0], track[k][1]]);
+    best = Math.max(best, (d / dt) * 3.6);
+  }
+  return Math.round(best * 10) / 10;
+}
+
+/** Pace (s/km) over the last `window` seconds of the track, or null if not enough data. */
+export function recentPace(track: TrackPoint[], now: number, window = 25): number | null {
+  const pts = track.filter((p) => p[2] >= now - window);
+  if (pts.length < 2) return null;
+  let d = 0;
+  for (let k = 1; k < pts.length; k++) d += haversine([pts[k - 1][0], pts[k - 1][1]], [pts[k][0], pts[k][1]]);
+  const dt = pts[pts.length - 1][2] - pts[0][2];
+  return d > 15 && dt > 8 ? dt / (d / 1000) : null;
+}
+
+export const fmtPaceSec = (secPerKm: number | null | undefined) => (secPerKm && Number.isFinite(secPerKm) ? `${Math.floor(secPerKm / 60)}:${String(Math.round(secPerKm % 60)).padStart(2, '0')}` : '–');
+
+export const kmh = (distanceM: number, sec: number) => (sec > 0 ? (distanceM / sec) * 3.6 : 0);

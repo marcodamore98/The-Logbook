@@ -33,7 +33,19 @@ export interface Stats {
   study: { minutes: number; byArea: Count[]; byType: Count[] };
   workout: { sessions: number; minutes: number; volumeKg: number; km: number; sets: number; byType: Count[]; byExercise: Count[] };
   outings: { total: number; byType: Count[] };
-  run: { sessions: number; km: number; minutes: number; byMode: Count[] };
+  run: {
+    sessions: number;
+    km: number;
+    minutes: number;
+    byMode: Count[];
+    paceSecKm?: number; // average over the period
+    bestPaceSecKm?: number; // best average pace of a run of at least 1 km
+    longestKm: number;
+    bestKmSec?: number; // fastest single km
+    maxKmh?: number;
+    workPaceSecKm?: number; // average pace of the fast reps in interval sessions
+    runs: { date: string; km: number; paceSecKm: number; workPaceSecKm?: number }[];
+  };
   photos: number;
   mood?: number;
   categories: { appointments: Count[]; todos: Count[]; todosDone: number; todosTotal: number };
@@ -66,14 +78,14 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
     study: { minutes: 0, byArea: [], byType: [] },
     workout: { sessions: 0, minutes: 0, volumeKg: 0, km: 0, sets: 0, byType: [], byExercise: [] },
     outings: { total: 0, byType: [] },
-    run: { sessions: 0, km: 0, minutes: 0, byMode: [] },
+    run: { sessions: 0, km: 0, minutes: 0, byMode: [], longestKm: 0, runs: [] },
     photos: 0,
     categories: { appointments: [], todos: [], todosDone: 0, todosTotal: 0 },
     muscles: [],
     body: {},
     nutrition: { days: 0, daysOnKcal: 0, daysOnProtein: 0 },
   };
-  let moodSum = 0, moodN = 0;
+  let moodSum = 0, moodN = 0, workM = 0, workS = 0;
   const apCat = new Tally(), tdCat = new Tally();
   const nutri: Record<'protein' | 'carbs' | 'fat', number[]> = { protein: [], carbs: [], fat: [] };
   const bodyVals: Record<'weight' | 'kcalIn' | 'steps' | 'sleepH', number[]> = { weight: [], kcalIn: [], steps: [], sleepH: [] };
@@ -149,6 +161,23 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
           s.run.km += m.distanceM / 1000;
           s.run.minutes += m.durationSec / 60;
           runMode.add(m.mode === 'intervals' ? 'A intervalli' : 'Continua');
+          {
+            const km = m.distanceM / 1000;
+            const pace = km > 0 ? m.durationSec / km : 0;
+            s.run.longestKm = Math.max(s.run.longestKm, km);
+            if (km >= 1 && pace > 0 && (!s.run.bestPaceSecKm || pace < s.run.bestPaceSecKm)) s.run.bestPaceSecKm = pace;
+            const best = m.splits?.length ? Math.min(...m.splits) : undefined;
+            if (best && (!s.run.bestKmSec || best < s.run.bestKmSec)) s.run.bestKmSec = best;
+            if (m.maxSpeedKmh && m.maxSpeedKmh > (s.run.maxKmh ?? 0)) s.run.maxKmh = m.maxSpeedKmh;
+            const work = (m.laps ?? []).filter((l) => l.kind === 'work' && l.meters >= 50 && l.seconds > 0);
+            const wm = work.reduce((n, l) => n + l.meters, 0);
+            const ws = work.reduce((n, l) => n + l.seconds, 0);
+            if (wm > 0) {
+              workM += wm;
+              workS += ws;
+            }
+            if (pace > 0) s.run.runs.push({ date: d.date, km, paceSecKm: pace, workPaceSecKm: wm > 0 ? ws / (wm / 1000) : undefined });
+          }
           break;
         case 'workout':
           s.workout.sessions++;
@@ -192,6 +221,9 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   s.workout.km = Math.round(s.workout.km * 10) / 10;
   s.outings.byType = oType.list(by(OUTING_TYPES));
   s.run.byMode = runMode.list((k) => k);
+  if (s.run.km > 0) s.run.paceSecKm = (s.run.minutes * 60) / s.run.km;
+  if (workM > 0) s.run.workPaceSecKm = workS / (workM / 1000);
+  s.run.runs.sort((a, b) => a.date.localeCompare(b.date));
   s.categories.appointments = apCat.list(by(CATEGORIES));
   s.categories.todos = tdCat.list(by(CATEGORIES));
   s.muscles = [...setsPerMuscle(days, settings.exercises ?? []).entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);

@@ -154,6 +154,7 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
           if (s.me < 0) return finish(false);
           s.j = s.me;
           s.active = true;
+          window.addEventListener('touchmove', blockScroll, { passive: false });
           navigator.vibrate?.(15);
           window.getSelection()?.removeAllRanges();
           s.raf = requestAnimationFrame(tick);
@@ -162,7 +163,6 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
       window.addEventListener('pointermove', onMove, { passive: true });
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onCancel);
-      window.addEventListener('touchmove', blockScroll, { passive: false });
     };
 
     return { onPointerDown, finish };

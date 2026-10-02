@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { KIND_LABEL, haversine, simplifyTrack } from './geo';
-import type { RunStep, TrackPoint } from '../types';
+import { KIND_LABEL, haversine, recentPace, simplifyTrack } from './geo';
+import type { RunLap, RunStep, TrackPoint } from '../types';
 
 export type Phase = 'idle' | 'running' | 'paused' | 'done';
 
@@ -15,6 +15,8 @@ export interface RunState {
   accuracy: number | null;
   gps: 'off' | 'waiting' | 'ok' | 'denied';
   track: TrackPoint[];
+  pace: number | null; // current pace, s/km over the last ~25 s
+  laps: RunLap[];
 }
 
 let audio: AudioContext | null = null;
@@ -87,7 +89,7 @@ export const signals = {
  * sleeps), GPS distance, and interval steps with sound/vibration/voice signals.
  */
 export function useRunSession(steps: RunStep[] | undefined, useGps: boolean) {
-  const [state, setState] = useState<RunState>({ phase: 'idle', elapsed: 0, distance: 0, stepIdx: 0, stepLeft: null, position: null, accuracy: null, gps: 'off', track: [] });
+  const [state, setState] = useState<RunState>({ phase: 'idle', elapsed: 0, distance: 0, stepIdx: 0, stepLeft: null, position: null, accuracy: null, gps: 'off', track: [], pace: null, laps: [] });
   const r = useRef({
     phase: 'idle' as Phase,
     t0: 0, // wall clock of the last resume
@@ -105,6 +107,7 @@ export function useRunSession(steps: RunStep[] | undefined, useGps: boolean) {
     gps: 'off' as RunState['gps'],
     pos: null as [number, number] | null,
     acc: null as number | null,
+    laps: [] as RunLap[],
   });
   r.current.steps = steps ?? [];
 
@@ -116,7 +119,7 @@ export function useRunSession(steps: RunStep[] | undefined, useGps: boolean) {
     const s = c.steps[c.idx];
     let left: number | null = null;
     if (s && c.phase !== 'idle') left = s.by === 'time' ? Math.max(0, s.value - (e - c.stepStartE)) : Math.max(0, s.value - (c.dist - c.stepStartD));
-    setState({ phase: c.phase, elapsed: e, distance: c.dist, stepIdx: c.idx, stepLeft: left, stepKind: s?.kind, position: c.pos, accuracy: c.acc, gps: c.gps, track: c.track });
+    setState({ phase: c.phase, elapsed: e, distance: c.dist, stepIdx: c.idx, stepLeft: left, stepKind: s?.kind, position: c.pos, accuracy: c.acc, gps: c.gps, track: c.track, pace: c.phase === 'running' ? recentPace(c.track, e) : null, laps: c.laps });
   }, []);
 
   const advance = useCallback(() => {
@@ -137,6 +140,7 @@ export function useRunSession(steps: RunStep[] | undefined, useGps: boolean) {
         }
         return;
       }
+      c.laps.push({ kind: s.kind, by: s.by, value: s.value, seconds: Math.round(s.by === 'time' ? s.value : e - c.stepStartE), meters: Math.round(c.dist - c.stepStartD) });
       c.idx++;
       c.stepStartE = s.by === 'time' ? c.stepStartE + s.value : e;
       c.stepStartD = c.dist;
@@ -198,7 +202,7 @@ export function useRunSession(steps: RunStep[] | undefined, useGps: boolean) {
   const start = () => {
     unlockAudio();
     const c = r.current;
-    Object.assign(c, { phase: 'running', t0: Date.now(), base: 0, dist: 0, last: null, track: [], idx: 0, stepStartE: 0, stepStartD: 0, ticked: -1 });
+    Object.assign(c, { phase: 'running', t0: Date.now(), base: 0, dist: 0, last: null, track: [], laps: [], idx: 0, stepStartE: 0, stepStartD: 0, ticked: -1 });
     startGps();
     void keepAwake();
     if (c.steps.length) signals.start(c.steps[0].kind);
@@ -231,7 +235,7 @@ export function useRunSession(steps: RunStep[] | undefined, useGps: boolean) {
   const reset = () => {
     const c = r.current;
     stopGps();
-    Object.assign(c, { phase: 'idle', base: 0, dist: 0, last: null, track: [], idx: 0, pos: c.pos });
+    Object.assign(c, { phase: 'idle', base: 0, dist: 0, last: null, track: [], laps: [], idx: 0, pos: c.pos });
     publish();
   };
   /** Skip to the next step by hand. */
@@ -268,5 +272,6 @@ export function useRunSession(steps: RunStep[] | undefined, useGps: boolean) {
   useEffect(() => () => stopGps(), []);
 
   const finalTrack = () => simplifyTrack(r.current.track);
-  return { state, start, pause, resume, stop, reset, skip, locate, finalTrack, KIND_LABEL };
+  const rawTrack = () => r.current.track;
+  return { state, start, pause, resume, stop, reset, skip, locate, finalTrack, rawTrack, KIND_LABEL };
 }

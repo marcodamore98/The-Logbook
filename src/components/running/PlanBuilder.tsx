@@ -43,10 +43,10 @@ function StepRow({ s, onChange, onRemove }: { s: RunStep; onChange: (s: RunStep)
 
 /** Builds an interval session: warm-up, repeats of work/rest, cool-down, or any custom sequence. */
 export function PlanBuilder({ steps, onChange }: { steps: RunStep[]; onChange: (s: RunStep[]) => void }) {
-  const [n, setN] = useState(6);
-  const [workBy, setWorkBy] = useState<RunStep['by']>('distance');
-  const [workV, setWorkV] = useState(400);
-  const [restSec, setRestSec] = useState(90);
+  const [n, setN] = useState(5);
+  const [workBy, setWorkBy] = useState<RunStep['by']>('time');
+  const [workV, setWorkV] = useState(60);
+  const [restSec, setRestSec] = useState(60);
   const [warm, setWarm] = useState(10);
   const [cool, setCool] = useState(5);
 

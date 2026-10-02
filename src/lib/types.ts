@@ -99,6 +99,15 @@ export interface RunPlan {
 /** [lat, lon, seconds from start] */
 export type TrackPoint = [number, number, number];
 
+/** A completed step of an interval session, as actually run. */
+export interface RunLap {
+  kind: RunStep['kind'];
+  by: RunStep['by'];
+  value: number;
+  seconds: number;
+  meters: number;
+}
+
 export interface RunModule {
   kind: 'run';
   id: string;
@@ -111,6 +120,9 @@ export interface RunModule {
   startedAt?: number;
   routeName?: string;
   track?: TrackPoint[];
+  maxSpeedKmh?: number;
+  splits?: number[]; // seconds per completed km
+  laps?: RunLap[];
   notes?: string;
 }
 

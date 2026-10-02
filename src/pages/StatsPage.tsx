@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconFlame, IconScale, IconOuting, IconRun, IconTodo, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
-import { BarList, Columns, Donut, fmt, PALETTE, Ring } from '../components/charts';
+import { BarList, Columns, Donut, fmt, PALETTE, Ring, Trend } from '../components/charts';
 import { PrintButton } from '../components/PrintDialog';
 import { Empty } from '../components/ui';
 import {
@@ -17,11 +17,24 @@ import {
   today,
   WEEKDAYS_SHORT,
 } from '../lib/dates';
+import { fmtPaceSec } from '../lib/running/geo';
 import { computeStats, metricOf, surgeryCsv, type Metric } from '../lib/stats';
 import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, ISODate } from '../lib/types';
 
 type Period = 'week' | 'month' | 'year';
+
+/** Small ▲/▼ chip comparing a value with the previous period. */
+function Delta({ cur, prev, lowerIsBetter, fmtv }: { cur?: number; prev?: number; lowerIsBetter?: boolean; fmtv?: (v: number) => string }) {
+  if (cur === undefined || prev === undefined || prev === 0 || cur === prev) return null;
+  const d = cur - prev;
+  const good = lowerIsBetter ? d < 0 : d > 0;
+  return (
+    <span className={`delta ${good ? 'better' : 'worse'}`}>
+      {d > 0 ? '▲' : '▼'} {fmtv ? fmtv(d) : Math.abs(Math.round(d))}
+    </span>
+  );
+}
 
 function bounds(p: Period, anchor: ISODate): [ISODate, ISODate] {
   if (p === 'week') {
@@ -73,6 +86,7 @@ export default function StatsPage() {
   const [anchor, setAnchor] = useState(today());
   const [metric, setMetric] = useState<Metric>('surgery');
   const [days, setDays] = useState<DayEntry[]>([]);
+  const [prevDays, setPrevDays] = useState<DayEntry[]>([]);
   const [from, to] = bounds(period, anchor);
 
   useEffect(() => {
@@ -82,6 +96,16 @@ export default function StatsPage() {
       alive = false;
     };
   }, [store.repo, from, to]);
+
+  const [pFrom, pTo] = bounds(period, shift(period, anchor, -1));
+  useEffect(() => {
+    let alive = true;
+    store.repo.getRange(pFrom, pTo).then((d) => alive && setPrevDays(d));
+    return () => {
+      alive = false;
+    };
+  }, [store.repo, pFrom, pTo]);
+  const prevStats = useMemo(() => computeStats(prevDays, store.settings), [prevDays, store.settings]);
 
   const stats = useMemo(() => computeStats(days, store.settings), [days, store.settings]);
 
@@ -162,6 +186,11 @@ export default function StatsPage() {
           <IconWorkout size={32} />
           <span className="tile-value">{stats.workout.sessions}</span>
           <span className="tile-label">allenamenti · {fmt(stats.workout.minutes / 60, 1)} h</span>
+        </div>
+        <div className="tile" data-print="palestra">
+          <IconRun size={32} />
+          <span className="tile-value">{fmt(stats.run.km, 1)} km</span>
+          <span className="tile-label">{stats.run.sessions} corse · {fmtPaceSec(stats.run.paceSecKm)}/km</span>
         </div>
         <div className="tile" data-print="privato">
           <IconOuting size={32} />
@@ -293,11 +322,35 @@ export default function StatsPage() {
           ) : (
             <>
               <dl className="side-stats">
-                <div><dt>Corse</dt><dd>{stats.run.sessions}</dd></div>
-                <div><dt>Distanza</dt><dd>{fmt(stats.run.km, 1)} km</dd></div>
+                <div><dt>Corse</dt><dd>{stats.run.sessions}<Delta cur={stats.run.sessions} prev={prevStats.run.sessions} /></dd></div>
+                <div><dt>Distanza</dt><dd>{fmt(stats.run.km, 1)} km<Delta cur={stats.run.km} prev={prevStats.run.km} fmtv={(v) => fmt(Math.abs(v), 1) + ' km'} /></dd></div>
                 <div><dt>Tempo</dt><dd>{fmt(stats.run.minutes / 60, 1)} h</dd></div>
-                <div><dt>Passo medio</dt><dd>{stats.run.km > 0 ? `${Math.floor(stats.run.minutes / stats.run.km)}:${String(Math.round(((stats.run.minutes / stats.run.km) % 1) * 60)).padStart(2, '0')}/km` : '—'}</dd></div>
+                <div><dt>Passo medio</dt><dd>{fmtPaceSec(stats.run.paceSecKm)}/km<Delta cur={stats.run.paceSecKm} prev={prevStats.run.paceSecKm} lowerIsBetter fmtv={(v) => `${Math.round(Math.abs(v))} s`} /></dd></div>
+                <div><dt>Miglior passo</dt><dd>{fmtPaceSec(stats.run.bestPaceSecKm)}/km</dd></div>
+                <div><dt>Km più veloce</dt><dd>{fmtPaceSec(stats.run.bestKmSec)}/km</dd></div>
+                <div><dt>Corsa più lunga</dt><dd>{fmt(stats.run.longestKm, 1)} km</dd></div>
+                <div><dt>Velocità massima</dt><dd>{stats.run.maxKmh ? `${fmt(stats.run.maxKmh, 1)} km/h` : '—'}</dd></div>
+                {stats.run.workPaceSecKm && <div><dt>Passo ripetute</dt><dd>{fmtPaceSec(stats.run.workPaceSecKm)}/km<Delta cur={stats.run.workPaceSecKm} prev={prevStats.run.workPaceSecKm} lowerIsBetter fmtv={(v) => `${Math.round(Math.abs(v))} s`} /></dd></div>}
               </dl>
+              <p className="muted small">Le frecce confrontano il periodo con quello precedente.</p>
+              <h3 className="sub">Progressione del passo (min/km)</h3>
+              <Trend
+                title="Passo medio per corsa"
+                better="down"
+                format={(v) => fmtPaceSec(v)}
+                points={stats.run.runs.map((r) => ({ label: fromISO(r.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }), value: r.paceSecKm }))}
+              />
+              {stats.run.runs.some((r) => r.workPaceSecKm) && (
+                <>
+                  <h3 className="sub">Progressione del passo delle ripetute</h3>
+                  <Trend
+                    title="Passo delle ripetute"
+                    better="down"
+                    format={(v) => fmtPaceSec(v)}
+                    points={stats.run.runs.filter((r) => r.workPaceSecKm).map((r) => ({ label: fromISO(r.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }), value: r.workPaceSecKm! }))}
+                  />
+                </>
+              )}
               <h3 className="sub">Tipo di corsa</h3>
               <Donut data={stats.run.byMode} />
             </>

@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { fmt } from '../components/charts';
 import { GlyphTrash, IconRun } from '../components/icons';
 import { PlanBuilder } from '../components/running/PlanBuilder';
+import { RunSummary, type RunResult } from '../components/running/RunSummary';
 import { Card, Field, uid } from '../components/ui';
 import { formatLong, today } from '../lib/dates';
 import { useRunSession } from '../lib/running/engine';
-import { fmtDuration, fmtKm, fmtPace, kmSplits, KIND_LABEL, planSummary, stepLabel } from '../lib/running/geo';
+import { fmtDuration, fmtKm, fmtPace, fmtPaceSec, kmSplits, KIND_LABEL, planSummary, stepLabel } from '../lib/running/geo';
 import { presetPlans } from '../lib/running/plans';
 import { useStore } from '../lib/store/StoreContext';
 import type { RunModule, RunPlan, RunStep } from '../lib/types';
@@ -15,8 +16,8 @@ export default function RunPage() {
   const store = useStore();
   const { settings } = store;
   const [mode, setMode] = useState<'continuous' | 'intervals'>('continuous');
-  const [steps, setSteps] = useState<RunStep[]>(() => presetPlans()[0].steps.map((s) => ({ ...s })));
-  const [planName, setPlanName] = useState<string>(presetPlans()[0].name);
+  const [steps, setSteps] = useState<RunStep[]>([]);
+  const [planName, setPlanName] = useState<string>('Personalizzata');
   const [useGps, setUseGps] = useState(true);
   const plans: RunPlan[] = useMemo(() => [...presetPlans(), ...(settings.runPlans ?? [])], [settings.runPlans]);
 
@@ -26,32 +27,25 @@ export default function RunPage() {
   const liveRef = useRef<HTMLElement>(null);
   const active = state.phase === 'running' || state.phase === 'paused';
 
-  // Saving
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
-  const [manualKm, setManualKm] = useState('');
-  const gpsKm = state.distance / 1000;
-  const finalKm = manualKm !== '' ? Number(manualKm.replace(',', '.')) : gpsKm;
-
-  const save = async () => {
+  const save = async (r: RunResult) => {
     const m: RunModule = {
       kind: 'run',
       id: uid(),
-      title: title.trim() || undefined,
+      title: r.title,
       mode,
-      planName: mode === 'intervals' ? planName : undefined,
+      planName: mode === 'intervals' && planName !== 'Personalizzata' ? planName : undefined,
       steps: mode === 'intervals' ? steps : undefined,
-      distanceM: Math.round(finalKm * 1000),
+      distanceM: r.distanceM,
       durationSec: Math.round(state.elapsed),
       startedAt: Date.now() - state.elapsed * 1000,
       track: run.finalTrack(),
-      notes: notes.trim() || undefined,
+      maxSpeedKmh: r.maxSpeedKmh,
+      splits: r.splits,
+      laps: mode === 'intervals' && state.laps.length ? state.laps : undefined,
+      notes: r.notes,
     };
     await store.updateDay(today(), (d) => ({ ...d, modules: [...d.modules, m] }));
     run.reset();
-    setTitle('');
-    setNotes('');
-    setManualKm('');
   };
 
   // History
@@ -115,9 +109,9 @@ export default function RunPage() {
         </label>
         {mode === 'intervals' && !active && (
           <>
-            <Field label="Sessione">
+            <Field label="Sessione preimpostata o salvata">
               <select value={plans.find((p) => p.name === planName)?.id ?? ''} onChange={(e) => choosePlan(e.target.value)}>
-                <option value="">Personalizzata</option>
+                <option value="">Personalizzata (da zero)</option>
                 {plans.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -165,9 +159,15 @@ export default function RunPage() {
           </div>
           <div>
             <span className="run-big">{useGps ? fmtPace(state.distance, state.elapsed) : '–'}</span>
-            <span className="run-cap">min/km</span>
+            <span className="run-cap">passo medio</span>
           </div>
         </div>
+        {useGps && active && (
+          <div className="run-now">
+            <span className="run-now-val">{fmtPaceSec(state.pace)}</span>
+            <span className="run-cap">passo attuale · min/km</span>
+          </div>
+        )}
         {useGps && state.phase !== 'idle' && (
           <p className="muted small run-gps">
             {state.gps === 'ok' ? `GPS ok${state.accuracy ? ` (±${Math.round(state.accuracy)} m)` : ''}` : state.gps === 'denied' ? 'GPS non disponibile: controlla i permessi di posizione' : 'Cerco il segnale GPS…'}
@@ -192,26 +192,6 @@ export default function RunPage() {
             <button className="btn-ghost danger" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>Fine</button>
           </div>
         )}
-        {state.phase === 'done' && (
-          <div className="run-save">
-            <h3 className="sub">Corsa terminata</h3>
-            <div className="grid">
-              <Field label="Titolo">
-                <input value={title} placeholder="es. Giro del parco" onChange={(e) => setTitle(e.target.value)} />
-              </Field>
-              <Field label="Distanza (km)">
-                <input inputMode="decimal" value={manualKm} placeholder={gpsKm.toFixed(2)} onChange={(e) => setManualKm(e.target.value)} />
-              </Field>
-              <Field label="Note" wide>
-                <input value={notes} onChange={(e) => setNotes(e.target.value)} />
-              </Field>
-            </div>
-            <div className="row">
-              <button className="btn" onClick={save}>Salva nella giornata di oggi</button>
-              <button className="btn-ghost" onClick={() => window.confirm('Scartare questa corsa?') && run.reset()}>Scarta</button>
-            </div>
-          </div>
-        )}
         {state.phase === 'idle' && (
           <a className="link-quiet" href="https://www.google.com/maps/search/percorsi+per+correre+vicino+a+me" target="_blank" rel="noreferrer">
             Cerca percorsi vicino a te su Google Maps
@@ -219,6 +199,21 @@ export default function RunPage() {
         )}
         {state.phase === 'idle' && <p className="muted small">Lo schermo resta acceso durante la corsa. Il GPS e i segnali funzionano finché l’app è aperta in primo piano.</p>}
       </section>
+
+      {state.phase === 'done' && (
+        <RunSummary
+          elapsed={state.elapsed}
+          gpsDistanceM={state.distance}
+          useGps={useGps}
+          track={run.rawTrack()}
+          laps={state.laps}
+          mode={mode}
+          planName={planName !== 'Personalizzata' ? planName : undefined}
+          previous={history.map((h) => h.m)}
+          onSave={save}
+          onDiscard={run.reset}
+        />
+      )}
 
       <Card id="run.history" icon={null} title="Le tue corse" summary={`${history.length} registrate`} defaultOpen={false}>
         {history.length === 0 ? (

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
 import { GlyphClose, GlyphMenu, IconFood, IconHeart, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
+import { useDrawer } from './components/useDrawer';
 import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
@@ -18,9 +19,6 @@ import WorkoutPage from './pages/WorkoutPage';
 import RunPage from './pages/RunPage';
 import SettingsPage from './pages/SettingsPage';
 import StatsPage from './pages/StatsPage';
-
-/** Width of the strip at the left edge from which a swipe opens the menu. */
-export const EDGE_PX = 40;
 
 const NAV = [
   { to: '/mese', label: 'Mese', Icon: IconMonth },
@@ -39,26 +37,16 @@ function useCurrentTitle() {
   return NAV.find((n) => loc.pathname.startsWith(n.to))?.label ?? '';
 }
 
-function NavDrawer({ onClose }: { onClose: () => void }) {
+function NavDrawer({ onClose, p, dragging }: { onClose: () => void; p: number; dragging: boolean }) {
   const loc = useLocation();
-  const swipe = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div className="drawer-backdrop left" onClick={onClose}>
-      <nav
-        className="drawer nav-drawer"
-        aria-label="Menu"
-        onClick={(e) => e.stopPropagation()}
-        onTouchStart={(e) => (swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
-        onTouchEnd={(e) => {
-          const t = swipe.current;
-          if (t && e.changedTouches[0].clientX - t.x < -60 && Math.abs(e.changedTouches[0].clientY - t.y) < 60) onClose();
-        }}
-      >
+    <div className={`drawer-backdrop left${dragging ? ' dragging' : ''}`} style={{ background: `rgb(0 0 0 / ${0.4 * p})`, pointerEvents: p > 0.02 ? 'auto' : 'none' }} onClick={onClose}>
+      <nav className="drawer nav-drawer" aria-label="Menu" onClick={(e) => e.stopPropagation()} style={{ transform: `translate3d(${(p - 1) * 100}%, 0, 0)` }}>
         <div className="nav-drawer-head">
           <span className="brand">
             <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={30} height={30} />
@@ -116,7 +104,8 @@ function GoogleStatus() {
 
 function Shell({ userEmail }: { userEmail?: string }) {
   const [bodyOpen, setBodyOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const menu = useDrawer();
+  const menuOpen = menu.visible;
 
   // Keyboard: keep the focused field visible and give the page room to scroll.
   useEffect(() => {
@@ -149,32 +138,11 @@ function Shell({ userEmail }: { userEmail?: string }) {
     return () => document.documentElement.classList.remove('scroll-locked');
   }, [menuOpen, bodyOpen]);
 
-  // Swipe right from the left edge opens the menu.
-  useEffect(() => {
-    let t: { x: number; y: number } | null = null;
-    const start = (e: TouchEvent) => (t = e.touches[0].clientX <= EDGE_PX ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null);
-    const move = (e: TouchEvent) => {
-      if (!t) return;
-      const dx = e.touches[0].clientX - t.x;
-      const dy = Math.abs(e.touches[0].clientY - t.y);
-      if (dx > 50 && dy < dx * 0.6) {
-        t = null;
-        setMenuOpen(true);
-      } else if (dy > 40) t = null;
-    };
-    window.addEventListener('touchstart', start, { passive: true });
-    window.addEventListener('touchmove', move, { passive: true });
-    return () => {
-      window.removeEventListener('touchstart', start);
-      window.removeEventListener('touchmove', move);
-    };
-  }, []);
-
   return (
     <HashRouter>
       <RestTimerProvider>
         <div className="app">
-          <Topbar onMenu={() => setMenuOpen(true)} onBody={() => setBodyOpen(true)} />
+          <Topbar onMenu={menu.open} onBody={() => setBodyOpen(true)} />
           <div className="layout">
             <main>
               <Routes>
@@ -196,7 +164,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
               <BodySidebar />
             </div>
           </div>
-          {menuOpen && <NavDrawer onClose={() => setMenuOpen(false)} />}
+          {menu.visible && <NavDrawer onClose={menu.close} p={menu.p} dragging={menu.dragging} />}
           {bodyOpen && (
             <div className="drawer-backdrop" onClick={() => setBodyOpen(false)}>
               <div className="drawer" onClick={(e) => e.stopPropagation()}>
