@@ -183,8 +183,8 @@ export function Ring({ value, of, label, display, color = PALETTE[0] }: { value:
 }
 
 /** Line with dots across runs (or any series). `better` says which direction is an improvement. */
-export function Trend({ points, format, better = 'down', title }: { points: { label: string; value: number }[]; format: (v: number) => string; better?: 'up' | 'down'; title: string }) {
-  if (points.length < 2) return <Empty>Servono almeno due corse per vedere la progressione.</Empty>;
+export function Trend({ points, format, better = 'down', title, noun = 'corse' }: { points: { label: string; value: number }[]; format: (v: number) => string; better?: 'up' | 'down'; title: string; noun?: string }) {
+  if (points.length < 2) return <Empty>Servono almeno due {noun} per vedere la progressione.</Empty>;
   const W = 640, H = 170, pad = { l: 46, r: 12, t: 14, b: 24 };
   const vals = points.map((p) => p.value);
   const lo = Math.min(...vals), hi = Math.max(...vals);

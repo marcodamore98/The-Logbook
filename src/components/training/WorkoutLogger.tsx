@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { today } from '../../lib/dates';
 import { useStore } from '../../lib/store/StoreContext';
-import { bestsBefore, matchingSet, previousSession, prsOf, SET_TYPES, setTypeOf, workingSets, workoutVolume } from '../../lib/training/analytics';
+import { bestsBefore, countsSet, matchingSet, previousSession, prsOf, SET_TYPES, setTypeOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import { exerciseDef, usesDistance, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
 import { REST_OPTIONS, restLabel, routineFromWorkout, supersetLetters, workoutFromRoutine } from '../../lib/training/routines';
 import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, WorkoutSet } from '../../lib/types';
 import { WORKOUT_TYPES } from '../../lib/vocab';
-import { GlyphCheck, GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconTimer } from '../icons';
+import { GlyphCheck, GlyphClose, GlyphPlus, IconBody, IconTimer } from '../icons';
 import { Field, NumberInput, uid, VocabSelect } from '../ui';
+import { ExAvatar } from './ExAvatar';
+import { ExerciseDetail } from './ExerciseDetail';
 import { ExercisePicker } from './ExercisePicker';
 import { useRestTimer } from './RestTimer';
 
@@ -57,6 +59,85 @@ function prevLabel(s: WorkoutSet | undefined, def: ExerciseDef) {
   return `${s.reps} rip`;
 }
 
+/** One set row: a grid like Hevy's, with swipe-left to reveal "Elimina". */
+function SetRow({
+  s,
+  n,
+  def,
+  prevSet,
+  prs,
+  onChange,
+  onDone,
+  onRemove,
+}: {
+  s: WorkoutSet;
+  n: number;
+  def: ExerciseDef;
+  prevSet?: WorkoutSet;
+  prs: string[];
+  onChange: (s: WorkoutSet) => void;
+  onDone: () => void;
+  onRemove: () => void;
+}) {
+  const type = setTypeOf(s);
+  const [dx, setDx] = useState(0);
+  const touch = useRef<{ x: number; y: number; base: number; lock: boolean | null } | null>(null);
+  const REVEAL = 84;
+  const onTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('input')) return;
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, base: dx, lock: null };
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const t = touch.current;
+    if (!t) return;
+    const mx = e.touches[0].clientX - t.x;
+    const my = e.touches[0].clientY - t.y;
+    if (t.lock === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) t.lock = Math.abs(mx) > Math.abs(my);
+    if (t.lock) setDx(Math.max(-REVEAL, Math.min(0, t.base + mx)));
+  };
+  const onTouchEnd = () => {
+    const t = touch.current;
+    touch.current = null;
+    if (t?.lock) setDx((v) => (v < -REVEAL / 2 ? -REVEAL : 0));
+  };
+  const cols = [usesWeight(def.kind), usesDistance(def.kind), usesReps(def.kind), usesTime(def.kind)].filter(Boolean).length + 1; // + RPE
+
+  return (
+    <div className={`set-wrap${dx ? ' open' : ''}`}>
+      <button type="button" className="set-delete" tabIndex={dx ? 0 : -1} onClick={onRemove}>
+        Elimina
+      </button>
+      <div
+        className={`set-row${s.done ? ' done' : ''} set-row-${type}`}
+        style={{ transform: `translate3d(${dx}px,0,0)`, ['--cols' as string]: cols }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <SetTypeBadge type={type} index={n} onChange={(t) => onChange({ ...s, type: t, warmup: undefined })} />
+        <button type="button" className="prev-btn" title="Copia valori precedenti" onClick={() => prevSet && onChange({ ...s, kg: prevSet.kg, reps: prevSet.reps, seconds: prevSet.seconds })}>
+          {prevLabel(prevSet, def)}
+        </button>
+        {usesWeight(def.kind) && <NumberInput value={s.kg} step={0.5} placeholder="kg" onChange={(kg) => onChange({ ...s, kg })} />}
+        {usesDistance(def.kind) && <NumberInput value={s.km} step={0.1} placeholder="km" onChange={(km) => onChange({ ...s, km })} />}
+        {usesReps(def.kind) && <NumberInput value={s.reps || undefined} placeholder="rip" onChange={(reps) => onChange({ ...s, reps: reps ?? 0 })} />}
+        {usesTime(def.kind) && <NumberInput value={s.seconds} step={5} placeholder="sec" onChange={(seconds) => onChange({ ...s, seconds })} />}
+        <NumberInput value={s.rpe} step={0.5} placeholder="–" onChange={(rpe) => onChange({ ...s, rpe: rpe === undefined ? undefined : Math.min(10, rpe) })} />
+        <span className="check-cell">
+          <button type="button" className={`check-btn${s.done ? ' on' : ''}`} aria-label={s.done ? 'Segna come non fatta' : 'Segna come fatta'} aria-pressed={!!s.done} onClick={onDone}>
+            <GlyphCheck />
+          </button>
+          {prs.length > 0 && (
+            <span className="pr" title={`Record: ${prs.join(', ')}`}>
+              PR
+            </span>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ExerciseBlock({
   ex,
   index,
@@ -90,146 +171,160 @@ function ExerciseBlock({
   const prev = previousSession(history, ex.exerciseId, workout.id, date);
   const bests = bestsBefore(history, ex.exerciseId, workout.id, date);
   const setAt = (k: number, s: WorkoutSet) => onChange({ ...ex, sets: ex.sets.map((x, i) => (i === k ? s : x)) });
+  const [menu, setMenu] = useState(false);
+  const [info, setInfo] = useState(false);
+  const [rest, setRest] = useState(false);
   let n = 0;
+  const unit = def.kind === 'assisted_bodyweight' ? '−KG' : def.kind === 'weighted_bodyweight' ? '+KG' : 'KG';
+  const cols = [usesWeight(def.kind) && unit, usesDistance(def.kind) && 'KM', usesReps(def.kind) && 'RIP', usesTime(def.kind) && 'SEC', 'RPE'].filter(Boolean) as string[];
 
   return (
     <div className={`exercise${ex.supersetId ? ' in-superset' : ''}`}>
       <div className="exercise-head">
-        {letter && <span className="superset-tag" title="Superserie">{letter}</span>}
-        <div className="exercise-title">
+        <ExAvatar muscle={def.muscle} size={42} />
+        <button type="button" className="exercise-title link-title" onClick={() => setInfo(true)}>
           <strong>{def.name}</strong>
           <span className="muted small">
             {def.muscle} · {def.equipment}
           </span>
-        </div>
-        <button type="button" className="icon-btn small" aria-label="Sposta su" disabled={index === 0} onClick={() => onMove(-1)}>
-          <GlyphPrev />
         </button>
-        <button type="button" className="icon-btn small" aria-label="Sposta giù" disabled={index === count - 1} onClick={() => onMove(1)}>
-          <GlyphNext />
-        </button>
-        <button type="button" className="icon-btn small" aria-label="Rimuovi esercizio" onClick={onRemove}>
-          <GlyphTrash />
-        </button>
-      </div>
-
-      <div className="exercise-opts">
-        <input className="grow" value={ex.notes ?? ''} placeholder="Note esercizio (sella, presa, sensazioni…)" onChange={(e) => onChange({ ...ex, notes: e.target.value || undefined })} />
-        <select value={ex.restSec ?? 90} onChange={(e) => onChange({ ...ex, restSec: Number(e.target.value) })} aria-label="Recupero">
-          {REST_OPTIONS.map((r) => (
-            <option key={r} value={r}>
-              ⏱ {restLabel(r)}
-            </option>
-          ))}
-        </select>
-        {ex.supersetId ? (
-          <button type="button" className="btn-ghost small" onClick={onUnlink}>
-            Scollega superserie
+        <div className="menu-wrap">
+          <button type="button" className="icon-btn small" aria-label="Altre azioni" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
+            ⋮
           </button>
-        ) : (
-          index < count - 1 && (
-            <button type="button" className="btn-ghost small" onClick={onLink}>
-              ⛓ Superserie con il successivo
-            </button>
-          )
+          {menu && (
+            <>
+              <div className="menu-cover" onClick={() => setMenu(false)} />
+              <ul className="menu" role="menu">
+                {index > 0 && (
+                  <li>
+                    <button role="menuitem" onClick={() => { onMove(-1); setMenu(false); }}>Sposta su</button>
+                  </li>
+                )}
+                {index < count - 1 && (
+                  <li>
+                    <button role="menuitem" onClick={() => { onMove(1); setMenu(false); }}>Sposta giù</button>
+                  </li>
+                )}
+                {ex.supersetId ? (
+                  <li>
+                    <button role="menuitem" onClick={() => { onUnlink(); setMenu(false); }}>Scollega superserie</button>
+                  </li>
+                ) : (
+                  index < count - 1 && (
+                    <li>
+                      <button role="menuitem" onClick={() => { onLink(); setMenu(false); }}>Superserie con il successivo</button>
+                    </li>
+                  )
+                )}
+                <li>
+                  <button role="menuitem" className="danger" onClick={() => { setMenu(false); onRemove(); }}>Rimuovi esercizio</button>
+                </li>
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+      {letter && <span className="superset-pill">Superset {letter}</span>}
+
+      <input className="ex-notes" value={ex.notes ?? ''} placeholder="Aggiungi delle note qui…" onChange={(e) => onChange({ ...ex, notes: e.target.value || undefined })} />
+      <div className="rest-line">
+        <button type="button" className="rest-link" onClick={() => setRest((v) => !v)}>
+          <IconTimer size={22} /> Riposo: {restLabel(ex.restSec ?? 90)}
+        </button>
+        {rest && (
+          <select autoFocus value={ex.restSec ?? 90} onChange={(e) => { onChange({ ...ex, restSec: Number(e.target.value) }); setRest(false); }} onBlur={() => setRest(false)} aria-label="Recupero">
+            {REST_OPTIONS.map((r) => (
+              <option key={r} value={r}>
+                {restLabel(r)}
+              </option>
+            ))}
+          </select>
         )}
       </div>
 
-      <table className="sets-table">
-        <thead>
-          <tr>
-            <th>Serie</th>
-            <th>Precedente</th>
-            {usesWeight(def.kind) && <th>{def.kind === 'assisted_bodyweight' ? '−kg' : def.kind === 'weighted_bodyweight' ? '+kg' : 'kg'}</th>}
-            {usesDistance(def.kind) && <th>km</th>}
-            {usesReps(def.kind) && <th>Rip</th>}
-            {usesTime(def.kind) && <th>Sec</th>}
-            <th>RPE</th>
-            <th aria-label="Fatta" />
-            <th aria-label="Rimuovi" />
-          </tr>
-        </thead>
-        <tbody>
-          {ex.sets.map((s, k) => {
-            const type = setTypeOf(s);
-            if (type !== 'warmup') n++;
-            const prs = prsOf(s, bests);
-            const p = prev ? matchingSet(prev.sets, ex.sets, k) : undefined;
-            return (
-              <tr key={k} className={`${s.done ? 'done' : ''} set-row-${type}`}>
-                <td>
-                  <SetTypeBadge type={type} index={n} onChange={(t) => setAt(k, { ...s, type: t, warmup: undefined })} />
-                </td>
-                <td className="prev">
-                  <button type="button" className="link-btn" title="Copia valori precedenti" onClick={() => p && setAt(k, { ...s, kg: p.kg, reps: p.reps, seconds: p.seconds })}>
-                    {prevLabel(p, def)}
-                  </button>
-                </td>
-                {usesWeight(def.kind) && (
-                  <td>
-                    <NumberInput value={s.kg} step={0.5} placeholder="kg" onChange={(kg) => setAt(k, { ...s, kg })} />
-                  </td>
-                )}
-                {usesDistance(def.kind) && (
-                  <td>
-                    <NumberInput value={s.km} step={0.1} placeholder="km" onChange={(km) => setAt(k, { ...s, km })} />
-                  </td>
-                )}
-                {usesReps(def.kind) && (
-                  <td>
-                    <NumberInput value={s.reps || undefined} placeholder="rip" onChange={(reps) => setAt(k, { ...s, reps: reps ?? 0 })} />
-                  </td>
-                )}
-                {usesTime(def.kind) && (
-                  <td>
-                    <NumberInput value={s.seconds} step={5} placeholder="sec" onChange={(seconds) => setAt(k, { ...s, seconds })} />
-                  </td>
-                )}
-                <td>
-                  <NumberInput value={s.rpe} step={0.5} placeholder="–" onChange={(rpe) => setAt(k, { ...s, rpe: rpe === undefined ? undefined : Math.min(10, rpe) })} />
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className={`check-btn${s.done ? ' on' : ''}`}
-                    aria-label={s.done ? 'Segna come non fatta' : 'Segna come fatta'}
-                    aria-pressed={!!s.done}
-                    onClick={() => {
-                      const next = { ...ex, sets: ex.sets.map((x, i) => (i === k ? { ...s, done: !s.done } : x)) };
-                      if (s.done) onChange(next);
-                      else onSetDone(next);
-                    }}
-                  >
-                    <GlyphCheck />
-                  </button>
-                  {prs.length > 0 && (
-                    <span className="pr" title={`Record: ${prs.join(', ')}`}>
-                      PR
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <button type="button" className="icon-btn small" aria-label="Rimuovi serie" onClick={() => onChange({ ...ex, sets: ex.sets.filter((_, i) => i !== k) })}>
-                    <GlyphClose />
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="row">
-        <button
-          type="button"
-          className="btn-ghost small"
-          onClick={() => {
-            const last = ex.sets.at(-1);
-            onChange({ ...ex, sets: [...ex.sets, { type: last && setTypeOf(last) !== 'warmup' ? setTypeOf(last) : 'normal', reps: last?.reps ?? 0, kg: last?.kg, seconds: last?.seconds, done: false }] });
-          }}
-        >
-          <GlyphPlus /> Serie
-        </button>
-        {bests.e1rm > 0 && <span className="muted small">Record: {bests.kg} kg · 1RM stimato {Math.round(bests.e1rm)} kg</span>}
+      <div className="sets" style={{ ['--cols' as string]: cols.length }}>
+        <div className="set-head">
+          <span>SERIE</span>
+          <span>PRECEDENTE</span>
+          {cols.map((c) => (
+            <span key={c}>{c}</span>
+          ))}
+          <span aria-hidden="true">✓</span>
+        </div>
+        {ex.sets.map((s, k) => {
+          const type = setTypeOf(s);
+          if (type !== 'warmup') n++;
+          const p = prev ? matchingSet(prev.sets, ex.sets, k) : undefined;
+          return (
+            <SetRow
+              key={k}
+              s={s}
+              n={n}
+              def={def}
+              prevSet={p}
+              prs={prsOf(s, bests)}
+              onChange={(ns) => setAt(k, ns)}
+              onRemove={() => onChange({ ...ex, sets: ex.sets.filter((_, i) => i !== k) })}
+              onDone={() => {
+                const next = { ...ex, sets: ex.sets.map((x, i) => (i === k ? { ...s, done: !s.done } : x)) };
+                if (s.done) onChange(next);
+                else onSetDone(next);
+              }}
+            />
+          );
+        })}
+      </div>
+      <button
+        type="button"
+        className="add-set"
+        onClick={() => {
+          const last = ex.sets.at(-1);
+          onChange({ ...ex, sets: [...ex.sets, { type: last && setTypeOf(last) !== 'warmup' ? setTypeOf(last) : 'normal', reps: last?.reps ?? 0, kg: last?.kg, seconds: last?.seconds, done: false }] });
+        }}
+      >
+        <GlyphPlus /> Aggiungi serie
+      </button>
+      {bests.e1rm > 0 && <p className="muted small">Record: {bests.kg} kg · 1RM stimato {Math.round(bests.e1rm)} kg</p>}
+      {info && <ExerciseDetail id={ex.exerciseId} onClose={() => setInfo(false)} />}
+    </div>
+  );
+}
+
+/** Sets done per muscle in this workout (primary counts 1, secondary ½). */
+function MuscleSheet({ w, onClose }: { w: WorkoutModule; onClose: () => void }) {
+  const { settings } = useStore();
+  const rows = new Map<string, number>();
+  for (const ex of w.exercises) {
+    const def = exerciseDef(ex.exerciseId, settings.exercises);
+    const n = ex.sets.filter(countsSet).length;
+    rows.set(def.muscle, (rows.get(def.muscle) ?? 0) + n);
+    for (const m of def.secondary ?? []) rows.set(m, (rows.get(m) ?? 0) + n / 2);
+  }
+  const list = [...rows.entries()].sort((a, b) => b[1] - a[1]);
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-label="Distribuzione dei muscoli" onClick={(e) => e.stopPropagation()}>
+        <div className="grabber" />
+        <div className="sheet-head">
+          <h2>Distribuzione dei muscoli</h2>
+          <button className="icon-btn" aria-label="Chiudi" onClick={onClose}>
+            <GlyphClose />
+          </button>
+        </div>
+        <div className="muscle-table">
+          <div className="muscle-head">
+            <span>Muscolo</span>
+            <span>Serie completate</span>
+          </div>
+          {list.length === 0 && <p className="muted">Aggiungi degli esercizi per vedere i muscoli allenati.</p>}
+          {list.map(([m, n]) => (
+            <div key={m} className="muscle-row">
+              <span>{m}</span>
+              <strong>{Number.isInteger(n) ? n : n.toFixed(1).replace('.', ',')}</strong>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -240,6 +335,8 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
   const { settings, history } = store;
   const timer = useRestTimer();
   const [picking, setPicking] = useState(false);
+  const [muscles, setMuscles] = useState(false);
+  const [details, setDetails] = useState(false);
   const [, tick] = useState(0);
   const set = (p: Partial<WorkoutModule>) => onChange({ ...w, ...p });
   const running = !!w.startedAt && !w.finishedAt;
@@ -263,48 +360,56 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
 
   return (
     <div className="workout">
-      <div className="workout-bar">
-        <IconTimer size={30} />
+      <div className="workout-bar hevy-bar">
+        <div className="stat">
+          <span className="stat-cap">Durata</span>
+          <span className="stat-val accent">{running ? fmtClock(Date.now() - w.startedAt!) : w.durationMin ? `${w.durationMin}′` : '–'}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-cap">Volume</span>
+          <span className="stat-val">{Math.round(volume).toLocaleString('it-IT')} kg</span>
+        </div>
+        <div className="stat">
+          <span className="stat-cap">Serie</span>
+          <span className="stat-val">{sets}</span>
+        </div>
+        <button type="button" className="icon-btn muscles-btn" aria-label="Distribuzione dei muscoli" title="Distribuzione dei muscoli" onClick={() => setMuscles(true)}>
+          <IconBody />
+        </button>
+      </div>
+      <div className="workout-actions">
         {running ? (
-          <>
-            <span className="workout-clock" aria-label="Durata">
-              {fmtClock(Date.now() - w.startedAt!)}
-            </span>
-            <button
-              type="button"
-              className="btn small"
-              onClick={() => set({ finishedAt: Date.now(), durationMin: Math.max(1, Math.round((Date.now() - w.startedAt!) / 60000)) })}
-            >
-              Termina allenamento
-            </button>
-          </>
+          <button type="button" className="btn" onClick={() => set({ finishedAt: Date.now(), durationMin: Math.max(1, Math.round((Date.now() - w.startedAt!) / 60000)) })}>
+            Termina
+          </button>
         ) : date === today() ? (
-          <button type="button" className="btn small" onClick={() => set({ startedAt: Date.now(), finishedAt: undefined })}>
+          <button type="button" className="btn" onClick={() => set({ startedAt: Date.now(), finishedAt: undefined })}>
             {w.finishedAt ? 'Riprendi' : 'Inizia allenamento'}
           </button>
         ) : null}
-        <span className="muted small">
-          {Math.round(volume).toLocaleString('it-IT')} kg · {sets} serie{w.durationMin ? ` · ${w.durationMin}′` : ''}
-        </span>
+        <button type="button" className="btn-ghost" onClick={() => setDetails((v) => !v)} aria-expanded={details}>
+          {details ? 'Nascondi dettagli' : 'Dettagli'}
+        </button>
       </div>
 
-      <div className="grid">
-        <Field label="Nome">
-          <input value={w.title ?? ''} placeholder="es. Push A" onChange={(e) => set({ title: e.target.value || undefined })} />
-        </Field>
-        <Field label="Tipo">
-          <VocabSelect items={WORKOUT_TYPES} value={w.type} onChange={(type) => set({ type })} />
-        </Field>
-        <Field label="Durata (min)">
-          <NumberInput value={w.durationMin || undefined} step={5} onChange={(n) => set({ durationMin: n ?? 0 })} />
-        </Field>
-        {cardio && (
-          <Field label="Distanza (km)">
-            <NumberInput value={w.distanceKm} step={0.1} onChange={(distanceKm) => set({ distanceKm })} />
+      <input className="workout-title" value={w.title ?? ''} placeholder="Nome allenamento (es. Push A)" onChange={(e) => set({ title: e.target.value || undefined })} />
+
+      {details && (
+        <div className="grid">
+          <Field label="Tipo">
+            <VocabSelect items={WORKOUT_TYPES} value={w.type} onChange={(type) => set({ type })} />
           </Field>
-        )}
-        {w.source === 'hevy' && <p className="field-wide muted small">Importato da Hevy.</p>}
-      </div>
+          <Field label="Durata (min)">
+            <NumberInput value={w.durationMin || undefined} step={5} onChange={(n) => set({ durationMin: n ?? 0 })} />
+          </Field>
+          {cardio && (
+            <Field label="Distanza (km)">
+              <NumberInput value={w.distanceKm} step={0.1} onChange={(distanceKm) => set({ distanceKm })} />
+            </Field>
+          )}
+          {w.source === 'hevy' && <p className="field-wide muted small">Importato da Hevy.</p>}
+        </div>
+      )}
 
       {w.exercises.length === 0 && routines.length > 0 && (
         <div className="routine-start">
@@ -376,6 +481,7 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
         <textarea rows={2} value={w.notes ?? ''} onChange={(e) => set({ notes: e.target.value || undefined })} />
       </Field>
 
+      {muscles && <MuscleSheet w={w} onClose={() => setMuscles(false)} />}
       {picking && (
         <ExercisePicker
           multiple

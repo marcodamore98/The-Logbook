@@ -2,38 +2,95 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import { allExercises, EQUIPMENT, KINDS, MUSCLES } from '../../lib/training/exercises';
 import type { ExerciseDef, ExerciseKind } from '../../lib/types';
-import { GlyphClose, GlyphPlus } from '../icons';
+import { ExAvatar } from './ExAvatar';
+import { ExerciseDetail } from './ExerciseDetail';
 import { Field, uid } from '../ui';
 
 /** Searchable exercise library with muscle filter and custom-exercise creation. */
 export function ExercisePicker({ onPick, onClose, multiple }: { onPick: (ids: string[]) => void; onClose: () => void; multiple?: boolean }) {
-  const { settings, saveSettings } = useStore();
+  const { settings, saveSettings, history } = useStore();
   const custom = settings.exercises ?? [];
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('');
+  const [equip, setEquip] = useState('');
+  const [filter, setFilter] = useState<null | 'muscle' | 'equipment'>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [creating, setCreating] = useState<ExerciseDef | null>(null);
 
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
     return allExercises(custom).filter(
-      (e) => (!muscle || e.muscle === muscle || e.secondary?.includes(muscle)) && (!t || e.name.toLowerCase().includes(t) || e.equipment.toLowerCase().includes(t)),
+      (e) => (!muscle || e.muscle === muscle || e.secondary?.includes(muscle)) && (!equip || e.equipment === equip) && (!t || e.name.toLowerCase().includes(t) || e.equipment.toLowerCase().includes(t)),
     );
-  }, [q, muscle, custom]);
+  }, [q, muscle, equip, custom]);
+
+  // Most recently used first, as the "recent exercises" shortcut.
+  const recent = useMemo(() => {
+    const last = (id: string) => history.get(id)?.[0]?.date ?? '';
+    return list.filter((e) => last(e.id)).sort((a, b) => last(b.id).localeCompare(last(a.id))).slice(0, 12);
+  }, [list, history]);
+  const showRecent = !q.trim() && !muscle && !equip && recent.length > 0;
+  const rest = useMemo(() => [...list].sort((a, b) => a.name.localeCompare(b.name, 'it')), [list]);
 
   const choose = (id: string) => {
     if (!multiple) return onPick([id]);
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   };
 
+  const row = (e: ExerciseDef) => (
+    <li key={e.id}>
+      <div className={`ex-row${picked.includes(e.id) ? ' on' : ''}`}>
+        <button className="ex-row-main" onClick={() => choose(e.id)}>
+          <ExAvatar muscle={e.muscle} size={44} />
+          <span className="ex-row-text">
+            <span className="ex-name">{e.name}</span>
+            <span className="ex-meta">
+              {e.muscle}
+              {e.custom ? ' · personale' : ''}
+            </span>
+          </span>
+          {picked.includes(e.id) && <span className="ex-picked">✓</span>}
+        </button>
+        <button className="icon-btn small ex-info" aria-label={`Dettagli di ${e.name}`} onClick={() => setInfo(e.id)}>
+          ⓘ
+        </button>
+      </div>
+    </li>
+  );
+
+  const MUSCLE_GROUPS: [string, string[]][] = [
+    ['Parte superiore', ['Petto', 'Dorsali', 'Trapezi', 'Lombari', 'Spalle', 'Bicipiti', 'Tricipiti', 'Avambracci', 'Addome']],
+    ['Parte inferiore', ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci', 'Adduttori', 'Abduttori']],
+    ['Altro', ['Cardio', 'Corpo intero']],
+  ];
+
   return (
     <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-label="Scegli esercizio" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head">
-          <h2>{creating ? 'Nuovo esercizio' : 'Esercizi'}</h2>
-          <button className="icon-btn" aria-label="Chiudi" onClick={onClose}>
-            <GlyphClose />
+      <div className="sheet picker-sheet" role="dialog" aria-label="Scegli esercizio" onClick={(e) => e.stopPropagation()}>
+        <div className="picker-bar">
+          <button className="link-btn" onClick={creating ? () => setCreating(null) : onClose}>
+            Annulla
           </button>
+          <h2>{creating ? 'Nuovo esercizio' : 'Aggiungi esercizio'}</h2>
+          {creating ? (
+            <button
+              className="link-btn strong"
+              disabled={!creating.name.trim()}
+              onClick={() => {
+                const ex = { ...creating, name: creating.name.trim() };
+                saveSettings({ ...settings, exercises: [...custom, ex] });
+                setCreating(null);
+                choose(ex.id);
+              }}
+            >
+              Salva
+            </button>
+          ) : (
+            <button className="link-btn strong" onClick={() => setCreating({ id: `custom-${uid()}`, name: q, muscle: muscle || 'Petto', equipment: equip || 'Macchina', kind: 'weight_reps', custom: true })}>
+              Crea
+            </button>
+          )}
         </div>
         {creating ? (
           <div className="grid">
@@ -63,64 +120,89 @@ export function ExercisePicker({ onPick, onClose, multiple }: { onPick: (ids: st
                 ))}
               </select>
             </Field>
-            <div className="row field-wide">
-              <button
-                className="btn"
-                disabled={!creating.name.trim()}
-                onClick={() => {
-                  const ex = { ...creating, name: creating.name.trim() };
-                  saveSettings({ ...settings, exercises: [...custom, ex] });
-                  setCreating(null);
-                  choose(ex.id);
-                }}
-              >
-                Salva esercizio
-              </button>
-              <button className="btn-ghost" onClick={() => setCreating(null)}>
-                Annulla
-              </button>
-            </div>
           </div>
         ) : (
           <>
-            <div className="picker-tools">
-              <input type="search" autoFocus placeholder="Cerca esercizio o attrezzo…" value={q} onChange={(e) => setQ(e.target.value)} />
-              <select value={muscle} onChange={(e) => setMuscle(e.target.value)} aria-label="Gruppo muscolare">
-                <option value="">Tutti i muscoli</option>
-                {MUSCLES.map((m) => (
-                  <option key={m}>{m}</option>
-                ))}
-              </select>
-            </div>
-            <ul className="ex-list">
-              {list.map((e) => (
-                <li key={e.id}>
-                  <button className={`ex-item${picked.includes(e.id) ? ' on' : ''}`} onClick={() => choose(e.id)}>
-                    <span className="ex-name">{e.name}</span>
-                    <span className="ex-meta">
-                      {e.muscle} · {e.equipment}
-                      {e.custom ? ' · personale' : ''}
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {list.length === 0 && <li className="empty">Nessun esercizio trovato.</li>}
-            </ul>
-            <div className="sheet-foot">
-              <button
-                className="btn-ghost"
-                onClick={() => setCreating({ id: `custom-${uid()}`, name: q, muscle: muscle || 'Petto', equipment: 'Macchina', kind: 'weight_reps', custom: true })}
-              >
-                <GlyphPlus /> Crea esercizio
+            <input className="picker-search" type="search" placeholder="Cerca esercizio" value={q} onChange={(e) => setQ(e.target.value)} />
+            <div className="picker-filters">
+              <button className={`filter-btn${equip ? ' on' : ''}`} onClick={() => setFilter('equipment')}>
+                {equip || "Tutta l'attrezzatura"}
               </button>
-              {multiple && (
+              <button className={`filter-btn${muscle ? ' on' : ''}`} onClick={() => setFilter('muscle')}>
+                {muscle || 'Tutti i muscoli'}
+              </button>
+            </div>
+            <div className="ex-scroll">
+              {showRecent && (
+                <>
+                  <h3 className="list-title">Esercizi recenti</h3>
+                  <ul className="ex-list">{recent.map(row)}</ul>
+                  <h3 className="list-title">Tutti gli esercizi</h3>
+                </>
+              )}
+              <ul className="ex-list">
+                {rest.map(row)}
+                {rest.length === 0 && <li className="empty">Nessun esercizio trovato.</li>}
+              </ul>
+            </div>
+            {multiple && (
+              <div className="sheet-foot">
+                <span className="muted small">{picked.length ? `${picked.length} selezionati` : 'Tocca per selezionare'}</span>
                 <button className="btn" disabled={!picked.length} onClick={() => onPick(picked)}>
                   Aggiungi {picked.length || ''}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
+
+        {filter && (
+          <div className="subsheet" role="dialog" aria-label={filter === 'muscle' ? 'Gruppo muscolare' : 'Attrezzatura'}>
+            <div className="grabber" />
+            <h3>{filter === 'muscle' ? 'Gruppo muscolare' : 'Attrezzatura'}</h3>
+            <div className="subsheet-body">
+              {filter === 'muscle' ? (
+                MUSCLE_GROUPS.map(([title, items]) => (
+                  <section key={title}>
+                    <h4 className="list-title">{title}</h4>
+                    <div className="tile-grid">
+                      {items.map((m) => (
+                        <button key={m} className={`pick-tile${muscle === m ? ' on' : ''}`} onClick={() => setMuscle(muscle === m ? '' : m)}>
+                          <ExAvatar muscle={m} size={44} />
+                          <span>{m}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ))
+              ) : (
+                <div className="tile-grid">
+                  {EQUIPMENT.map((m) => (
+                    <button key={m} className={`pick-tile${equip === m ? ' on' : ''}`} onClick={() => setEquip(equip === m ? '' : m)}>
+                      <ExAvatar muscle={m === 'Altro' ? 'Corpo intero' : 'Quadricipiti'} size={44} />
+                      <span>{m}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="subsheet-foot">
+              <button
+                className="btn-ghost"
+                onClick={() => {
+                  setMuscle('');
+                  setEquip('');
+                }}
+              >
+                Cancella i filtri
+              </button>
+              <button className="btn" onClick={() => setFilter(null)}>
+                Mostra {list.length} risultati
+              </button>
+            </div>
+          </div>
+        )}
+        {info && <ExerciseDetail id={info} onClose={() => setInfo(null)} />}
       </div>
     </div>
   );

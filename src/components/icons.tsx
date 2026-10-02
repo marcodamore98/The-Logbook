@@ -377,3 +377,13 @@ export const GlyphEdit = () => (
     <path d="M4 20l1-4.2L16.3 4.5a1.8 1.8 0 0 1 2.6 0l.6.6a1.8 1.8 0 0 1 0 2.6L8.2 19z M14.5 6.5l3 3" />
   </svg>
 );
+
+/** Small front-and-back body, the shortcut to the muscle distribution. */
+export const IconBody = () => (
+  <svg viewBox="0 0 28 24" width={28} height={24} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="7" cy="4" r="2" />
+    <path d="M3.5 9c0-1.5 1.5-2.5 3.5-2.5S10.5 7.5 10.5 9v5l-1 8M3.5 9v5l1 8M7 14v8" />
+    <circle cx="21" cy="4" r="2" />
+    <path d="M17.5 9c0-1.5 1.5-2.5 3.5-2.5S24.5 7.5 24.5 9v5l-1 8M17.5 9v5l1 8M21 14v8" />
+  </svg>
+);

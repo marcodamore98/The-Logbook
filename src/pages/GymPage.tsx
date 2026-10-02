@@ -56,23 +56,31 @@ function Routines() {
 
   return (
     <>
-      <div className="row">
+      <div className="routine-head">
+        <h2 className="routine-title">Routine</h2>
+      </div>
+      <div className="routine-actions">
         <button
-          className="btn"
+          className="tile-btn"
           onClick={() => {
-            const r: Routine = { id: uid(), name: 'Nuova scheda', folder: folders[0], exercises: [], updatedAt: Date.now() };
+            const r: Routine = { id: uid(), name: 'Nuova routine', folder: folders[0], exercises: [], updatedAt: Date.now() };
             save([...routines, r]);
             setEditing(r.id);
           }}
         >
-          <GlyphPlus /> Nuova scheda
+          <GlyphPlus /> Nuova routine
         </button>
-        <Link className="btn-ghost" to="/impostazioni#personal-trainer">
-          Importa dal personal trainer (Claude)
-        </Link>
-        <button className="btn-ghost" onClick={() => hevyFile.current?.click()}>
-          Crea schede da un export Hevy
-        </button>
+        <details className="menu-details">
+          <summary className="tile-btn">Importa</summary>
+          <div className="menu">
+            <Link className="menu-item" to="/impostazioni#personal-trainer">
+              Dal personal trainer (Claude)
+            </Link>
+            <button className="menu-item" onClick={() => hevyFile.current?.click()}>
+              Da un export Hevy
+            </button>
+          </div>
+        </details>
         <input
           ref={hevyFile}
           type="file"
@@ -109,51 +117,41 @@ function Routines() {
       {msg && <p className="muted small">{msg}</p>}
       {routines.length === 0 && (
         <Empty>
-          Nessuna scheda. Creane una (es. cartella “PPL” con Push, Pull e Legs), oppure apri un allenamento nella pagina del giorno e usa “Salva come
-          scheda”.
+          Nessuna routine. Creane una (es. cartella “PPL” con Push, Pull e Legs), oppure fai un allenamento e usa “Salva come scheda”.
         </Empty>
       )}
       {[...byFolder.entries()].map(([folder, list]) => (
-        <section key={folder} className="folder">
-          <h3 className="sub">{folder}</h3>
+        <details key={folder} className="folder" open>
+          <summary className="folder-head">
+            <span className="folder-arrow" aria-hidden="true">▾</span> {folder} ({list.length})
+          </summary>
           <div className="routine-grid">
             {list.map((r) => (
               <article key={r.id} className="card routine-card">
-                <div className="card-head">
-                  <h2>{r.name}</h2>
+                <div className="routine-top">
+                  <h3 className="routine-name">{r.name}</h3>
                   {r.type && <span className="badge">{labelOf(WORKOUT_TYPES, r.type)}</span>}
+                  <details className="menu-details more">
+                    <summary className="icon-btn small" aria-label="Altre azioni">⋯</summary>
+                    <div className="menu">
+                      <button className="menu-item" onClick={() => setEditing(r.id)}>Modifica</button>
+                      <button className="menu-item" onClick={() => save([...routines, { ...structuredClone(r), id: uid(), name: `${r.name} (copia)`, updatedAt: Date.now() }])}>Duplica</button>
+                      <button className="menu-item danger" onClick={() => window.confirm(`Eliminare la routine “${r.name}”?`) && save(routines.filter((x) => x.id !== r.id))}>Elimina</button>
+                    </div>
+                  </details>
                 </div>
-                <ul className="routine-ex">
-                  {r.exercises.map((ex, i) => (
-                    <li key={i}>
-                      {ex.sets.length} × {exerciseDef(ex.exerciseId, store.settings.exercises).name}
-                      {ex.supersetId && <span className="muted"> ⛓</span>}
-                    </li>
-                  ))}
-                  {r.exercises.length === 0 && <li className="muted">Nessun esercizio</li>}
-                </ul>
-                <div className="row">
-                  <button className="btn small" disabled={!r.exercises.length} onClick={() => start(r)}>
-                    Inizia oggi
-                  </button>
-                  <button className="btn-ghost small" onClick={() => setEditing(r.id)}>
-                    Modifica
-                  </button>
-                  <button className="btn-ghost small" onClick={() => save([...routines, { ...structuredClone(r), id: uid(), name: `${r.name} (copia)`, updatedAt: Date.now() }])}>
-                    Duplica
-                  </button>
-                  <button
-                    className="icon-btn small"
-                    aria-label="Elimina scheda"
-                    onClick={() => window.confirm(`Eliminare la scheda “${r.name}”?`) && save(routines.filter((x) => x.id !== r.id))}
-                  >
-                    <GlyphTrash />
-                  </button>
-                </div>
+                <p className="routine-preview">
+                  {r.exercises.length
+                    ? r.exercises.map((ex) => exerciseDef(ex.exerciseId, store.settings.exercises).name).join(', ')
+                    : 'Nessun esercizio'}
+                </p>
+                <button className="btn routine-start" disabled={!r.exercises.length} onClick={() => start(r)}>
+                  Avvia la routine
+                </button>
               </article>
             ))}
           </div>
-        </section>
+        </details>
       ))}
     </>
   );
@@ -398,7 +396,7 @@ export default function GymPage() {
       </header>
       <div className="row">
         <button
-          className="btn"
+          className="btn start-empty"
           onClick={async () => {
             const date = today();
             const id = uid();
@@ -409,7 +407,7 @@ export default function GymPage() {
             nav(`/palestra/allenamento/${date}/${id}`);
           }}
         >
-          <GlyphPlus /> Allenamento libero oggi
+          <GlyphPlus /> Inizia un allenamento vuoto
         </button>
       </div>
       <div className="segmented" role="tablist">

@@ -68,9 +68,11 @@ function useDraft(value: number | undefined, commit: (raw: string) => void, fall
     },
     onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
       const el = e.currentTarget;
+      const before = el.value;
       el.dataset.fresh = '1';
       el.select();
-      setTimeout(() => el.select(), 0);
+      // Re-select after the tap settles, unless something was typed meanwhile.
+      setTimeout(() => el.value === before && el.select(), 0);
     },
     // The tap that focuses the field would otherwise drop the caret and cancel the selection.
     onMouseUp: (e: React.MouseEvent<HTMLInputElement>) => {
