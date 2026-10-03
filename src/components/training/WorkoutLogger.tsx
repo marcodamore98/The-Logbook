@@ -8,6 +8,7 @@ import { REST_OPTIONS, restLabel, supersetLetters } from '../../lib/training/rou
 import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, WorkoutSet } from '../../lib/types';
 import { GlyphCheck, GlyphPlus, IconTimer } from '../icons';
 import { AutoText, NumberInput, uid } from '../ui';
+import { useUndo } from '../Undo';
 import { ExAvatar } from './ExAvatar';
 import { FinishFlow } from './FinishFlow';
 import { ExerciseDetail } from './ExerciseDetail';
@@ -85,6 +86,8 @@ function SetRow({
 }) {
   const type = setTypeOf(s);
   const [dx, setDx] = useState(0);
+  // Rows are keyed by position: after a deletion the next set takes this slot, closed.
+  useEffect(() => setDx(0), [s]);
   const touch = useRef<{ x: number; y: number; base: number; lock: boolean | null } | null>(null);
   const REVEAL = 84;
   const onTouchStart = (e: React.TouchEvent) => {
@@ -177,6 +180,7 @@ function ExerciseBlock({
   onSetDone: (e: WorkoutExercise) => void;
 }) {
   const { settings, history } = useStore();
+  const offerUndo = useUndo();
   const def = exerciseDef(ex.exerciseId, settings.exercises);
   const prev = previousSession(history, ex.exerciseId, workout.id, date);
   const bests = bestsBefore(history, ex.exerciseId, workout.id, date);
@@ -269,7 +273,10 @@ function ExerciseBlock({
               prs={prsOf(s, bests)}
               locked={s.done ? ex.sets.slice(k + 1).some((x) => x.done) : ex.sets.slice(0, k).some((x) => !x.done)}
               onChange={(ns) => setAt(k, ns)}
-              onRemove={() => onChange({ ...ex, sets: ex.sets.filter((_, i) => i !== k) })}
+              onRemove={() => {
+                onChange({ ...ex, sets: ex.sets.filter((_, i) => i !== k) });
+                offerUndo('Serie eliminata', () => onChange(ex));
+              }}
               onDone={() => {
                 const next = { ...ex, sets: ex.sets.map((x, i) => (i === k ? { ...s, done: !s.done } : x)) };
                 if (s.done) onChange(next);

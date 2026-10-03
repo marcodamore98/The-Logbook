@@ -175,7 +175,7 @@ export default function NutritionPage() {
             icon={<MealIcon id={m.id} />}
             className="meal"
             title={m.label}
-            summary={entries.length ? `${entries.length} alimenti` : undefined}
+            summary={entries.length ? `${entries.length} alimenti` : 'Tocca + per aggiungere'}
             actions={
               <>
                 <span className="meal-kcal">
@@ -188,10 +188,8 @@ export default function NutritionPage() {
             }
           >
             {entries.length === 0 ? (
+              yesterday.length > 0 && (
               <div className="row">
-                <button className="btn-ghost small" onClick={() => setAdding(m.id)}>
-                  <GlyphPlus /> Aggiungi alimento
-                </button>
                 {yesterday.length > 0 && (
                   <button
                     className="btn-ghost small"
@@ -201,6 +199,7 @@ export default function NutritionPage() {
                   </button>
                 )}
               </div>
+              )
             ) : (
               <ul className="food-list">
                 {entries.map((e) => (

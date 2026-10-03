@@ -5,6 +5,7 @@ import { BodySidebar } from './components/BodySidebar';
 import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconHeart, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
+import { UndoProvider } from './components/Undo';
 import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
@@ -163,6 +164,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
   return (
     <HashRouter>
       <RestTimerProvider>
+        <UndoProvider>
         <div className="app">
           <Topbar onMenu={menu.open} onBody={() => setBodyOpen(true)} />
           <div className="layout">
@@ -201,6 +203,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
             </div>
           )}
         </div>
+        </UndoProvider>
       </RestTimerProvider>
     </HashRouter>
   );

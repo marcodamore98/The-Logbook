@@ -1306,3 +1306,8 @@ button.workout-summary { width: 100%; border: none; text-align: left; font: inhe
 /* Pressed state, like native buttons */
 .btn:active, .btn-ghost:active, .icon-btn:active, .lime-banner:active, .tile-btn:active, .add-ex:active, .add-set:active, .palette-item:active, .ex-row-main:active, .pick-tile:active, .workout-summary:active, .nav-item:active { transform: scale(0.97); transition: transform 0.08s; }
 .swipe-page, .day-page, .diary-page { min-height: calc(100dvh - 9rem); }
+.snackbar { position: fixed; left: 0.75rem; right: 0.75rem; bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 90; display: flex; align-items: center; gap: 0.8rem; background: #1d1d1f; color: #fff; border-radius: 16px; padding: 0.75rem 0.9rem 0.75rem 1.1rem; box-shadow: 0 10px 30px rgb(0 0 0 / 0.3); animation: snack-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); max-width: 520px; margin: 0 auto; }
+.snackbar span { flex: 1; }
+.snackbar button { background: none; border: none; color: var(--lime); font: inherit; font-weight: 800; padding: 0.4rem 0.6rem; }
+body.has-bar .snackbar { bottom: calc(5.2rem + env(safe-area-inset-bottom)); }
+@keyframes snack-in { from { transform: translate3d(0, 120%, 0); opacity: 0; } to { transform: none; opacity: 1; } }

@@ -9,6 +9,7 @@ import { fmt } from '../charts';
 import { runLine } from '../modules/meta';
 import { IconFood, IconWorkout } from '../icons';
 import { Card } from '../ui';
+import { useUndo } from '../Undo';
 
 export function workoutLine(w: WorkoutModule, prs = 0): string {
   return [
@@ -29,6 +30,12 @@ const dur = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(mi
 export function TrainingBlock({ day }: { day: DayEntry }) {
   const nav = useNavigate();
   const store = useStore();
+  const offerUndo = useUndo();
+  const remove = (m: WorkoutModule | RunModule, label: string) => {
+    const index = day.modules.findIndex((x) => x.id === m.id);
+    store.updateDay(day.date, (d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }));
+    offerUndo(label, () => store.updateDay(day.date, (d) => ({ ...d, modules: [...d.modules.slice(0, index), m, ...d.modules.slice(index)] })));
+  };
   const [picked, setPicked] = useState<WorkoutModule | null>(null);
   const [pickedRun, setPickedRun] = useState<RunModule | null>(null);
   const [, tickNow] = useState(0);
@@ -131,7 +138,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             <button
               className="danger-banner"
               onClick={() => {
-                store.updateDay(day.date, (d) => ({ ...d, modules: d.modules.filter((m) => m.id !== picked.id) }));
+                remove(picked, 'Allenamento eliminato');
                 setPicked(null);
               }}
             >
@@ -155,7 +162,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             <button
               className="danger-banner"
               onClick={() => {
-                store.updateDay(day.date, (d) => ({ ...d, modules: d.modules.filter((m) => m.id !== pickedRun.id) }));
+                remove(pickedRun, 'Corsa eliminata');
                 setPickedRun(null);
               }}
             >
