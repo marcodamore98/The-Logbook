@@ -10,6 +10,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write
 
 concurrency:
   group: pages
@@ -19,8 +20,16 @@ env:
   TEST_BRANCH: claude/prova-navigazione
 
 jobs:
+  # Only the default branch may deploy to Pages: a push on the test branch asks it to rebuild.
+  trigger:
+    if: github.ref_name == 'claude/prova-navigazione'
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run deploy.yml --repo "${{ github.repository }}" --ref "${{ github.event.repository.default_branch }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
   build:
-    if: github.ref_name == github.event.repository.default_branch || github.ref_name == 'claude/prova-navigazione'
+    if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
