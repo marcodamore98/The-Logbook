@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { MODULES, metaOf, runLine, summarize } from '../components/modules/meta';
+import { MODULES, metaOf, summarize } from '../components/modules/meta';
 import { ModuleEditor } from '../components/modules/editors';
 import {
   GlyphClose,
@@ -10,7 +10,6 @@ import {
   GlyphTrash,
   IconAppointment,
   IconNote,
-  IconRun,
   IconSleep,
   IconShift,
   IconTodo,
@@ -335,26 +334,6 @@ export default function DayPage() {
         );
       case 'training':
         return <TrainingBlock key="training" day={day} />;
-      case 'run': {
-        const runs = day.modules.filter((m): m is Extract<Module, { kind: 'run' }> => m.kind === 'run');
-        if (!runs.length) return null;
-        return (
-          <Card key="run" id="day.run" print="palestra" icon={<IconRun />} title="Corsa" defaultOpen={false} summary={runs.map(runLine).join(' / ')}>
-            <ul className="summary-list">
-              {runs.map((m) => (
-                <li key={m.id}>
-                  <span>{runLine(m)}</span>
-                  {m.routeName && <span className="muted">{m.routeName}</span>}
-                </li>
-              ))}
-            </ul>
-            <Link className="lime-banner no-print" to="/corsa">
-              <span>Apri Corsa</span>
-              <span aria-hidden="true">›</span>
-            </Link>
-          </Card>
-        );
-      }
       case 'nutrition':
         return <NutritionBlock key="nutrition" day={day} />;
       case 'diary': {

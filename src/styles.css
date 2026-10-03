@@ -1269,3 +1269,4 @@ button.workout-summary { width: 100%; border: none; text-align: left; font: inhe
 .guardia h3.sub { display: flex; align-items: center; gap: 0.5rem; }
 .guardia h3.sub .icon-btn { margin-left: auto; }
 .time-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; } .time-pair input { width: 100%; }
+.card-body > .lime-banner + .lime-banner, .card-body > .workout-summary + .lime-banner, .card-body > .lime-banner + .workout-summary, .card-body > .workout-summary + .workout-summary { margin-top: 0.5rem; }

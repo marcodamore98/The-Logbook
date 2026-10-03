@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { dayIntake, MEALS, totalsOf } from '../../lib/nutrition/foods';
 import { useStore } from '../../lib/store/StoreContext';
 import { workingSets, workoutVolume } from '../../lib/training/analytics';
-import type { DayEntry, WorkoutModule } from '../../lib/types';
+import type { DayEntry, RunModule, WorkoutModule } from '../../lib/types';
+import { fmtDuration, fmtKm, fmtPace } from '../../lib/running/geo';
 import { fmt } from '../charts';
+import { runLine } from '../modules/meta';
 import { IconFood, IconWorkout } from '../icons';
 import { Card } from '../ui';
 
@@ -28,8 +30,10 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
   const nav = useNavigate();
   const store = useStore();
   const [picked, setPicked] = useState<WorkoutModule | null>(null);
+  const [pickedRun, setPickedRun] = useState<RunModule | null>(null);
   const [, tickNow] = useState(0);
   const workouts = day.modules.filter((m): m is WorkoutModule => m.kind === 'workout');
+  const runs = day.modules.filter((m): m is RunModule => m.kind === 'run');
   const anyRunning = workouts.some((w) => w.startedAt && !w.finishedAt);
 
   useEffect(() => {
@@ -51,11 +55,13 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           return `${i.name} · ${fmt(i.volume)} kg${i.minutes ? ` · ${dur(i.minutes)}` : ''}${i.running ? ' · in corso' : ''}`;
         })
         .join(' / ')
-    : 'Nessun allenamento';
+    : '';
+  const runSummary = runs.map(runLine).join(' / ');
+  const cardSummary = [summary, runSummary].filter(Boolean).join(' / ') || 'Niente di registrato';
 
   return (
     <>
-      <Card id="day.training" print="palestra" icon={<IconWorkout />} title="Allenamento" defaultOpen={true} summary={summary}>
+      <Card id="day.training" print="palestra" icon={<IconWorkout />} title="Allenamento" defaultOpen={true} summary={cardSummary}>
         {workouts.length === 0 ? (
           <Link className="lime-banner" to="/palestra">
             <span>Inizia allenamento</span>
@@ -86,6 +92,32 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             );
           })
         )}
+        {runs.length === 0 ? (
+          <Link className="lime-banner" to="/corsa">
+            <span>Inizia corsa</span>
+            <span aria-hidden="true">›</span>
+          </Link>
+        ) : (
+          runs.map((m) => (
+            <button key={m.id} type="button" onClick={() => setPickedRun(m)} className="workout-summary run">
+              <strong className="ws-name">{m.title || (m.mode === 'intervals' ? m.planName ?? 'Corsa a intervalli' : 'Corsa')}</strong>
+              <dl className="ws-stats">
+                <div>
+                  <dt>Distanza</dt>
+                  <dd>{m.distanceM ? `${fmtKm(m.distanceM)} km` : '–'}</dd>
+                </div>
+                <div>
+                  <dt>Durata</dt>
+                  <dd>{m.durationSec ? fmtDuration(m.durationSec) : '–'}</dd>
+                </div>
+                <div>
+                  <dt>Passo</dt>
+                  <dd>{m.distanceM && m.durationSec ? `${fmtPace(m.distanceM, m.durationSec)}/km` : '–'}</dd>
+                </div>
+              </dl>
+            </button>
+          ))
+        )}
       </Card>
       {picked && (
         <div className="sheet-backdrop" onClick={() => setPicked(null)}>
@@ -106,6 +138,30 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
               Elimina
             </button>
             <button className="btn-ghost cancel-banner" onClick={() => setPicked(null)}>
+              Annulla
+            </button>
+          </div>
+        </div>
+      )}
+      {pickedRun && (
+        <div className="sheet-backdrop" onClick={() => setPickedRun(null)}>
+          <div className="sheet action-sheet" role="dialog" aria-label="Corsa" onClick={(e) => e.stopPropagation()}>
+            <div className="grabber" />
+            <h2 className="sheet-title">{pickedRun.title || 'Corsa'}</h2>
+            <button className="lime-banner" onClick={() => nav('/corsa')}>
+              <span>Apri Corsa</span>
+              <span aria-hidden="true">›</span>
+            </button>
+            <button
+              className="danger-banner"
+              onClick={() => {
+                store.updateDay(day.date, (d) => ({ ...d, modules: d.modules.filter((m) => m.id !== pickedRun.id) }));
+                setPickedRun(null);
+              }}
+            >
+              Elimina
+            </button>
+            <button className="btn-ghost cancel-banner" onClick={() => setPickedRun(null)}>
               Annulla
             </button>
           </div>
