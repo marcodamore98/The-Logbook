@@ -20,7 +20,7 @@ export async function openFile(repo: ReturnType<typeof useStore>['repo'], f: Fil
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-/** One attachment: paperclip button to add a PDF (or image), then name, open and remove. */
+/** One PDF attachment: paperclip button to add it, then name, open, replace and remove. */
 export function FileSlot({ label, doneLabel, crown, file, onChange }: { label: string; doneLabel?: string; crown?: boolean; file?: FileRef; onChange: (f: FileRef | undefined) => void }) {
   const { repo } = useStore();
   const input = useRef<HTMLInputElement>(null);
@@ -29,6 +29,11 @@ export function FileSlot({ label, doneLabel, crown, file, onChange }: { label: s
   async function pick(files: FileList | null) {
     const f = files?.[0];
     if (!f) return;
+    if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) {
+      window.alert('Scegli un file PDF.');
+      if (input.current) input.current.value = '';
+      return;
+    }
     if (f.size > MAX_BYTES) {
       window.alert('Il file supera 8 MB: riducilo o comprimilo prima di caricarlo.');
       if (input.current) input.current.value = '';
@@ -48,7 +53,7 @@ export function FileSlot({ label, doneLabel, crown, file, onChange }: { label: s
 
   return (
     <div className={`file-slot${file ? ' has-file' : ''}`}>
-      <input ref={input} type="file" accept="application/pdf,image/*" hidden onChange={(e) => pick(e.target.files)} />
+      <input ref={input} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => pick(e.target.files)} />
       {file ? (
         <>
           <button type="button" className="file-open" onClick={() => openFile(repo, file)}>

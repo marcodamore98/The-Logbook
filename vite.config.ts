@@ -5,6 +5,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 // BASE_PATH lets the same build run at the domain root (Firebase Hosting)
 // or under /The-Logbook/ (GitHub Pages).
 const base = process.env.BASE_PATH ?? '/';
+// The test version is published under <base>prova/: it gets its own name, and the main
+// app's service worker must not answer for those pages.
+const isTest = process.env.APP_VARIANT === 'prova';
 
 export default defineConfig({
   base,
@@ -14,8 +17,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'The Logbook',
-        short_name: 'Logbook',
+        name: isTest ? 'The Logbook (prova)' : 'The Logbook',
+        short_name: isTest ? 'Logbook prova' : 'Logbook',
         description: 'Diario giornaliero di turni, attività chirurgica, studio e vita privata.',
         lang: 'it',
         theme_color: '#1d1d1f',
@@ -30,6 +33,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: 'index.html',
+        navigateFallbackDenylist: isTest ? [] : [/\/prova\//],
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
       },
     }),

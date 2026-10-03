@@ -1,6 +1,7 @@
 name: Pubblica su GitHub Pages
 
-# Pubblica a ogni push sul branch predefinito del repository (qualunque nome abbia).
+# Pubblica a ogni push sul branch predefinito e sul branch di prova.
+# L'app principale va su /<repo>/, la versione di prova su /<repo>/prova/.
 on:
   push:
   workflow_dispatch:
@@ -14,24 +15,48 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  TEST_BRANCH: claude/prova-navigazione
+
 jobs:
   build:
-    if: github.ref_name == github.event.repository.default_branch
+    if: github.ref_name == github.event.repository.default_branch || github.ref_name == 'claude/prova-navigazione'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: main
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
       # La configurazione Firebase è in src/lib/config.ts: non servono secrets.
-      - run: npm run build
+      - name: App principale
+        working-directory: main
+        run: npm ci && npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+      - name: Scarica la versione di prova (se esiste)
+        id: test
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${{ github.repository }}.git" "$TEST_BRANCH" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.test.outputs.exists == 'true'
+        with:
+          ref: ${{ env.TEST_BRANCH }}
+          path: prova
+      - name: Versione di prova
+        if: steps.test.outputs.exists == 'true'
+        working-directory: prova
+        run: npm ci && npm run build && cp -r dist ../main/dist/prova
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/prova/
+          APP_VARIANT: prova
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: main/dist
   deploy:
     needs: build
     runs-on: ubuntu-latest
