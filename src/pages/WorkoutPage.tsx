@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { GlyphPrev, GlyphTrash } from '../components/icons';
+import { GlyphCheck, GlyphPrev, GlyphTrash } from '../components/icons';
 import { WorkoutLogger } from '../components/training/WorkoutLogger';
 import { Empty } from '../components/ui';
 import { formatLong } from '../lib/dates';
@@ -15,6 +15,10 @@ export default function WorkoutPage() {
   const day = store.day(date);
   const w = day.modules.find((m): m is WorkoutModule => m.kind === 'workout' && m.id === id);
 
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const setTitle = (title: string) => store.updateDay(date, (d) => ({ ...d, modules: d.modules.map((m) => (m.id === id && m.kind === 'workout' ? { ...m, title: title.trim() || undefined } : m)) }));
+
   useEffect(() => {
     store.loadRange(date, date);
     store.ensureAllLoaded();
@@ -27,7 +31,36 @@ export default function WorkoutPage() {
           <GlyphPrev />
         </button>
         <div className="page-title">
-          <h1>{w?.title || 'Allenamento'}</h1>
+          {editing ? (
+            <form
+              className="title-edit"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setTitle(draft);
+                setEditing(false);
+              }}
+            >
+              <input autoFocus value={draft} placeholder="Nome dell’allenamento" onChange={(e) => setDraft(e.target.value)} aria-label="Nome dell’allenamento" />
+              <button type="submit" className="icon-btn confirm" aria-label="Conferma il nome">
+                <GlyphCheck />
+              </button>
+            </form>
+          ) : (
+            <h1>
+              <button
+                type="button"
+                className="title-btn"
+                disabled={!w}
+                aria-label="Modifica il nome dell’allenamento"
+                onClick={() => {
+                  setDraft(w?.title ?? '');
+                  setEditing(true);
+                }}
+              >
+                {w?.title || 'Allenamento'}
+              </button>
+            </h1>
+          )}
           <Link className="link-quiet capitalize" to={`/giorno/${date}`}>
             {formatLong(date)}
           </Link>

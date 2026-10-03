@@ -4,7 +4,7 @@ import { chime } from '../../lib/sound';
 import { useStore } from '../../lib/store/StoreContext';
 import { bestsBefore, matchingSet, previousSession, prsOf, SET_TYPES, setTypeOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import { exerciseDef, usesDistance, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
-import { REST_OPTIONS, restLabel, routineFromWorkout, supersetLetters, workoutFromRoutine } from '../../lib/training/routines';
+import { REST_OPTIONS, restLabel, supersetLetters } from '../../lib/training/routines';
 import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, WorkoutSet } from '../../lib/types';
 import { GlyphCheck, GlyphPlus, IconTimer } from '../icons';
 import { AutoText, NumberInput, uid } from '../ui';
@@ -300,7 +300,6 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
   const set = (p: Partial<WorkoutModule>) => onChange({ ...w, ...p });
   const running = !!w.startedAt && !w.finishedAt;
   const letters = supersetLetters(w.exercises);
-  const routines = settings.routines ?? [];
 
   useEffect(() => {
     store.ensureAllLoaded();
@@ -332,41 +331,6 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
           <span className="stat-val">{sets}</span>
         </div>
       </div>
-      <div className="workout-actions">
-        {running ? (
-          <button type="button" className="btn" onClick={() => setFinishing(true)}>
-            Termina
-          </button>
-        ) : date === today() ? (
-          <button type="button" className="btn" onClick={() => set({ startedAt: Date.now(), finishedAt: undefined })}>
-            {w.finishedAt ? 'Riprendi' : 'Inizia allenamento'}
-          </button>
-        ) : null}
-      </div>
-
-
-      {w.exercises.length === 0 && routines.length > 0 && (
-        <div className="routine-start">
-          <span className="muted small">Parti da una scheda:</span>
-          <div className="chips">
-            {routines.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                className="chip"
-                onClick={() => {
-                  const filled = workoutFromRoutine(r, w.id, date, history);
-                  onChange({ ...filled, startedAt: w.startedAt });
-                }}
-              >
-                {r.folder ? `${r.folder} · ` : ''}
-                {r.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {w.exercises.map((ex, i) => (
         <ExerciseBlock
           key={i}
@@ -392,26 +356,21 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
         />
       ))}
 
-      <div className="row">
-        <button type="button" className="btn-ghost" onClick={() => setPicking(true)}>
-          <GlyphPlus /> Aggiungi esercizi
-        </button>
-        {w.exercises.length > 0 && (
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => {
-              const name = window.prompt('Nome della nuova scheda', w.title ?? 'Nuova scheda');
-              if (!name) return;
-              store.saveSettings({ ...settings, routines: [...routines, routineFromWorkout(w, uid(), name)] });
-            }}
-          >
-            Salva come scheda
-          </button>
-        )}
-      </div>
+      <button type="button" className="add-ex" onClick={() => setPicking(true)}>
+        <GlyphPlus /> Aggiungi esercizi
+      </button>
 
-      <AutoText className="ex-notes" value={w.notes ?? ''} placeholder="Note sull’allenamento…" onChange={(v) => set({ notes: v || undefined })} />
+      <div className="workout-actions bottom">
+        {running ? (
+          <button type="button" className="btn" onClick={() => setFinishing(true)}>
+            Termina
+          </button>
+        ) : date === today() ? (
+          <button type="button" className="btn" onClick={() => set({ startedAt: Date.now(), finishedAt: undefined })}>
+            {w.finishedAt ? 'Riprendi' : 'Inizia allenamento'}
+          </button>
+        ) : null}
+      </div>
 
       {finishing && (
         <FinishFlow

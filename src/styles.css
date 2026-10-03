@@ -1254,3 +1254,12 @@ button.workout-summary { width: 100%; border: none; text-align: left; font: inhe
 .action-sheet { gap: 0.6rem; }
 .danger-banner { width: 100%; background: #c0392b; color: #fff; border: none; border-radius: 18px; padding: 0.95rem 1.2rem; font: inherit; font-size: 1.05rem; font-weight: 800; min-height: 3.2rem; }
 .cancel-banner { width: 100%; justify-content: center; min-height: 3rem; }
+
+/* Workout page: editable title, add-exercise and finish at the bottom */
+.title-btn { background: none; border: none; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-align: left; }
+.title-edit { display: flex; align-items: center; gap: 0.4rem; }
+.title-edit input { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; padding: 0.3rem 0.6rem; background: var(--surface); }
+.title-edit .confirm { background: var(--lime); color: #1d1d1f; flex: none; }
+.add-ex { width: 100%; background: var(--surface-2); border: none; border-radius: 14px; padding: 0.9rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 0.8rem; }
+.workout-actions.bottom { margin-top: 0.8rem; }
+.workout-actions .btn { width: 100%; min-height: 3.4rem; justify-content: center; font-size: 1.1rem; }

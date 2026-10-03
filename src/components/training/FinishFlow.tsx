@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../lib/store/StoreContext';
+import { routineFromWorkout } from '../../lib/training/routines';
 import { bestsBefore, prsOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import type { ISODate, WorkoutModule } from '../../lib/types';
 import { fmt } from '../charts';
 import { GlyphPrev } from '../icons';
-import { AutoText, NumField } from '../ui';
+import { AutoText, NumField, uid } from '../ui';
 
 const SHORT_MIN = 10; // below this the duration is probably a mistake
 
@@ -39,7 +40,8 @@ export function FinishFlow({
   onClose: () => void;
 }) {
   const nav = useNavigate();
-  const { allDays, history } = useStore();
+  const { allDays, history, settings, saveSettings } = useStore();
+  const [asRoutine, setAsRoutine] = useState(false);
   const endedAt = useMemo(() => Date.now(), []);
   const measured = Math.max(1, Math.round((endedAt - (w.startedAt ?? endedAt)) / 60000));
   const [step, setStep] = useState<'short' | 'save' | 'done'>(measured < SHORT_MIN ? 'short' : 'save');
@@ -104,6 +106,7 @@ export function FinishFlow({
           <button
             className="btn small"
             onClick={() => {
+              if (asRoutine && w.exercises.length) saveSettings({ ...settings, routines: [...(settings.routines ?? []), routineFromWorkout(w, uid(), title.trim() || 'Nuova routine')] });
               onSave({ title: title.trim() || undefined, notes: notes.trim() || undefined, durationMin: Math.max(1, Math.round(minutes)), finishedAt: Math.round(minutes) !== measured && w.startedAt ? w.startedAt + Math.round(minutes) * 60000 : endedAt });
               setStep('done');
             }}
@@ -133,6 +136,11 @@ export function FinishFlow({
             <span className="field-label">Note</span>
             <AutoText className="finish-notes" value={notes} placeholder="Come è andato il tuo allenamento? Lascia qualche nota qui…" onChange={setNotes} />
           </label>
+          {w.exercises.length > 0 && (
+            <label className="check">
+              <input type="checkbox" checked={asRoutine} onChange={(e) => setAsRoutine(e.target.checked)} /> Salva questo allenamento come routine
+            </label>
+          )}
           <button
             className="finish-abandon"
             onClick={() => {
