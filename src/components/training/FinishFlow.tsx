@@ -8,8 +8,6 @@ import { fmt } from '../charts';
 import { GlyphPrev } from '../icons';
 import { AutoText, NumField, uid } from '../ui';
 
-const SHORT_MIN = 10; // below this the duration is probably a mistake
-
 /** Fun comparison for the total weight lifted. */
 function compare(kg: number): { icon: string; text: string } {
   if (kg < 300) return { icon: '🎹', text: 'È come sollevare un pianoforte!' };
@@ -44,11 +42,10 @@ export function FinishFlow({
   const [asRoutine, setAsRoutine] = useState(false);
   const endedAt = useMemo(() => Date.now(), []);
   const measured = Math.max(1, Math.round((endedAt - (w.startedAt ?? endedAt)) / 60000));
-  const [step, setStep] = useState<'short' | 'save' | 'done'>(measured < SHORT_MIN ? 'short' : 'save');
+  const [step, setStep] = useState<'confirm' | 'save' | 'done'>('confirm');
   const [title, setTitle] = useState(w.title ?? '');
   const [notes, setNotes] = useState(w.notes ?? '');
   const [minutes, setMinutes] = useState(measured);
-  const [focusMin, setFocusMin] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.add('modal-open');
@@ -67,28 +64,19 @@ export function FinishFlow({
   }, [w, history, date]);
   const number = useMemo(() => allDays.flatMap((d) => d.modules).filter((m) => m.kind === 'workout' && m.finishedAt && m.id !== w.id).length + 1, [allDays, w.id]);
 
-  if (step === 'short') {
+  if (step === 'confirm') {
     return (
-      <div className="finish-backdrop">
-        <div className="finish-dialog" role="alertdialog" aria-label="Durata insolita">
-          <h2>Durata dell’allenamento insolita</h2>
-          <p>
-            Il tuo allenamento è durato <strong>{measured} min</strong>. Questa durata sembra essere inferiore al solito. Desideri modificarla?
-          </p>
-          <button
-            className="btn"
-            onClick={() => {
-              setFocusMin(true);
-              setStep('save');
-            }}
-          >
-            Modifica durata allenamento
-          </button>
-          <button className="btn-ghost" onClick={() => setStep('save')}>
-            Mantieni durata attuale
-          </button>
+      <div className="finish-backdrop" onClick={onClose}>
+        <div className="finish-dialog" role="alertdialog" aria-label="Terminare l’allenamento" onClick={(e) => e.stopPropagation()}>
+          <h2>Terminare l’allenamento?</h2>
           <button className="btn-ghost" onClick={onClose}>
-            Riprendi allenamento
+            Torna all’allenamento
+          </button>
+          <button className="danger-banner" onClick={onAbandon}>
+            Abbandona ed elimina
+          </button>
+          <button className="btn" onClick={() => setStep('save')}>
+            Termina e salva
           </button>
         </div>
       </div>
@@ -120,7 +108,7 @@ export function FinishFlow({
             <div>
               <dt>Durata</dt>
               <dd className="accent">
-                <NumField value={minutes} min={1} label="Durata in minuti" className={`finish-min${focusMin ? ' focus' : ''}`} onChange={setMinutes} /> min
+                <NumField value={minutes} min={1} label="Durata in minuti" className="finish-min" onChange={setMinutes} /> min
               </dd>
             </div>
             <div>
