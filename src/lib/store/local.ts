@@ -1,4 +1,4 @@
-import { createStore, entries, get, getMany, set } from 'idb-keyval';
+import { createStore, del, entries, get, getMany, set } from 'idb-keyval';
 import { rangeDays } from '../dates';
 import type { DayEntry, Settings } from '../types';
 import { blobToDataURL, type Repo } from './repo';
@@ -23,5 +23,15 @@ export const localRepo: Repo = {
     return { src: await blobToDataURL(blob) };
   },
   async deletePhoto() {},
+  async uploadFile(id, blob) {
+    await set(`file:${id}`, await blobToDataURL(blob), db);
+    return { src: `lf:${id}`, path: id };
+  },
+  async deleteFile(path) {
+    if (path) await del(`file:${path}`, db);
+  },
+  async resolveFile(src) {
+    return (await get<string>(`file:${src.slice(3)}`, db)) ?? '';
+  },
   resolvePhoto: async (src) => src,
 };

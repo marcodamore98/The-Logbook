@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
-import { GlyphClose, GlyphMenu, IconFood, IconHeart, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
+import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconHeart, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
 import { RestTimerProvider } from './components/training/RestTimer';
@@ -12,6 +12,7 @@ import { localRepo } from './lib/store/local';
 import { StoreProvider, useStore } from './lib/store/StoreContext';
 import { today } from './lib/dates';
 import { MonthPage, WeekPage } from './pages/CalendarPages';
+import CoursesPage from './pages/CoursesPage';
 import DayPage from './pages/DayPage';
 import DiaryPage from './pages/DiaryPage';
 import GymPage from './pages/GymPage';
@@ -29,6 +30,7 @@ const NAV = [
   { to: '/palestra', label: 'Palestra', Icon: IconWorkout },
   { to: '/corsa', label: 'Corsa', Icon: IconRun },
   { to: '/alimentazione', label: 'Alimentazione', Icon: IconFood },
+  { to: '/corsi', label: 'Corsi e congressi', Icon: IconCourse },
   { to: '/statistiche', label: 'Statistiche', Icon: IconStats },
   { to: '/impostazioni', label: 'Impostazioni', Icon: IconSettings },
 ];
@@ -169,6 +171,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
                 <Route path="/palestra/allenamento/:date/:id" element={<WorkoutPage />} />
                 <Route path="/corsa" element={<RunPage />} />
                 <Route path="/alimentazione/:date?" element={<NutritionPage />} />
+                <Route path="/corsi/:sub?" element={<CoursesPage />} />
                 <Route path="/statistiche" element={<StatsPage />} />
                 <Route path="/impostazioni" element={<SettingsPage userEmail={userEmail} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

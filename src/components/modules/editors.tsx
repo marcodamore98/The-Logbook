@@ -4,7 +4,9 @@ import { WorkoutLogger } from '../training/WorkoutLogger';
 import type {
   ClinicalModule,
   Module,
+  CourseModule,
   NoteModule,
+  TravelModule,
   OutingModule,
   PhotoModule,
   StudyModule,
@@ -24,6 +26,7 @@ import {
   SURGICAL_ROLES,
 } from '../../lib/vocab';
 import { GlyphPlus, GlyphTrash } from '../icons';
+import { FileSlot } from '../files/FileSlot';
 import { Field, NumberInput, uid, VocabSelect } from '../ui';
 
 type Props<M> = { value: M; onChange: (m: M) => void };
@@ -239,6 +242,52 @@ function NoteEditor({ value: m, onChange }: Props<NoteModule>) {
   );
 }
 
+function DateRange({ start, end, onChange }: { start: string; end: string; onChange: (s: string, e: string) => void }) {
+  return (
+    <div className="time-pair">
+      <Field label="Dal">
+        <input type="date" value={start} onChange={(e) => onChange(e.target.value, end < e.target.value ? e.target.value : end)} />
+      </Field>
+      <Field label="Al">
+        <input type="date" value={end} min={start} onChange={(e) => onChange(start, e.target.value < start ? start : e.target.value)} />
+      </Field>
+    </div>
+  );
+}
+
+function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
+  return (
+    <div className="grid">
+      <Field label="Titolo" wide>
+        <input value={m.title} placeholder="es. Congresso nazionale SIGO" onChange={(e) => onChange({ ...m, title: e.target.value })} />
+      </Field>
+      <div className="field field-wide">
+        <DateRange start={m.startDate} end={m.endDate} onChange={(startDate, endDate) => onChange({ ...m, startDate, endDate })} />
+      </div>
+      <div className="field field-wide file-slots">
+        <FileSlot label="Aggiungi il programma (PDF)" doneLabel="Programma" file={m.program} onChange={(program) => onChange({ ...m, program })} />
+        <FileSlot label="Aggiungi l’attestato" doneLabel="Attestato" crown file={m.certificate} onChange={(certificate) => onChange({ ...m, certificate })} />
+      </div>
+    </div>
+  );
+}
+
+function TravelEditor({ value: m, onChange }: Props<TravelModule>) {
+  return (
+    <div className="grid">
+      <Field label="Titolo" wide>
+        <input value={m.title} placeholder="es. Weekend a Lisbona" onChange={(e) => onChange({ ...m, title: e.target.value })} />
+      </Field>
+      <Field label="Destinazione" wide>
+        <input value={m.destination ?? ''} onChange={(e) => onChange({ ...m, destination: e.target.value || undefined })} />
+      </Field>
+      <div className="field field-wide">
+        <DateRange start={m.startDate} end={m.endDate} onChange={(startDate, endDate) => onChange({ ...m, startDate, endDate })} />
+      </div>
+    </div>
+  );
+}
+
 export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: ISODate }) {
   switch (value.kind) {
     case 'surgery':
@@ -249,6 +298,10 @@ export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: 
       return <StudyEditor value={value} onChange={onChange} />;
     case 'workout':
       return <WorkoutLogger value={value} onChange={onChange} date={date} />;
+    case 'course':
+      return <CourseEditor value={value} onChange={onChange} />;
+    case 'travel':
+      return <TravelEditor value={value} onChange={onChange} />;
     case 'run':
       return null; // le corse si registrano dalla pagina Corsa
     case 'outing':

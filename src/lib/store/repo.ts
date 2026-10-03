@@ -11,6 +11,11 @@ export interface Repo {
   /** Stores a JPEG blob and returns what the PhotoItem should keep. */
   uploadPhoto(id: string, blob: Blob): Promise<{ src: string; path?: string }>;
   deletePhoto(path: string | undefined): Promise<void>;
+  /** Stores any file (PDF…) and returns what the FileRef should keep. */
+  uploadFile(id: string, blob: Blob): Promise<{ src: string; path?: string }>;
+  deleteFile(path: string | undefined): Promise<void>;
+  /** Returns a data URL for a stored FileRef.src. */
+  resolveFile(src: string): Promise<string>;
   /** Turns a stored PhotoItem.src into something an <img> can show. */
   resolvePhoto(src: string): Promise<string>;
 }

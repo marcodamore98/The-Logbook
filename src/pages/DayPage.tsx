@@ -30,7 +30,7 @@ import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
 
 /** Cards that can be added by hand; training, food and the diary have their own sections. */
-const ADDABLE: ModuleKind[] = ['surgery', 'clinical', 'study', 'outing'];
+const ADDABLE: ModuleKind[] = ['surgery', 'clinical', 'study', 'course', 'travel', 'outing'];
 
 export default function DayPage() {
   const params = useParams();
@@ -84,7 +84,7 @@ export default function DayPage() {
 
   // ---- Modules ----
   const addModule = (k: ModuleKind) => {
-    const m = metaOf(k).create();
+    const m = metaOf(k).create(date);
     update((d) => ({ ...d, modules: [...d.modules, m] }));
     setAdding(false);
     // Workouts are logged on their own page; the day keeps a summary.
@@ -94,6 +94,10 @@ export default function DayPage() {
   const setModule = (m: Module) => update((d) => ({ ...d, modules: d.modules.map((x) => (x.id === m.id ? m : x)) }));
   const removeModule = (m: Module) => {
     if (m.kind === 'photos') m.items.forEach((p) => store.repo.deletePhoto(p.path));
+    if (m.kind === 'course') {
+      store.repo.deleteFile(m.program?.path);
+      store.repo.deleteFile(m.certificate?.path);
+    }
     update((d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }));
   };
 
@@ -116,6 +120,33 @@ export default function DayPage() {
       ? `Dal tabellone: ${myCodes.map(codeShort).join(' · ')}`
       : 'Nessun turno';
   const order = blockOrder(settings.dayLayout);
+
+  // Courses and trips that began on another day but cover this one.
+  useEffect(() => {
+    store.ensureAllLoaded();
+  }, []);
+  const spanning = store.allDays
+    .filter((d) => d.date !== date)
+    .flatMap((d) => d.modules.filter((m): m is Extract<Module, { kind: 'course' | 'travel' }> => (m.kind === 'course' || m.kind === 'travel') && m.startDate <= date && date <= m.endDate).map((m) => ({ origin: d.date, m })));
+  const spanCards = (block: string) =>
+    spanning
+      .filter(({ m }) => MODULE_BLOCK[m.kind] === block)
+      .map(({ origin, m }) => {
+        const meta = metaOf(m.kind);
+        const n = Math.round((new Date(`${date}T12:00:00`).getTime() - new Date(`${m.startDate}T12:00:00`).getTime()) / 864e5) + 1;
+        const total = Math.round((new Date(`${m.endDate}T12:00:00`).getTime() - new Date(`${m.startDate}T12:00:00`).getTime()) / 864e5) + 1;
+        return (
+          <Card key={`span-${m.id}`} id={`span.${m.id}`} className={`module module-${m.kind}`} icon={<meta.Icon />} title={meta.label} summary={`${m.title || meta.label} · giorno ${n} di ${total}`} defaultOpen={false}>
+            <p>
+              <strong>{m.title || meta.label}</strong> · giorno {n} di {total}
+            </p>
+            <Link className="lime-banner no-print" to={`/giorno/${origin}?apri=${m.id}`}>
+              <span>Modifica nel giorno di inizio</span>
+              <span aria-hidden="true">›</span>
+            </Link>
+          </Card>
+        );
+      });
 
   const moduleCards = (block: string) =>
     day.modules
@@ -354,7 +385,7 @@ export default function DayPage() {
       }
       case 'work':
       case 'private': {
-        const cards = moduleCards(id);
+        const cards = [...moduleCards(id), ...spanCards(id)];
         return cards.length ? <div key={id} className="modules">{cards}</div> : null;
       }
       default:

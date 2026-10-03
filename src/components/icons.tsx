@@ -387,3 +387,32 @@ export const IconBody = () => (
     <path d="M17.5 9c0-1.5 1.5-2.5 3.5-2.5S24.5 7.5 24.5 9v5l-1 8M17.5 9v5l1 8M21 14v8" />
   </svg>
 );
+
+export const IconCourse = (p: P) => (
+  <Art pigment="indigo" blot={0} {...p}>
+    <path d="M20 10.5l11 5-11 5-11-5z" />
+    <path d="M14.5 19v5.2c0 1.6 2.4 3 5.5 3s5.5-1.4 5.5-3V19M31 15.5v7" />
+    <path d="M31 25.5v1.2" strokeWidth="2" />
+  </Art>
+);
+
+export const IconTravel = (p: P) => (
+  <Art pigment="sky" blot={1} {...p}>
+    <rect x="9.5" y="14" width="21" height="14.5" rx="2.5" />
+    <path d="M16 14v-2.2c0-.9.7-1.6 1.6-1.6h4.8c.9 0 1.6.7 1.6 1.6V14M9.5 20.5h21M18.5 20.5v2h3v-2" />
+  </Art>
+);
+
+export const GlyphFolder = () => (
+  <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3.5 7.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.2h8a1.5 1.5 0 0 1 1.5 1.5v8.3a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z" />
+  </svg>
+);
+
+/** Paperclip; with `crown` it marks a certificate. */
+export const GlyphClip = ({ crown = false }: { crown?: boolean }) => (
+  <svg viewBox="0 0 24 24" width={22} height={22} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.5 11.5l-6 6a3.5 3.5 0 0 1-5-5l7-7a2.3 2.3 0 0 1 3.3 3.3l-7 7a1.2 1.2 0 0 1-1.7-1.7l6-6" />
+    {crown && <path d="M14.5 5.5l1.2 1.4 1.3-2 1.3 2 1.2-1.4-.6 3h-3.8z" fill="#e0a800" stroke="#e0a800" strokeWidth="0.6" />}
+  </svg>
+);

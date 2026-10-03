@@ -67,6 +67,7 @@ function SetRow({
   def,
   prevSet,
   prs,
+  locked,
   onChange,
   onDone,
   onRemove,
@@ -76,6 +77,8 @@ function SetRow({
   def: ExerciseDef;
   prevSet?: WorkoutSet;
   prs: string[];
+  /** An earlier set is not done yet (or a later one already is): the tick is not available. */
+  locked: boolean;
   onChange: (s: WorkoutSet) => void;
   onDone: () => void;
   onRemove: () => void;
@@ -124,7 +127,8 @@ function SetRow({
         {usesReps(def.kind) && <NumberInput value={s.reps || undefined} placeholder="rip" onChange={(reps) => onChange({ ...s, reps: reps ?? 0 })} />}
         {usesTime(def.kind) && <NumberInput value={s.seconds} step={5} placeholder="sec" onChange={(seconds) => onChange({ ...s, seconds })} />}
         <span className="check-cell">
-          <button type="button" className={`check-btn${s.done ? ' on' : ''}`} aria-label={s.done ? 'Segna come non fatta' : 'Segna come fatta'} aria-pressed={!!s.done} onClick={() => {
+          <button type="button" className={`check-btn${s.done ? ' on' : ''}${locked ? ' locked' : ''}`} aria-label={s.done ? 'Segna come non fatta' : 'Segna come fatta'} aria-pressed={!!s.done} aria-disabled={locked} onClick={() => {
+              if (locked) return;
               if (!s.done) chime();
               onDone();
             }}>
@@ -263,6 +267,7 @@ function ExerciseBlock({
               def={def}
               prevSet={p}
               prs={prsOf(s, bests)}
+              locked={s.done ? ex.sets.slice(k + 1).some((x) => x.done) : ex.sets.slice(0, k).some((x) => !x.done)}
               onChange={(ns) => setAt(k, ns)}
               onRemove={() => onChange({ ...ex, sets: ex.sets.filter((_, i) => i !== k) })}
               onDone={() => {

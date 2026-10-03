@@ -133,6 +133,36 @@ export interface PhotoItem {
   caption?: string;
 }
 
+/** A document stored with the app (course programme, certificate). */
+export interface FileRef {
+  id: string;
+  name: string;
+  src: string; // 'fs:<id>' (cloud) or 'lf:<id>' (this device)
+  path?: string;
+  size?: number;
+}
+
+/** Course or congress: may last several days. */
+export interface CourseModule {
+  kind: 'course';
+  id: string;
+  title: string;
+  startDate: ISODate;
+  endDate: ISODate;
+  program?: FileRef;
+  certificate?: FileRef;
+}
+
+/** Trip: may last several days. */
+export interface TravelModule {
+  kind: 'travel';
+  id: string;
+  title: string;
+  destination?: string;
+  startDate: ISODate;
+  endDate: ISODate;
+}
+
 export interface PhotoModule {
   kind: 'photos';
   id: string;
@@ -339,6 +369,8 @@ export type Module =
   | NoteModule
   | WorkoutModule
   | RunModule
+  | CourseModule
+  | TravelModule
   | OutingModule;
 
 export type ModuleKind = Module['kind'];

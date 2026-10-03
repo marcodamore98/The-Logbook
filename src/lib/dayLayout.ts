@@ -25,6 +25,8 @@ export const MODULE_BLOCK: Record<ModuleKind, string> = {
   study: 'work',
   workout: 'training',
   run: 'training',
+  course: 'work',
+  travel: 'private',
   outing: 'private',
   photos: 'diary',
   note: 'diary',
