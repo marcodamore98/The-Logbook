@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
 import { GlyphClose, GlyphMenu, IconFood, IconHeart, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { useDrawer } from './components/useDrawer';
+import { ActiveBar } from './components/training/ActiveBar';
 import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
@@ -164,6 +165,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
               <BodySidebar />
             </div>
           </div>
+          <ActiveBar />
           {menu.visible && <NavDrawer onClose={menu.close} p={menu.p} dragging={menu.dragging} />}
           {bodyOpen && (
             <div className="drawer-backdrop" onClick={() => setBodyOpen(false)}>

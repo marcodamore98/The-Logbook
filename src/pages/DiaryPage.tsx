@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DiaryEntryView } from '../components/diary/DiaryEntry';
 import { ExplorerPrint, printWhenReady } from '../components/diary/ExplorerPrint';
 import { GlyphClose, GlyphNext, GlyphPrev, GlyphPrint } from '../components/icons';
+import { useSwipeNav } from '../components/useSwipeNav';
 import { Card } from '../components/ui';
 import { addDays, formatLong, fromISO, today } from '../lib/dates';
 import { hasDiary, withDiary } from '../lib/diary';
@@ -17,7 +18,6 @@ export default function DiaryPage() {
   const day = store.day(date);
   const [printOpen, setPrintOpen] = useState(false);
   const [printing, setPrinting] = useState<{ days: DayEntry[]; from: ISODate; to: ISODate; photos: boolean } | null>(null);
-  const touch = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     store.loadRange(date, date);
@@ -29,22 +29,10 @@ export default function DiaryPage() {
   const next = written.find((d) => d.date > date)?.date;
   const go = (d: ISODate) => nav(`/diario/${d}`);
 
-  // Swipe sideways to turn the page.
-  const onTouchStart = (e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest('textarea, input') || e.touches[0].clientX <= 40) return;
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const t = touch.current;
-    touch.current = null;
-    if (!t) return;
-    const dx = e.changedTouches[0].clientX - t.x;
-    const dy = e.changedTouches[0].clientY - t.y;
-    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) go(addDays(date, dx < 0 ? 1 : -1));
-  };
+  const swipeRef = useSwipeNav<HTMLDivElement>(() => go(addDays(date, -1)), () => go(addDays(date, 1)), date);
 
   return (
-    <div className="page diary-page" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div ref={swipeRef} className="page diary-page">
       <div className="diary-screen">
         <header className="page-head">
           <button className="icon-btn" aria-label="Giorno precedente" onClick={() => go(addDays(date, -1))}>

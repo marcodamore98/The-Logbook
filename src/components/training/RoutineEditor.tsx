@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
-import { SET_TYPES } from '../../lib/training/analytics';
 import { exerciseDef, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
 import { REST_OPTIONS, restLabel, supersetLetters } from '../../lib/training/routines';
 import type { PlannedSet, Routine, RoutineExercise } from '../../lib/types';
-import { WORKOUT_TYPES } from '../../lib/vocab';
 import { GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash } from '../icons';
-import { Field, NumberInput, VocabSelect } from '../ui';
+import { Field, NumberInput } from '../ui';
 import { ExercisePicker } from './ExercisePicker';
 import { linkNext, move, SetTypeBadge, unlink } from './WorkoutLogger';
 
@@ -136,7 +134,7 @@ function PlannedBlock({
   );
 }
 
-export function RoutineEditor({ value: r, onChange, folders }: { value: Routine; onChange: (r: Routine) => void; folders: string[] }) {
+export function RoutineEditor({ value: r, onChange }: { value: Routine; onChange: (r: Routine) => void }) {
   const [picking, setPicking] = useState(false);
   const set = (p: Partial<Routine>) => onChange({ ...r, ...p, updatedAt: Date.now() });
   const setExercises = (exercises: RoutineExercise[]) => set({ exercises });
@@ -147,25 +145,11 @@ export function RoutineEditor({ value: r, onChange, folders }: { value: Routine;
         <Field label="Nome scheda">
           <input value={r.name} onChange={(e) => set({ name: e.target.value })} placeholder="es. Push A" />
         </Field>
-        <Field label="Cartella">
-          <input list="routine-folders" value={r.folder ?? ''} onChange={(e) => set({ folder: e.target.value || undefined })} placeholder="es. PPL" />
-          <datalist id="routine-folders">
-            {folders.map((f) => (
-              <option key={f} value={f} />
-            ))}
-          </datalist>
-        </Field>
-        <Field label="Tipo">
-          <VocabSelect items={WORKOUT_TYPES} value={r.type ?? 'strength'} onChange={(type) => set({ type })} />
-        </Field>
         <Field label="Note" wide>
           <input value={r.notes ?? ''} onChange={(e) => set({ notes: e.target.value || undefined })} />
         </Field>
       </div>
-      <p className="muted small">
-        Tipi di serie: tocca il numero per alternare {SET_TYPES.map((t) => `${t.short || '1'} = ${t.label.toLowerCase()}`).join(', ')}. Il peso lasciato vuoto viene
-        preso dall'ultima volta.
-      </p>
+      <p className="muted small">Il peso lasciato vuoto viene preso dall'ultima volta.</p>
       {r.exercises.map((ex, i) => (
         <PlannedBlock
           key={i}

@@ -19,6 +19,7 @@ import { RosterCard } from '../components/RosterCard';
 import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
 import { DiaryEntryView } from '../components/diary/DiaryEntry';
 import { useBlockDrag } from '../components/useBlockDrag';
+import { useSwipeNav } from '../components/useSwipeNav';
 import { Card, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
 import { blockOrder, DAY_BLOCKS, MODULE_BLOCK } from '../lib/dayLayout';
 import { CATEGORIES } from '../lib/vocab';
@@ -419,10 +420,11 @@ export default function DayPage() {
     );
   }
 
+  const swipeRef = useSwipeNav<HTMLDivElement>(() => nav(`/giorno/${addDays(date, -1)}`), () => nav(`/giorno/${addDays(date, 1)}`), date);
   const saveOrder = (o: string[]) => store.saveSettings({ ...settings, dayLayout: o });
 
   return (
-    <div className={`page day-page${drag ? ' is-dragging' : ''}`} onPointerDown={onPointerDown}>
+    <div ref={swipeRef} className={`page day-page${drag ? ' is-dragging' : ''}`} onPointerDown={onPointerDown}>
       <header className="page-head">
         <button className="icon-btn no-print" aria-label="Giorno precedente" onClick={() => nav(`/giorno/${addDays(date, -1)}`)}>
           <GlyphPrev />

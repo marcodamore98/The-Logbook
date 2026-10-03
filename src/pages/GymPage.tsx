@@ -22,15 +22,7 @@ function Routines() {
   const [editing, setEditing] = useState<string | null>(null);
   const [msg, setMsg] = useState<string>();
   const hevyFile = useRef<HTMLInputElement>(null);
-  const folders = [...new Set(routines.map((r) => r.folder).filter((f): f is string => !!f))];
   const save = (list: Routine[]) => store.saveSettings({ ...store.settings, routines: list });
-  const byFolder = new Map<string, Routine[]>();
-  for (const r of routines) {
-    const f = r.folder || 'Senza cartella';
-    if (!byFolder.has(f)) byFolder.set(f, []);
-    byFolder.get(f)!.push(r);
-  }
-
   async function start(r: Routine) {
     const date = today();
     const w = workoutFromRoutine(r, uid(), date, store.history);
@@ -49,7 +41,7 @@ function Routines() {
             Fatto
           </button>
         </div>
-        <RoutineEditor value={current} folders={folders} onChange={(r) => save(routines.map((x) => (x.id === r.id ? r : x)))} />
+        <RoutineEditor value={current} onChange={(r) => save(routines.map((x) => (x.id === r.id ? r : x)))} />
       </section>
     );
   }
@@ -63,7 +55,7 @@ function Routines() {
         <button
           className="tile-btn"
           onClick={() => {
-            const r: Routine = { id: uid(), name: 'Nuova routine', folder: folders[0], exercises: [], updatedAt: Date.now() };
+            const r: Routine = { id: uid(), name: 'Nuova routine', exercises: [], updatedAt: Date.now() };
             save([...routines, r]);
             setEditing(r.id);
           }}
@@ -104,10 +96,10 @@ function Routines() {
                 .map((w) => {
                   const r = routineFromWorkout(w, uid(), w.title!);
                   // Leave weights empty: each workout proposes the last weight actually used.
-                  return { ...r, folder: 'Da Hevy', exercises: r.exercises.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s, kg: undefined })) })) };
+                  return { ...r, exercises: r.exercises.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s, kg: undefined })) })) };
                 });
               save([...routines, ...created]);
-              setMsg(`Schede create: ${created.length} (dalla sessione più completa di ogni routine). Controllale e spostale nella cartella che preferisci.`);
+              setMsg(`Routine create: ${created.length} (dalla sessione più completa di ciascuna). Controllale.`);
             } catch (err) {
               setMsg(String(err instanceof Error ? err.message : err));
             }
@@ -117,20 +109,14 @@ function Routines() {
       {msg && <p className="muted small">{msg}</p>}
       {routines.length === 0 && (
         <Empty>
-          Nessuna routine. Creane una (es. cartella “PPL” con Push, Pull e Legs), oppure fai un allenamento e usa “Salva come scheda”.
+          Nessuna routine. Creane una con “Nuova routine”, oppure fai un allenamento e usa “Salva come scheda”.
         </Empty>
       )}
-      {[...byFolder.entries()].map(([folder, list]) => (
-        <details key={folder} className="folder" open>
-          <summary className="folder-head">
-            <span className="folder-arrow" aria-hidden="true">▾</span> {folder} ({list.length})
-          </summary>
           <div className="routine-grid">
-            {list.map((r) => (
+            {routines.map((r) => (
               <article key={r.id} className="card routine-card">
                 <div className="routine-top">
                   <h3 className="routine-name">{r.name}</h3>
-                  {r.type && <span className="badge">{labelOf(WORKOUT_TYPES, r.type)}</span>}
                   <details className="menu-details more">
                     <summary className="icon-btn small" aria-label="Altre azioni">⋯</summary>
                     <div className="menu">
@@ -151,8 +137,6 @@ function Routines() {
               </article>
             ))}
           </div>
-        </details>
-      ))}
     </>
   );
 }

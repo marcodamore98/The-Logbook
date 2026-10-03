@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GlyphNext, GlyphPrev } from '../components/icons';
+import { useSwipeNav } from '../components/useSwipeNav';
 import { metaOf, summarize } from '../components/modules/meta';
 import {
   addDays,
@@ -62,8 +63,9 @@ export function MonthPage() {
     store.loadRange(grid[0], grid[41]);
   }, [anchor, store.gcal.connected]);
 
+  const swipeRef = useSwipeNav<HTMLDivElement>(() => nav(`/mese/${addMonths(anchor, -1)}`), () => nav(`/mese/${addMonths(anchor, 1)}`), month);
   return (
-    <div className="page">
+    <div ref={swipeRef} className="page swipe-page">
       <header className="page-head">
         <button className="icon-btn" aria-label="Mese precedente" onClick={() => nav(`/mese/${addMonths(anchor, -1)}`)}>
           <GlyphPrev />
@@ -121,8 +123,9 @@ export function WeekPage() {
   }, [start, store.gcal.connected]);
 
   const end = fromISO(days[6]);
+  const swipeRef = useSwipeNav<HTMLDivElement>(() => nav(`/settimana/${addDays(start, -7)}`), () => nav(`/settimana/${addDays(start, 7)}`), start);
   return (
-    <div className="page">
+    <div ref={swipeRef} className="page swipe-page">
       <header className="page-head">
         <button className="icon-btn" aria-label="Settimana precedente" onClick={() => nav(`/settimana/${addDays(start, -7)}`)}>
           <GlyphPrev />

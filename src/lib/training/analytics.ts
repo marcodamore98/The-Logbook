@@ -120,3 +120,25 @@ export function setsPerMuscle(days: DayEntry[], custom: ExerciseDef[]): Map<stri
   }
   return out;
 }
+
+/** Where a running workout stands: the exercise to do now and how many sets are done. */
+export function workoutProgress(w: WorkoutModule, customExercises: ExerciseDef[] = []) {
+  const total = w.exercises.reduce((n, e) => n + e.sets.length, 0);
+  const done = w.exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
+  const idx = w.exercises.findIndex((e) => e.sets.some((s) => !s.done));
+  const ex = idx >= 0 ? w.exercises[idx] : undefined;
+  return {
+    total,
+    done,
+    exerciseName: ex ? exerciseDef(ex.exerciseId, customExercises).name : undefined,
+    setNo: ex ? ex.sets.filter((s) => s.done).length + 1 : undefined,
+    setCount: ex?.sets.length,
+    exerciseNo: idx >= 0 ? idx + 1 : undefined,
+    exerciseCount: w.exercises.length,
+  };
+}
+
+/** The workout started today and not yet finished, if any. */
+export function runningWorkout(day: DayEntry): WorkoutModule | undefined {
+  return day.modules.find((m): m is WorkoutModule => m.kind === 'workout' && !!m.startedAt && !m.finishedAt);
+}
