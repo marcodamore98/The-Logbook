@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Columns, fmt } from '../components/charts';
 import { GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconBreakfast, IconDinner, IconLunch, IconSnack, IconWater } from '../components/icons';
 import { FoodSheet } from '../components/nutrition/FoodSheet';
@@ -101,9 +101,6 @@ export default function NutritionPage() {
         </button>
         <div className="page-title">
           <h1 className="capitalize">{formatLong(date)}</h1>
-          <Link to={`/giorno/${date}`} className="link-quiet">
-            pagina del giorno
-          </Link>
         </div>
         <button className="icon-btn" aria-label="Giorno successivo" onClick={() => nav(`/alimentazione/${addDays(date, 1)}`)}>
           <GlyphNext />

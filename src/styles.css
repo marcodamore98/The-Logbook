@@ -1215,3 +1215,5 @@ body.has-bar main { padding-bottom: 6.5rem; }
 .import-note { margin-top: 1rem; }
 .import-note .link-btn { font-size: inherit; padding: 0; text-decoration: underline; }
 .workout-page .page-title h1 { font-size: 2rem; letter-spacing: -0.03em; }
+.back-day { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--lime); color: #1d1d1f; font-weight: 800; font-size: 0.9rem; text-decoration: none; padding: 0.4rem 0.9rem 0.4rem 0.7rem; border-radius: 999px; margin: 0 0 0.7rem; }
+.back-day span { font-size: 1.2rem; line-height: 1; }

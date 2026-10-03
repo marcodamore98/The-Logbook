@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
 import { GlyphClose, GlyphMenu, IconFood, IconHeart, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
@@ -70,6 +70,18 @@ function NavDrawer({ onClose, p, dragging }: { onClose: () => void; p: number; d
         ))}
       </nav>
     </div>
+  );
+}
+
+/** Small banner under the title bar: back to the day page (of the day being viewed, else today). */
+function BackToDay() {
+  const { pathname } = useLocation();
+  if (pathname === '/' || pathname.startsWith('/giorno')) return null;
+  const date = pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? today();
+  return (
+    <Link to={`/giorno/${date}`} className="back-day no-print">
+      <span aria-hidden="true">‹</span> Pagina del giorno
+    </Link>
   );
 }
 
@@ -146,6 +158,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
           <Topbar onMenu={menu.open} onBody={() => setBodyOpen(true)} />
           <div className="layout">
             <main>
+              <BackToDay />
               <Routes>
                 <Route path="/" element={<Navigate to={`/giorno/${today()}`} replace />} />
                 <Route path="/mese/:date?" element={<MonthPage />} />
