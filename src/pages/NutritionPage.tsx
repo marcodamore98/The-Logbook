@@ -1,3 +1,4 @@
+import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Columns, fmt } from '../components/charts';
@@ -93,8 +94,10 @@ export default function NutritionPage() {
     value: dayIntake(store.day(d)).kcal ?? 0,
   }));
 
+  const swipeRef = useSwipeNav<HTMLDivElement>(() => nav(`/alimentazione/${addDays(date, -1)}`), () => nav(`/alimentazione/${addDays(date, 1)}`), date);
+
   return (
-    <div className="page nutrition-page">
+    <div ref={swipeRef} className="page nutrition-page swipe-page">
       <header className="page-head">
         <button className="icon-btn" aria-label="Giorno precedente" onClick={() => nav(`/alimentazione/${addDays(date, -1)}`)}>
           <GlyphPrev />

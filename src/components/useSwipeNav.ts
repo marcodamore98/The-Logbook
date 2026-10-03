@@ -9,10 +9,10 @@ const EDGE = 40; // the left edge belongs to the menu
  * (and the next page slides in from the other side) or springs back.
  * `key` identifies the current item: when it changes the page slides in.
  */
-export function useSwipeNav<T extends HTMLElement>(onPrev: () => void, onNext: () => void, key: string) {
+export function useSwipeNav<T extends HTMLElement>(onPrev: () => void, onNext: () => void, key: string, can: (dir: 1 | -1) => boolean = () => true) {
   const ref = useRef<T>(null);
-  const cb = useRef({ onPrev, onNext });
-  cb.current = { onPrev, onNext };
+  const cb = useRef({ onPrev, onNext, can });
+  cb.current = { onPrev, onNext, can };
   const entering = useRef<0 | 1 | -1>(0);
   const clearTimer = useRef(0);
   // A transform on the page would turn it into the containing block of fixed overlays, so drop it once settled.
@@ -65,7 +65,7 @@ export function useSwipeNav<T extends HTMLElement>(onPrev: () => void, onNext: (
       g = null;
       if (!cur || cur.lock !== 'x') return;
       const w = window.innerWidth;
-      const go = Math.abs(cur.dx) > w * 0.28 || (Math.abs(cur.v) > 0.5 && Math.abs(cur.dx) > 40);
+      const go = (Math.abs(cur.dx) > w * 0.28 || (Math.abs(cur.v) > 0.5 && Math.abs(cur.dx) > 40)) && cb.current.can(cur.dx < 0 ? 1 : -1);
       el.style.transition = 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s';
       if (!go) {
         el.style.transform = 'translate3d(0,0,0)';

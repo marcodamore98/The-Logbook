@@ -122,8 +122,13 @@ export default function DayPage() {
   const order = blockOrder(settings.dayLayout);
 
   // Courses and trips that began on another day but cover this one.
+  // Loading the whole archive is not urgent: do it once the page is idle.
   useEffect(() => {
-    store.ensureAllLoaded();
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const id = ric ? ric(() => store.ensureAllLoaded()) : window.setTimeout(() => store.ensureAllLoaded(), 1200);
+    return () => {
+      if (!ric) window.clearTimeout(id);
+    };
   }, []);
   const spanning = store.allDays
     .filter((d) => d.date !== date)

@@ -77,7 +77,7 @@ export function FinishFlow({
     return (
       <div className="finish-screen" role="dialog" aria-label="Salva allenamento">
         <header className="finish-bar">
-          <button className="icon-btn" aria-label="Torna all’allenamento" onClick={onClose}>
+          <button data-back className="icon-btn" aria-label="Torna all’allenamento" onClick={onClose}>
             <GlyphPrev />
           </button>
           <h2>Salva allenamento</h2>
@@ -154,7 +154,7 @@ export function FinishFlow({
           <dd>{records ? `👑 ${records}` : '–'}</dd>
         </div>
       </dl>
-      <button className="btn finish-ok" onClick={() => nav(`/giorno/${date}`)}>
+      <button data-back className="btn finish-ok" onClick={() => nav(`/giorno/${date}`)}>
         Fatto
       </button>
     </div>

@@ -1,3 +1,4 @@
+import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useMemo, useState } from 'react';
 import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconFlame, IconScale, IconOuting, IconRun, IconTodo, IconShift, IconStudy, IconSurgery, IconWorkout } from '../components/icons';
 import { BarList, Columns, Donut, fmt, PALETTE, Ring, Trend } from '../components/charts';
@@ -139,8 +140,10 @@ export default function StatsPage() {
 
   const m = METRICS.find((x) => x.id === metric)!;
 
+  const swipeRef = useSwipeNav<HTMLDivElement>(() => setAnchor(shift(period, anchor, -1)), () => setAnchor(shift(period, anchor, 1)), `${period}:${from}`);
+
   return (
-    <div className="page stats-page">
+    <div ref={swipeRef} className="page stats-page swipe-page">
       <div className="segmented no-print" role="tablist">
         {(['week', 'month', 'year'] as Period[]).map((p) => (
           <button key={p} role="tab" aria-selected={period === p} className={period === p ? 'on' : ''} onClick={() => setPeriod(p)}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
@@ -11,16 +11,20 @@ import { cloudRepo } from './lib/store/cloud';
 import { localRepo } from './lib/store/local';
 import { StoreProvider, useStore } from './lib/store/StoreContext';
 import { today } from './lib/dates';
-import { MonthPage, WeekPage } from './pages/CalendarPages';
-import CoursesPage from './pages/CoursesPage';
 import DayPage from './pages/DayPage';
-import DiaryPage from './pages/DiaryPage';
-import GymPage from './pages/GymPage';
-import NutritionPage from './pages/NutritionPage';
-import WorkoutPage from './pages/WorkoutPage';
-import RunPage from './pages/RunPage';
-import SettingsPage from './pages/SettingsPage';
-import StatsPage from './pages/StatsPage';
+import { ScrollMemory, useBackClosesOverlays, useRightDrawerSwipe, useSheetSwipeDown } from './components/useAppGestures';
+
+// The day page loads with the app; the other pages load the first time they are opened.
+const MonthPage = lazy(() => import('./pages/CalendarPages').then((m) => ({ default: m.MonthPage })));
+const WeekPage = lazy(() => import('./pages/CalendarPages').then((m) => ({ default: m.WeekPage })));
+const CoursesPage = lazy(() => import('./pages/CoursesPage'));
+const DiaryPage = lazy(() => import('./pages/DiaryPage'));
+const GymPage = lazy(() => import('./pages/GymPage'));
+const NutritionPage = lazy(() => import('./pages/NutritionPage'));
+const WorkoutPage = lazy(() => import('./pages/WorkoutPage'));
+const RunPage = lazy(() => import('./pages/RunPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
 
 const NAV = [
   { to: '/mese', label: 'Mese', Icon: IconMonth },
@@ -121,6 +125,9 @@ function Shell({ userEmail }: { userEmail?: string }) {
   const [bodyOpen, setBodyOpen] = useState(false);
   const menu = useDrawer();
   const menuOpen = menu.visible;
+  useBackClosesOverlays();
+  useSheetSwipeDown();
+  useRightDrawerSwipe();
 
   // Keyboard: keep the focused field visible and give the page room to scroll.
   useEffect(() => {
@@ -160,7 +167,9 @@ function Shell({ userEmail }: { userEmail?: string }) {
           <Topbar onMenu={menu.open} onBody={() => setBodyOpen(true)} />
           <div className="layout">
             <main>
+              <ScrollMemory />
               <BackToDay />
+              <Suspense fallback={<div className="page-loading" aria-label="Caricamento" />}>
               <Routes>
                 <Route path="/" element={<Navigate to={`/giorno/${today()}`} replace />} />
                 <Route path="/mese/:date?" element={<MonthPage />} />
@@ -176,6 +185,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
                 <Route path="/impostazioni" element={<SettingsPage userEmail={userEmail} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </Suspense>
             </main>
             <div className="side-desktop">
               <BodySidebar />
