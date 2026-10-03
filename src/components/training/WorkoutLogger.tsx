@@ -9,6 +9,7 @@ import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, Wor
 import { GlyphCheck, GlyphPlus, IconTimer } from '../icons';
 import { AutoText, NumberInput, uid } from '../ui';
 import { ExAvatar } from './ExAvatar';
+import { FinishFlow } from './FinishFlow';
 import { ExerciseDetail } from './ExerciseDetail';
 import { ExercisePicker } from './ExercisePicker';
 import { useRestTimer } from './RestTimer';
@@ -289,11 +290,12 @@ function ExerciseBlock({
   );
 }
 
-export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModule; onChange: (w: WorkoutModule) => void; date: ISODate }) {
+export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: WorkoutModule; onChange: (w: WorkoutModule) => void; date: ISODate; onAbandon?: () => void }) {
   const store = useStore();
   const { settings, history } = store;
   const timer = useRestTimer();
   const [picking, setPicking] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const [, tick] = useState(0);
   const set = (p: Partial<WorkoutModule>) => onChange({ ...w, ...p });
   const running = !!w.startedAt && !w.finishedAt;
@@ -332,7 +334,7 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
       </div>
       <div className="workout-actions">
         {running ? (
-          <button type="button" className="btn" onClick={() => set({ finishedAt: Date.now(), durationMin: Math.max(1, Math.round((Date.now() - w.startedAt!) / 60000)) })}>
+          <button type="button" className="btn" onClick={() => setFinishing(true)}>
             Termina
           </button>
         ) : date === today() ? (
@@ -411,6 +413,21 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
 
       <AutoText className="ex-notes" value={w.notes ?? ''} placeholder="Note sull’allenamento…" onChange={(v) => set({ notes: v || undefined })} />
 
+      {finishing && (
+        <FinishFlow
+          w={w}
+          date={date}
+          onClose={() => setFinishing(false)}
+          onSave={(patch) => {
+            timer.stop();
+            onChange({ ...w, ...patch });
+          }}
+          onAbandon={() => {
+            setFinishing(false);
+            onAbandon?.();
+          }}
+        />
+      )}
       {picking && (
         <ExercisePicker
           multiple

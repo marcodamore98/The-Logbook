@@ -48,7 +48,7 @@ export default function WorkoutPage() {
       </header>
       {w ? (
         <section className="card">
-          <WorkoutLogger value={w} date={date} onChange={(nw) => store.updateDay(date, (d) => ({ ...d, modules: d.modules.map((m) => (m.id === nw.id ? nw : m)) }))} />
+          <WorkoutLogger value={w} date={date} onAbandon={() => { store.updateDay(date, (d) => ({ ...d, modules: d.modules.filter((m) => m.id !== id) })); nav(`/giorno/${date}`); }} onChange={(nw) => store.updateDay(date, (d) => ({ ...d, modules: d.modules.map((m) => (m.id === nw.id ? nw : m)) }))} />
         </section>
       ) : (
         <Empty>Allenamento non trovato (forse è ancora in caricamento).</Empty>

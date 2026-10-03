@@ -1217,3 +1217,35 @@ body.has-bar main { padding-bottom: 6.5rem; }
 .workout-page .page-title h1 { font-size: 2rem; letter-spacing: -0.03em; }
 .back-day { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--lime); color: #1d1d1f; font-weight: 800; font-size: 0.9rem; text-decoration: none; padding: 0.4rem 0.9rem 0.4rem 0.7rem; border-radius: 999px; margin: 0 0 0.7rem; }
 .back-day span { font-size: 1.2rem; line-height: 1; }
+
+/* ---- Finishing a workout ---- */
+.finish-backdrop { position: fixed; inset: 0; z-index: 80; background: rgb(0 0 0 / 0.6); display: grid; place-items: center; padding: 1.2rem; }
+.finish-dialog { width: min(380px, 100%); background: var(--bg); border-radius: 24px; padding: 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0.7rem; text-align: center; }
+.finish-dialog h2 { margin: 0; font-size: 1.25rem; }
+.finish-dialog p { margin: 0 0 0.4rem; line-height: 1.5; }
+.finish-dialog .btn, .finish-dialog .btn-ghost { justify-content: center; min-height: 3rem; }
+.finish-screen { position: fixed; inset: 0; z-index: 80; background: var(--bg); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; }
+.finish-bar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.5rem; padding: calc(0.6rem + env(safe-area-inset-top)) 0.9rem 0.6rem; position: sticky; top: 0; background: var(--bg); z-index: 1; }
+.finish-bar h2 { margin: 0; text-align: center; font-size: 1.05rem; }
+.finish-bar .btn { background: var(--lime); color: #1d1d1f; font-weight: 800; }
+.finish-body { padding: 0.5rem 1rem calc(2rem + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 1.1rem; max-width: 640px; width: 100%; margin: 0 auto; }
+.finish-title { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.03em; border-color: transparent; background: none; padding-left: 0; }
+.finish-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin: 0; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+.finish-stats dt { color: var(--muted); font-size: 0.85rem; }
+.finish-stats dd { margin: 0; font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 0.3rem; }
+.finish-stats dd.accent { color: var(--accent); }
+.finish-min { width: 4rem; padding: 0.2rem 0.4rem; font-size: 1.2rem; font-weight: 700; text-align: center; background: var(--surface-2); }
+.finish-notes { min-height: 5rem; background: var(--surface-2); border-radius: 14px; padding: 0.8rem; }
+.finish-abandon { background: none; border: none; color: #c0392b; font-weight: 700; padding: 0.8rem; margin-top: 0.5rem; }
+.finish-done { background: #1d1d1f; color: #fff; align-items: center; justify-content: center; gap: 1rem; padding: 1.5rem 1.2rem calc(1.5rem + env(safe-area-inset-bottom)); text-align: center; }
+.finish-done h1 { margin: 0; font-size: 2rem; letter-spacing: -0.03em; }
+.finish-sub { margin: 0; opacity: 0.8; font-size: 1.1rem; }
+.finish-card { width: min(420px, 100%); background: #2b2b2e; border-radius: 26px; padding: 1.5rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.finish-card p { margin: 0; font-size: 1.1rem; }
+.finish-big { font-size: clamp(2.6rem, 14vw, 3.6rem); letter-spacing: -0.04em; color: var(--lime); line-height: 1.1; }
+.finish-emoji { font-size: 5.5rem; line-height: 1.2; }
+.finish-stats-done { width: min(420px, 100%); border: none; padding: 0; }
+.finish-stats-done dt { color: #fff; opacity: 0.65; }
+.finish-stats-done dd { justify-content: center; }
+.finish-stats-done > div { background: #2b2b2e; border-radius: 18px; padding: 0.7rem 0.4rem; text-align: center; }
+.finish-ok { width: min(420px, 100%); min-height: 3.4rem; justify-content: center; background: var(--lime); color: #1d1d1f; font-weight: 800; font-size: 1.1rem; }
