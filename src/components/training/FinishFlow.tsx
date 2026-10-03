@@ -85,6 +85,9 @@ export function FinishFlow({
           <button className="btn-ghost" onClick={() => setStep('save')}>
             Mantieni durata attuale
           </button>
+          <button className="btn-ghost" onClick={onClose}>
+            Riprendi allenamento
+          </button>
         </div>
       </div>
     );
