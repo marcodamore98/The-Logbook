@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { today } from '../../lib/dates';
+import { Link } from 'react-router-dom';
 import { dayIntake, MEALS, totalsOf } from '../../lib/nutrition/foods';
 import { useStore } from '../../lib/store/StoreContext';
 import { workingSets, workoutVolume } from '../../lib/training/analytics';
-import { workoutFromRoutine } from '../../lib/training/routines';
-import type { DayEntry, Routine, WorkoutModule } from '../../lib/types';
+import type { DayEntry, WorkoutModule } from '../../lib/types';
 import { fmt } from '../charts';
-import { GlyphPlus, IconFood, IconWorkout } from '../icons';
-import { Card, uid } from '../ui';
+import { IconFood, IconWorkout } from '../icons';
+import { Card } from '../ui';
 
 export function workoutLine(w: WorkoutModule, prs = 0): string {
   return [
@@ -27,12 +25,8 @@ const dur = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(mi
 
 /** Workout of the day: a tappable summary (name, volume, times) or a banner to start one. */
 export function TrainingBlock({ day }: { day: DayEntry }) {
-  const store = useStore();
-  const nav = useNavigate();
-  const [choosing, setChoosing] = useState(false);
   const [, tickNow] = useState(0);
   const workouts = day.modules.filter((m): m is WorkoutModule => m.kind === 'workout');
-  const routines = store.settings.routines ?? [];
   const anyRunning = workouts.some((w) => w.startedAt && !w.finishedAt);
 
   useEffect(() => {
@@ -40,18 +34,6 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
     const id = window.setInterval(() => tickNow((n) => n + 1), 30000);
     return () => window.clearInterval(id);
   }, [anyRunning]);
-
-  /** Creates the workout (empty or from a saved one) and opens its page. */
-  async function create(r?: Routine) {
-    setChoosing(false);
-    const id = uid();
-    const fresh: WorkoutModule = r
-      ? workoutFromRoutine(r, id, day.date, store.history)
-      : { kind: 'workout', id, type: 'strength', durationMin: 0, exercises: [] };
-    const w = day.date === today() ? { ...fresh, startedAt: Date.now() } : fresh;
-    await store.updateDay(day.date, (d) => ({ ...d, modules: [...d.modules, w] }));
-    nav(`/palestra/allenamento/${day.date}/${id}`);
-  }
 
   const info = (w: WorkoutModule) => {
     const running = !!w.startedAt && !w.finishedAt;
@@ -72,10 +54,10 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
     <>
       <Card id="day.training" print="palestra" icon={<IconWorkout />} title="Allenamento" defaultOpen={true} summary={summary}>
         {workouts.length === 0 ? (
-          <button type="button" className="lime-banner" onClick={() => setChoosing(true)}>
+          <Link className="lime-banner" to="/palestra">
             <span>Inizia allenamento</span>
             <span aria-hidden="true">›</span>
-          </button>
+          </Link>
         ) : (
           workouts.map((w) => {
             const i = info(w);
@@ -102,26 +84,6 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           })
         )}
       </Card>
-      {choosing && (
-        <div className="sheet-backdrop" onClick={() => setChoosing(false)}>
-          <div className="sheet" role="dialog" aria-label="Che allenamento fai?" onClick={(e) => e.stopPropagation()}>
-            <div className="grabber" />
-            <h2 className="sheet-title">Che allenamento fai?</h2>
-            <ul className="choose-list">
-              {routines.map((r) => (
-                <li key={r.id}>
-                  <button onClick={() => create(r)}>{r.name}</button>
-                </li>
-              ))}
-              <li>
-                <button className="new" onClick={() => create()}>
-                  <GlyphPlus /> Allenamento nuovo
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
     </>
   );
 }
