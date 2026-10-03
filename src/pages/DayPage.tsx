@@ -17,6 +17,7 @@ import {
 import { RosterCard } from '../components/RosterCard';
 import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
 import { DiaryEntryView } from '../components/diary/DiaryEntry';
+import { useUndo } from '../components/Undo';
 import { useBlockDrag } from '../components/useBlockDrag';
 import { useSwipeNav } from '../components/useSwipeNav';
 import { Card, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
@@ -92,13 +93,29 @@ export default function DayPage() {
     else setOpenId(m.id);
   };
   const setModule = (m: Module) => update((d) => ({ ...d, modules: d.modules.map((x) => (x.id === m.id ? m : x)) }));
+  const offerUndo = useUndo();
+  /** Removes a card; "Annulla" in the snackbar puts it back. Attached files go only once that chance is over. */
   const removeModule = (m: Module) => {
-    if (m.kind === 'photos') m.items.forEach((p) => store.repo.deletePhoto(p.path));
-    if (m.kind === 'course') {
-      store.repo.deleteFile(m.program?.path);
-      store.repo.deleteFile(m.certificate?.path);
-    }
+    const index = dayRef.current.modules.findIndex((x) => x.id === m.id);
     update((d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }));
+    let undone = false;
+    offerUndo(`Eliminata: ${metaOf(m.kind).label}`, () => {
+      undone = true;
+      update((d) => ({ ...d, modules: [...d.modules.slice(0, index), m, ...d.modules.slice(index)] }));
+    });
+    window.setTimeout(() => {
+      if (undone) return;
+      if (m.kind === 'photos') m.items.forEach((p) => store.repo.deletePhoto(p.path));
+      if (m.kind === 'course') {
+        store.repo.deleteFile(m.program?.path);
+        store.repo.deleteFile(m.certificate?.path);
+      }
+    }, 6500);
+  };
+  const removeShift = (which: 'shift' | 'guardia') => {
+    const before = dayRef.current[which];
+    update((d) => ({ ...d, [which]: undefined }));
+    offerUndo(which === 'shift' ? 'Turno eliminato' : 'Guardia medica eliminata', () => update((d) => ({ ...d, [which]: before })));
   };
 
   const catSelect = (value: string | undefined, onChange: (v: string | undefined) => void) => (
@@ -122,8 +139,13 @@ export default function DayPage() {
   const order = blockOrder(settings.dayLayout);
 
   // Courses and trips that began on another day but cover this one.
+  // Loading the whole archive is not urgent: do it once the page is idle.
   useEffect(() => {
-    store.ensureAllLoaded();
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const id = ric ? ric(() => store.ensureAllLoaded()) : window.setTimeout(() => store.ensureAllLoaded(), 1200);
+    return () => {
+      if (!ric) window.clearTimeout(id);
+    };
   }, []);
   const spanning = store.allDays
     .filter((d) => d.date !== date)
@@ -167,7 +189,7 @@ export default function DayPage() {
             onToggle={() => setOpenId(open ? null : m.id)}
             actions={
               <>
-                <button className="icon-btn small no-print" aria-label="Elimina scheda" onClick={() => window.confirm(`Eliminare la scheda “${meta.label}”?`) && removeModule(m)}>
+                <button className="icon-btn small no-print" aria-label="Elimina scheda" onClick={() => removeModule(m)}>
                   <GlyphTrash />
                 </button>
               </>
@@ -194,7 +216,7 @@ export default function DayPage() {
             summary={shiftSummary}
             actions={
               day.shift && (
-                <button type="button" className="icon-btn small no-print" aria-label="Elimina il turno" onClick={() => window.confirm('Eliminare il turno di questo giorno?') && setShift(undefined)}>
+                <button type="button" className="icon-btn small no-print" aria-label="Elimina il turno" onClick={() => removeShift('shift')}>
                   <GlyphTrash />
                 </button>
               )
@@ -255,7 +277,7 @@ export default function DayPage() {
             title="Guardia medica"
             summary={`${day.guardia.start}–${day.guardia.end}`}
             actions={
-              <button type="button" className="icon-btn small no-print" aria-label="Elimina la guardia medica" onClick={() => window.confirm('Eliminare la guardia medica di questo giorno?') && setGuardia(undefined)}>
+              <button type="button" className="icon-btn small no-print" aria-label="Elimina la guardia medica" onClick={() => removeShift('guardia')}>
                 <GlyphTrash />
               </button>
             }

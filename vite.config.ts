@@ -11,6 +11,15 @@ const isTest = process.env.APP_VARIANT === 'prova';
 
 export default defineConfig({
   base,
+  build: {
+    rollupOptions: {
+      output: {
+        // Libraries change rarely: separate files stay cached across app updates.
+        manualChunks: (id: string) =>
+          /node_modules\/(@firebase|firebase)\//.test(id) ? 'firebase' : /node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id) ? 'react' : undefined,
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

@@ -1,3 +1,4 @@
+import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarList, Columns, fmt } from '../components/charts';
@@ -389,8 +390,17 @@ export default function GymPage() {
     ] as const,
     [],
   );
+  // Swipe sideways to move between the tabs.
+  const tabIdx = tabs.findIndex(([id]) => id === tab);
+  const swipeRef = useSwipeNav<HTMLDivElement>(
+    () => setTab(tabs[Math.max(0, tabIdx - 1)][0]),
+    () => setTab(tabs[Math.min(tabs.length - 1, tabIdx + 1)][0]),
+    tab,
+    (dir) => tabIdx + dir >= 0 && tabIdx + dir < tabs.length,
+  );
+
   return (
-    <div className="page gym-page">
+    <div ref={swipeRef} className="page gym-page swipe-page">
       <header className="page-head">
         <div className="page-title">
           <h1>Palestra</h1>

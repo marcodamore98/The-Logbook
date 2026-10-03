@@ -64,6 +64,8 @@ export function RunSummary({ elapsed, gpsDistanceM, useGps, track, laps, mode, p
   return (
     <div className="run-summary" role="dialog" aria-label="Riepilogo della corsa">
       <div className="run-summary-inner">
+        {/* "Back" must not throw away an unsaved run: it lands here and does nothing. */}
+        <button type="button" data-back hidden tabIndex={-1} aria-hidden="true" />
         <div className="run-win">
           <IconRun size={72} />
           <h2>Corsa completata!</h2>

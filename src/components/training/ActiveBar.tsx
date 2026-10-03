@@ -107,7 +107,7 @@ export function ActiveBar() {
             if (t && e.changedTouches[0].clientY - t.y > 60) setBig(false);
           }}
         >
-          <button className="rest-big-close" onClick={() => setBig(false)} aria-label="Riduci">
+          <button data-back className="rest-big-close" onClick={() => setBig(false)} aria-label="Riduci">
             ⌄
           </button>
           <p className="rest-big-label">{rest.state.done ? 'Recupero finito' : `Recupero${rest.state.label ? ` · ${rest.state.label}` : ''}`}</p>
