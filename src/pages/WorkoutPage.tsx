@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { GlyphPrev, GlyphTrash, IconWorkout } from '../components/icons';
+import { GlyphPrev, GlyphTrash } from '../components/icons';
 import { WorkoutLogger } from '../components/training/WorkoutLogger';
 import { Empty } from '../components/ui';
 import { formatLong } from '../lib/dates';
@@ -48,10 +48,6 @@ export default function WorkoutPage() {
       </header>
       {w ? (
         <section className="card">
-          <div className="card-head">
-            <IconWorkout />
-            <h2>Registro</h2>
-          </div>
           <WorkoutLogger value={w} date={date} onChange={(nw) => store.updateDay(date, (d) => ({ ...d, modules: d.modules.map((m) => (m.id === nw.id ? nw : m)) }))} />
         </section>
       ) : (

@@ -342,7 +342,6 @@ export function WorkoutLogger({ value: w, onChange, date }: { value: WorkoutModu
         ) : null}
       </div>
 
-      <input className="workout-title" value={w.title ?? ''} placeholder="Nome allenamento (es. Push A)" onChange={(e) => set({ title: e.target.value || undefined })} />
 
       {w.exercises.length === 0 && routines.length > 0 && (
         <div className="routine-start">
