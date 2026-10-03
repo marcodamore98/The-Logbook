@@ -166,6 +166,11 @@ export default function DayPage() {
             summary={shiftSummary}
             actions={
               <>
+                {!day.guardia && guardiaTypes.length > 0 && (
+                  <button type="button" className="icon-btn small no-print" aria-label="Aggiungi guardia medica" title="Aggiungi guardia medica" onClick={() => chooseGuardia(guardiaTypes[0].id)}>
+                    <GlyphPlus />
+                  </button>
+                )}
                 {hours > 0 && <span className="badge">{hours} h</span>}
                 {(day.shift?.gcalEventId || day.guardia?.gcalEventId) && (
                   <span className="badge badge-sync" title="Sincronizzato con Google Calendar">
@@ -210,9 +215,13 @@ export default function DayPage() {
                 </>
               )}
             </div>
+            {day.guardia && (
             <div className="guardia">
               <h3 className="sub">
                 <IconSleep size={26} /> Guardia medica
+                <button type="button" className="icon-btn small no-print" aria-label="Rimuovi la guardia medica" onClick={() => setGuardia(undefined)}>
+                  <GlyphTrash />
+                </button>
               </h3>
               <div className="grid">
                 <Field label="Tipo di guardia">
@@ -240,21 +249,17 @@ export default function DayPage() {
                 )}
               </div>
             </div>
+            )}
+            <RosterCard
+              date={date}
+              onJoin={(names) => {
+                const base = dayRef.current.shift ?? (myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null);
+                if (!base) return;
+                const ids = idsForNames(names, settings.colleagues);
+                setShift({ ...base, colleagueIds: [...new Set([...base.colleagueIds, ...ids])] });
+              }}
+            />
           </Card>
-        );
-      case 'roster':
-        return (
-          <RosterCard
-            key="roster"
-            date={date}
-            onDelete={() => window.confirm('Eliminare il tabellone da questa pagina? Potrai riaggiungerlo dall’ordine delle sezioni.') && saveSettings({ ...settings, hiddenBlocks: [...hidden, 'roster'] })}
-            onJoin={(names) => {
-              const base = dayRef.current.shift ?? (myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null);
-              if (!base) return;
-              const ids = idsForNames(names, settings.colleagues);
-              setShift({ ...base, colleagueIds: [...new Set([...base.colleagueIds, ...ids])] });
-            }}
-          />
         );
       case 'agenda':
         return (

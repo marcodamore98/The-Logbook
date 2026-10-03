@@ -1263,3 +1263,8 @@ button.workout-summary { width: 100%; border: none; text-align: left; font: inhe
 .workout-actions.bottom { margin-top: 0.8rem; }
 .workout-actions .btn { width: 100%; min-height: 3.4rem; justify-content: center; font-size: 1.1rem; }
 .finish-dialog .danger-banner { min-height: 3rem; }
+
+/* Roster inside the shift card */
+.card .card.roster { box-shadow: none; background: var(--surface-2); margin-top: 0.8rem; border-radius: 18px; }
+.guardia h3.sub { display: flex; align-items: center; gap: 0.5rem; }
+.guardia h3.sub .icon-btn { margin-left: auto; }
