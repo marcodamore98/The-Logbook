@@ -12,10 +12,6 @@ permissions:
   id-token: write
   actions: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 env:
   TEST_BRANCH: claude/prova-navigazione
 
@@ -30,6 +26,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
   build:
     if: github.ref_name == github.event.repository.default_branch
+    concurrency:
+      group: pages
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
