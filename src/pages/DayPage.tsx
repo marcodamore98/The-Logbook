@@ -364,8 +364,9 @@ export default function DayPage() {
                 </li>
               ))}
             </ul>
-            <Link className="btn-ghost small no-print" to="/corsa">
-              Apri Corsa
+            <Link className="lime-banner no-print" to="/corsa">
+              <span>Apri Corsa</span>
+              <span aria-hidden="true">›</span>
             </Link>
           </Card>
         );
@@ -432,11 +433,6 @@ export default function DayPage() {
         <div className="page-title">
           <h1>{formatLong(date)}</h1>
           <span className="page-sub">Settimana {isoWeek(date)}</span>
-          {date !== today() && (
-            <Link to={`/giorno/${today()}`} className="link-quiet no-print">
-              vai a oggi
-            </Link>
-          )}
         </div>
         <button className="icon-btn no-print" aria-label="Ordina le sezioni" title="Ordina le sezioni" onClick={() => setOrdering(true)}>
           <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -447,6 +443,13 @@ export default function DayPage() {
           <GlyphNext />
         </button>
       </header>
+
+      {date !== today() && (
+        <Link to={`/giorno/${today()}`} className="lime-banner no-print">
+          <span>Vai a oggi</span>
+          <span aria-hidden="true">›</span>
+        </Link>
+      )}
 
       {rendered}
 

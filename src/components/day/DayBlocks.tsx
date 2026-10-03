@@ -72,7 +72,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
     <>
       <Card id="day.training" print="palestra" icon={<IconWorkout />} title="Allenamento" defaultOpen={true} summary={summary}>
         {workouts.length === 0 ? (
-          <button type="button" className="start-banner" onClick={() => setChoosing(true)}>
+          <button type="button" className="lime-banner" onClick={() => setChoosing(true)}>
             <span>Inizia allenamento</span>
             <span aria-hidden="true">›</span>
           </button>
@@ -176,8 +176,9 @@ export function NutritionBlock({ day }: { day: DayEntry }) {
             ))}
         </ul>
       )}
-      <Link className="btn-ghost small" to={`/alimentazione/${day.date}`}>
-        Apri il diario alimentare
+      <Link className="lime-banner" to={`/alimentazione/${day.date}`}>
+        <span>Apri il diario alimentare</span>
+        <span aria-hidden="true">›</span>
       </Link>
     </Card>
   );
