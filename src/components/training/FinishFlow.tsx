@@ -8,16 +8,6 @@ import { fmt } from '../charts';
 import { GlyphPrev } from '../icons';
 import { AutoText, NumField, uid } from '../ui';
 
-/** Fun comparison for the total weight lifted. */
-function compare(kg: number): { icon: string; text: string } {
-  if (kg < 300) return { icon: '🎹', text: 'È come sollevare un pianoforte!' };
-  if (kg < 900) return { icon: '🐎', text: 'È come sollevare un cavallo!' };
-  if (kg < 2500) return { icon: '🚗', text: 'È come sollevare un’auto!' };
-  if (kg < 7000) return { icon: '🐘', text: 'È come sollevare un elefante!' };
-  if (kg < 15000) return { icon: '🚌', text: 'È come sollevare un autobus!' };
-  return { icon: '✈️', text: 'È come sollevare un aereo!' };
-}
-
 const hm = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min` : `${min} min`);
 
 /**
@@ -142,7 +132,6 @@ export function FinishFlow({
     );
   }
 
-  const fun = compare(volume);
   return (
     <div className="finish-screen finish-done" role="dialog" aria-label="Allenamento completato">
       <h1>Ottimo lavoro!</h1>
@@ -150,10 +139,6 @@ export function FinishFlow({
       <div className="finish-card">
         <p>Hai sollevato un totale di</p>
         <strong className="finish-big">{fmt(volume)} kg</strong>
-        <p>{fun.text}</p>
-        <span className="finish-emoji" aria-hidden="true">
-          {fun.icon}
-        </span>
       </div>
       <dl className="finish-stats finish-stats-done">
         <div>
