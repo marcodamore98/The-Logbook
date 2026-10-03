@@ -1,25 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { today } from '../../lib/dates';
 import { dayIntake, MEALS, totalsOf } from '../../lib/nutrition/foods';
 import { useStore } from '../../lib/store/StoreContext';
-import { bestsBefore, countsSet, e1rm, prsOf, workingSets, workoutProgress, workoutVolume } from '../../lib/training/analytics';
+import { workingSets, workoutVolume } from '../../lib/training/analytics';
 import { workoutFromRoutine } from '../../lib/training/routines';
-import { fmtRest, useRestTimer } from '../training/RestTimer';
-import { exerciseDef } from '../../lib/training/exercises';
-import type { DayEntry, ISODate, Routine, WorkoutModule } from '../../lib/types';
+import type { DayEntry, Routine, WorkoutModule } from '../../lib/types';
 import { fmt } from '../charts';
 import { GlyphPlus, IconFood, IconWorkout } from '../icons';
 import { Card, uid } from '../ui';
-
-function prCount(w: WorkoutModule, date: ISODate, h: ReturnType<typeof useStore>['history']) {
-  let n = 0;
-  for (const ex of w.exercises) {
-    const b = bestsBefore(h, ex.exerciseId, w.id, date);
-    if (ex.sets.some((s) => prsOf(s, b).length)) n++;
-  }
-  return n;
-}
 
 export function workoutLine(w: WorkoutModule, prs = 0): string {
   return [
@@ -33,16 +22,24 @@ export function workoutLine(w: WorkoutModule, prs = 0): string {
     .join(' · ');
 }
 
-/** Workouts of the day as summaries; logging happens on the workout page. */
+const hhmm = (ms: number) => new Date(ms).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+const dur = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min` : `${min} min`);
+
+/** Workout of the day: a tappable summary (name, volume, times) or a banner to start one. */
 export function TrainingBlock({ day }: { day: DayEntry }) {
   const store = useStore();
   const nav = useNavigate();
-  const rest = useRestTimer();
   const [choosing, setChoosing] = useState(false);
+  const [, tickNow] = useState(0);
   const workouts = day.modules.filter((m): m is WorkoutModule => m.kind === 'workout');
-  const running = workouts.find((w) => w.startedAt && !w.finishedAt);
-  const lines = workouts.map((w) => workoutLine(w, prCount(w, day.date, store.history)));
   const routines = store.settings.routines ?? [];
+  const anyRunning = workouts.some((w) => w.startedAt && !w.finishedAt);
+
+  useEffect(() => {
+    if (!anyRunning) return;
+    const id = window.setInterval(() => tickNow((n) => n + 1), 30000);
+    return () => window.clearInterval(id);
+  }, [anyRunning]);
 
   /** Creates the workout (empty or from a saved one) and opens its page. */
   async function create(r?: Routine) {
@@ -56,67 +53,55 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
     nav(`/palestra/allenamento/${day.date}/${id}`);
   }
 
-  const p = running ? workoutProgress(running, store.settings.exercises) : null;
+  const info = (w: WorkoutModule) => {
+    const running = !!w.startedAt && !w.finishedAt;
+    const minutes = running ? Math.max(1, Math.round((Date.now() - w.startedAt!) / 60000)) : w.durationMin;
+    const times = w.startedAt ? (w.finishedAt ? `${hhmm(w.startedAt)}–${hhmm(w.finishedAt)}` : `dalle ${hhmm(w.startedAt)}`) : '';
+    return { running, name: w.title || 'Allenamento', volume: Math.round(workoutVolume(w)), minutes, times };
+  };
+  const summary = workouts.length
+    ? workouts
+        .map((w) => {
+          const i = info(w);
+          return `${i.name} · ${fmt(i.volume)} kg${i.minutes ? ` · ${dur(i.minutes)}` : ''}${i.running ? ' · in corso' : ''}`;
+        })
+        .join(' / ')
+    : 'Nessun allenamento';
 
   return (
     <>
-    <Card
-      id="day.training"
-      print="palestra"
-      icon={<IconWorkout />}
-      title="Allenamento"
-      defaultOpen={!!running}
-      open={running ? true : undefined}
-      summary={running ? 'In corso' : workouts.length ? lines.join(' / ') : 'Nessun allenamento'}
-      actions={
-        <button className="icon-btn" aria-label="Nuovo allenamento" onClick={() => setChoosing(true)}>
-          <GlyphPlus />
-        </button>
-      }
-    >
-      {running && p && (
-        <div className="workout-day-running">
-          <strong>{running.title || 'Allenamento'} in corso</strong>
-          <span className="muted">
-            {p.exerciseName ? `${p.exerciseName} · serie ${p.setNo}/${p.setCount}` : 'Tutte le serie fatte'} · {p.done}/{p.total} serie
-          </span>
-          {rest.state.left !== null && <span className="muted">Recupero {fmtRest(rest.state.left)}</span>}
-          <Link className="btn" to={`/palestra/allenamento/${day.date}/${running.id}`}>
-            Riprendi l’allenamento
-          </Link>
-        </div>
-      )}
-      {workouts.length === 0 && <p className="empty">Nessun allenamento. Premi + per iniziarne uno.</p>}
-      {workouts
-        .filter((w) => w !== running)
-        .map((w) => {
-          const i = workouts.indexOf(w);
-          return (
-            <div key={w.id} className="summary-block">
-              <div className="summary-head">
-                <strong>{lines[i]}</strong>
-                <Link className="btn-ghost small" to={`/palestra/allenamento/${day.date}/${w.id}`}>
-                  Apri
-                </Link>
-              </div>
-              <ul className="summary-list">
-                {w.exercises.map((ex, k) => {
-                  const sets = ex.sets.filter(countsSet);
-                  const top = sets.reduce((b, s) => (e1rm(s.kg, s.reps) > e1rm(b?.kg, b?.reps) ? s : b), sets[0]);
-                  return (
-                    <li key={k}>
-                      <span>{exerciseDef(ex.exerciseId, store.settings.exercises).name}</span>
-                      <span className="muted">
-                        {sets.length} serie{top?.kg ? ` · top ${fmt(top.kg, 1)}×${top.reps}` : top?.reps ? ` · top ${top.reps} rip` : ''}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          );
-        })}
-    </Card>
+      <Card id="day.training" print="palestra" icon={<IconWorkout />} title="Allenamento" defaultOpen={true} summary={summary}>
+        {workouts.length === 0 ? (
+          <button type="button" className="start-banner" onClick={() => setChoosing(true)}>
+            <span>Inizia allenamento</span>
+            <span aria-hidden="true">›</span>
+          </button>
+        ) : (
+          workouts.map((w) => {
+            const i = info(w);
+            return (
+              <Link key={w.id} to={`/palestra/allenamento/${day.date}/${w.id}`} className={`workout-summary${i.running ? ' running' : ''}`}>
+                <strong className="ws-name">{i.name}</strong>
+                {i.running && <span className="ws-live">In corso · tocca per riprendere</span>}
+                <dl className="ws-stats">
+                  <div>
+                    <dt>Carico sollevato</dt>
+                    <dd>{fmt(i.volume)} kg</dd>
+                  </div>
+                  <div>
+                    <dt>Durata</dt>
+                    <dd>{i.minutes ? dur(i.minutes) : '–'}</dd>
+                  </div>
+                  <div>
+                    <dt>Orario</dt>
+                    <dd>{i.times || '–'}</dd>
+                  </div>
+                </dl>
+              </Link>
+            );
+          })
+        )}
+      </Card>
       {choosing && (
         <div className="sheet-backdrop" onClick={() => setChoosing(false)}>
           <div className="sheet" role="dialog" aria-label="Che allenamento fai?" onClick={(e) => e.stopPropagation()}>
