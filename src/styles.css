@@ -1249,3 +1249,8 @@ body.has-bar main { padding-bottom: 6.5rem; }
 .finish-stats-done dd { justify-content: center; }
 .finish-stats-done > div { background: #2b2b2e; border-radius: 18px; padding: 0.7rem 0.4rem; text-align: center; }
 .finish-ok { width: min(420px, 100%); min-height: 3.4rem; justify-content: center; background: var(--lime); color: #1d1d1f; font-weight: 800; font-size: 1.1rem; }
+button.workout-summary { width: 100%; border: none; text-align: left; font: inherit; }
+.sheet-title { margin: 0.2rem 0 0.4rem; font-size: 1.2rem; text-align: center; }
+.action-sheet { gap: 0.6rem; }
+.danger-banner { width: 100%; background: #c0392b; color: #fff; border: none; border-radius: 18px; padding: 0.95rem 1.2rem; font: inherit; font-size: 1.05rem; font-weight: 800; min-height: 3.2rem; }
+.cancel-banner { width: 100%; justify-content: center; min-height: 3rem; }

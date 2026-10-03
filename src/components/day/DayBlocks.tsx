@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { dayIntake, MEALS, totalsOf } from '../../lib/nutrition/foods';
 import { useStore } from '../../lib/store/StoreContext';
 import { workingSets, workoutVolume } from '../../lib/training/analytics';
@@ -25,6 +25,9 @@ const dur = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(mi
 
 /** Workout of the day: a tappable summary (name, volume, times) or a banner to start one. */
 export function TrainingBlock({ day }: { day: DayEntry }) {
+  const nav = useNavigate();
+  const store = useStore();
+  const [picked, setPicked] = useState<WorkoutModule | null>(null);
   const [, tickNow] = useState(0);
   const workouts = day.modules.filter((m): m is WorkoutModule => m.kind === 'workout');
   const anyRunning = workouts.some((w) => w.startedAt && !w.finishedAt);
@@ -62,9 +65,9 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           workouts.map((w) => {
             const i = info(w);
             return (
-              <Link key={w.id} to={`/palestra/allenamento/${day.date}/${w.id}`} className={`workout-summary${i.running ? ' running' : ''}`}>
+              <button key={w.id} type="button" onClick={() => setPicked(w)} className={`workout-summary${i.running ? ' running' : ''}`}>
                 <strong className="ws-name">{i.name}</strong>
-                {i.running && <span className="ws-live">In corso · tocca per riprendere</span>}
+                {i.running && <span className="ws-live">In corso</span>}
                 <dl className="ws-stats">
                   <div>
                     <dt>Carico sollevato</dt>
@@ -79,11 +82,35 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
                     <dd>{i.times || '–'}</dd>
                   </div>
                 </dl>
-              </Link>
+              </button>
             );
           })
         )}
       </Card>
+      {picked && (
+        <div className="sheet-backdrop" onClick={() => setPicked(null)}>
+          <div className="sheet action-sheet" role="dialog" aria-label="Allenamento" onClick={(e) => e.stopPropagation()}>
+            <div className="grabber" />
+            <h2 className="sheet-title">{picked.title || 'Allenamento'}</h2>
+            <button className="lime-banner" onClick={() => nav(`/palestra/allenamento/${day.date}/${picked.id}`)}>
+              <span>{picked.startedAt && !picked.finishedAt ? 'Riprendi allenamento' : 'Apri allenamento'}</span>
+              <span aria-hidden="true">›</span>
+            </button>
+            <button
+              className="danger-banner"
+              onClick={() => {
+                store.updateDay(day.date, (d) => ({ ...d, modules: d.modules.filter((m) => m.id !== picked.id) }));
+                setPicked(null);
+              }}
+            >
+              Elimina
+            </button>
+            <button className="btn-ghost cancel-banner" onClick={() => setPicked(null)}>
+              Annulla
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
