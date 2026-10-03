@@ -23,12 +23,29 @@ function Routines() {
   const [msg, setMsg] = useState<string>();
   const hevyFile = useRef<HTMLInputElement>(null);
   const save = (list: Routine[]) => store.saveSettings({ ...store.settings, routines: list });
+  async function startEmpty() {
+    const date = today();
+    const id = uid();
+    await store.updateDay(date, (d) => ({
+      ...d,
+      modules: [...d.modules, { kind: 'workout', id, type: 'strength', durationMin: 0, exercises: [], startedAt: Date.now() }],
+    }));
+    nav(`/palestra/allenamento/${date}/${id}`);
+  }
+
   async function start(r: Routine) {
     const date = today();
     const w = workoutFromRoutine(r, uid(), date, store.history);
     await store.updateDay(date, (d) => ({ ...d, modules: [...d.modules, { ...w, startedAt: Date.now() }] }));
     nav(`/palestra/allenamento/${date}/${w.id}`);
   }
+
+  // Empty routines left behind by "Nuova routine" are of no use: remove them.
+  useEffect(() => {
+    if (editing) return;
+    const keep = routines.filter((r) => r.exercises.length > 0 || !/^nuova/i.test(r.name));
+    if (keep.length !== routines.length) save(keep);
+  }, [routines, editing]);
 
   const current = routines.find((r) => r.id === editing);
   if (current) {
@@ -37,7 +54,13 @@ function Routines() {
         <div className="card-head">
           <IconWorkout />
           <h2>Modifica scheda</h2>
-          <button className="btn small" onClick={() => setEditing(null)}>
+          <button
+            className="btn small"
+            onClick={() => {
+              if (!current.exercises.length) save(routines.filter((x) => x.id !== current.id));
+              setEditing(null);
+            }}
+          >
             Fatto
           </button>
         </div>
@@ -62,17 +85,9 @@ function Routines() {
         >
           <GlyphPlus /> Nuova routine
         </button>
-        <details className="menu-details">
-          <summary className="tile-btn">Importa</summary>
-          <div className="menu">
-            <Link className="menu-item" to="/impostazioni#personal-trainer">
-              Dal personal trainer (Claude)
-            </Link>
-            <button className="menu-item" onClick={() => hevyFile.current?.click()}>
-              Da un export Hevy
-            </button>
-          </div>
-        </details>
+        <button className="tile-btn lime" onClick={startEmpty}>
+          <GlyphPlus /> Inizia un allenamento vuoto
+        </button>
         <input
           ref={hevyFile}
           type="file"
@@ -137,6 +152,10 @@ function Routines() {
               </article>
             ))}
           </div>
+      <p className="muted small import-note">
+        Hai già delle routine? <button className="link-btn" onClick={() => hevyFile.current?.click()}>Importa da Hevy</button> ·{' '}
+        <Link className="link-btn" to="/impostazioni#personal-trainer">dal personal trainer</Link>
+      </p>
     </>
   );
 }
@@ -357,7 +376,6 @@ function WorkoutHistory() {
 
 export default function GymPage() {
   const store = useStore();
-  const nav = useNavigate();
   const [tab, setTab] = useState<Tab>('routines');
   useEffect(() => {
     store.ensureAllLoaded();
@@ -378,22 +396,6 @@ export default function GymPage() {
           <h1>Palestra</h1>
         </div>
       </header>
-      <div className="row">
-        <button
-          className="btn start-empty"
-          onClick={async () => {
-            const date = today();
-            const id = uid();
-            await store.updateDay(date, (d) => ({
-              ...d,
-              modules: [...d.modules, { kind: 'workout', id, type: 'strength', durationMin: 0, exercises: [], startedAt: Date.now() }],
-            }));
-            nav(`/palestra/allenamento/${date}/${id}`);
-          }}
-        >
-          <GlyphPlus /> Inizia un allenamento vuoto
-        </button>
-      </div>
       <div className="segmented" role="tablist">
         {tabs.map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>

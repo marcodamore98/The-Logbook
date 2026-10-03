@@ -1215,3 +1215,6 @@ body.has-bar main { padding-bottom: 6.5rem; }
 .card-body > .lime-banner { margin-top: 0.4rem; }
 .start-empty, .routine-start, .workout-actions .btn { background: var(--lime); color: #1d1d1f; font-weight: 800; }
 .routine-start:disabled { opacity: 0.45; }
+.tile-btn.lime { background: var(--lime); color: #1d1d1f; font-weight: 800; text-align: center; line-height: 1.2; }
+.import-note { margin-top: 1rem; }
+.import-note .link-btn { font-size: inherit; padding: 0; text-decoration: underline; }
