@@ -1268,3 +1268,4 @@ button.workout-summary { width: 100%; border: none; text-align: left; font: inhe
 .card .card.roster { box-shadow: none; background: var(--surface-2); margin-top: 0.8rem; border-radius: 18px; }
 .guardia h3.sub { display: flex; align-items: center; gap: 0.5rem; }
 .guardia h3.sub .icon-btn { margin-left: auto; }
+.time-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; } .time-pair input { width: 100%; }

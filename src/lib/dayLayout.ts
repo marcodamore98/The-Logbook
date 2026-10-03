@@ -9,6 +9,7 @@ export interface BlockDef {
 /** Blocks of the day page in their default order: work first, diary last. */
 export const DAY_BLOCKS: BlockDef[] = [
   { id: 'shift', label: 'Turno', print: 'lavoro' },
+  { id: 'guardia', label: 'Guardia medica', print: 'lavoro' },
   { id: 'work', label: 'Interventi, attività clinica e studio', print: 'lavoro' },
   { id: 'agenda', label: 'Impegni', print: 'agenda' },
   { id: 'todos', label: 'Da ricordare', print: 'agenda' },
