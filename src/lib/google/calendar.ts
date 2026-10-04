@@ -176,6 +176,8 @@ export interface EventInput {
   endDate?: ISODate; // for overnight events
   kind: string;
   colorId?: string;
+  /** Popup reminders, minutes before the start. */
+  reminders?: number[];
 }
 
 function toBody(e: EventInput) {
@@ -190,6 +192,7 @@ function toBody(e: EventInput) {
       ? { dateTime: localDateTime(e.endDate ?? e.date, e.end!), timeZone: TIME_ZONE }
       : { date: addDays(e.date, 1) },
     extendedProperties: { private: { logbook: '1', lbKind: e.kind, lbDate: e.date } },
+    ...(e.reminders ? { reminders: { useDefault: !e.reminders.length, overrides: e.reminders.map((minutes) => ({ method: 'popup', minutes })) } } : {}),
   };
 }
 

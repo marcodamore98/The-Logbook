@@ -27,6 +27,7 @@ import {
 } from '../../lib/vocab';
 import { GlyphPlus, GlyphTrash } from '../icons';
 import { FileSlot } from '../files/FileSlot';
+import { metaOf } from './meta';
 import { Field, NumberInput, uid, VocabSelect } from '../ui';
 
 type Props<M> = { value: M; onChange: (m: M) => void };
@@ -96,7 +97,7 @@ function StudyEditor({ value: m, onChange }: Props<StudyModule>) {
         <input value={m.title} onChange={(e) => set({ title: e.target.value })} placeholder="es. Linee guida SIGO emorragia post partum" />
       </Field>
       <Field label="Tipo">
-        <VocabSelect items={STUDY_TYPES} value={m.type} onChange={(type) => set({ type })} />
+        <VocabSelect items={STUDY_TYPES.filter((t) => !['course', 'congress', 'webinar'].includes(t.id))} value={m.type} onChange={(type) => set({ type })} />
       </Field>
       <Field label="Area">
         <VocabSelect items={STUDY_AREAS} value={m.area} onChange={(area) => set({ area })} />
@@ -255,14 +256,56 @@ function DateRange({ start, end, onChange }: { start: string; end: string; onCha
   );
 }
 
+export const COURSE_TYPES: { id: NonNullable<CourseModule['type']>; label: string }[] = [
+  { id: 'course', label: 'Corso' },
+  { id: 'congress', label: 'Congresso' },
+  { id: 'webinar', label: 'Webinar' },
+];
+
+async function askNotifications() {
+  try {
+    if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
+  } catch {
+    /* not supported */
+  }
+}
+
 function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
   return (
     <div className="grid">
+      <div className="field field-wide">
+        <div className="chips" role="radiogroup" aria-label="Tipo">
+          {COURSE_TYPES.map((t) => (
+            <button key={t.id} type="button" role="radio" aria-checked={(m.type ?? 'course') === t.id} className={`chip${(m.type ?? 'course') === t.id ? ' chip-on' : ''}`} onClick={() => onChange({ ...m, type: t.id })}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <Field label="Titolo" wide>
         <input value={m.title} placeholder="es. Congresso nazionale SIGO" onChange={(e) => onChange({ ...m, title: e.target.value })} />
       </Field>
       <div className="field field-wide">
         <DateRange start={m.startDate} end={m.endDate} onChange={(startDate, endDate) => onChange({ ...m, startDate, endDate })} />
+      </div>
+      <div className="field field-wide time-remind">
+        <Field label="Ora di inizio">
+          <input type="time" value={m.startTime ?? ''} onChange={(e) => onChange({ ...m, startTime: e.target.value || undefined })} />
+        </Field>
+        <label className={`switch-row${m.startTime ? '' : ' disabled'}`}>
+          <span>Avvisami 30 e 5 minuti prima</span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            disabled={!m.startTime}
+            checked={!!m.remind && !!m.startTime}
+            onChange={(e) => {
+              if (e.target.checked) askNotifications();
+              onChange({ ...m, remind: e.target.checked });
+            }}
+          />
+        </label>
       </div>
       <div className="field field-wide file-slots">
         <FileSlot label="Aggiungi il programma (PDF)" doneLabel="Programma" file={m.program} onChange={(program) => onChange({ ...m, program })} />
@@ -288,7 +331,38 @@ function TravelEditor({ value: m, onChange }: Props<TravelModule>) {
   );
 }
 
+/** Pairs of cards that share one entry in "Aggiungi scheda": a switch at the top changes what the card is. */
+const KIND_GROUPS: { kinds: Module['kind'][]; labels: string[] }[] = [
+  { kinds: ['surgery', 'clinical'], labels: ['Chirurgica', 'Clinica'] },
+  { kinds: ['study', 'course'], labels: ['Studio', 'Corsi e congressi'] },
+];
+
 export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: ISODate }) {
+  const group = KIND_GROUPS.find((g) => g.kinds.includes(value.kind));
+  const editor = <KindEditor value={value} onChange={onChange} date={date} />;
+  if (!group) return editor;
+  return (
+    <>
+      <div className="segmented kind-switch" role="tablist">
+        {group.kinds.map((k, i) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={value.kind === k}
+            className={value.kind === k ? 'on' : ''}
+            onClick={() => value.kind !== k && onChange({ ...metaOf(k).create(date), id: value.id } as Module)}
+          >
+            {group.labels[i]}
+          </button>
+        ))}
+      </div>
+      {editor}
+    </>
+  );
+}
+
+function KindEditor({ value, onChange, date }: Props<Module> & { date: ISODate }) {
   switch (value.kind) {
     case 'surgery':
       return <SurgeryEditor value={value} onChange={onChange} />;

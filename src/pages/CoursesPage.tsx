@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { FileSlot, openFile } from '../components/files/FileSlot';
 import { GlyphClip, GlyphFolder, IconCourse } from '../components/icons';
+import { COURSE_TYPES } from '../components/modules/editors';
 import { rangeLabel } from '../components/modules/meta';
 import { Empty } from '../components/ui';
 import { useStore } from '../lib/store/StoreContext';
@@ -55,7 +56,10 @@ export default function CoursesPage() {
           <li key={m.id} className="course-row">
             <div className="course-head">
               <strong>{m.title || 'Senza titolo'}</strong>
-              <span className="muted small">{rangeLabel(m.startDate, m.endDate)} {m.startDate.slice(0, 4)}</span>
+              <span className="muted small">
+                {COURSE_TYPES.find((t) => t.id === (m.type ?? 'course'))?.label} · {rangeLabel(m.startDate, m.endDate)} {m.startDate.slice(0, 4)}
+                {m.startTime ? ` · ore ${m.startTime}` : ''}
+              </span>
             </div>
             {m.program && (
               <button type="button" className="program-link" onClick={() => openFile(store.repo, m.program!)}>

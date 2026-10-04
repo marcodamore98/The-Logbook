@@ -31,7 +31,12 @@ import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
 
 /** Cards that can be added by hand; training, food and the diary have their own sections. */
-const ADDABLE: ModuleKind[] = ['surgery', 'clinical', 'study', 'course', 'travel', 'outing'];
+const ADDABLE: ModuleKind[] = ['surgery', 'study', 'travel', 'outing'];
+/** Entries that stand for two kinds of card: you pick the exact one inside the card. */
+const MERGED: Partial<Record<ModuleKind, { label: string; hint: string }>> = {
+  surgery: { label: 'Attività chirurgica e clinica', hint: 'Interventi, ambulatorio, ecografie, PS, sala parto' },
+  study: { label: 'Studio, corsi e congressi', hint: 'Articoli, linee guida, corsi, congressi, webinar' },
+};
 
 export default function DayPage() {
   const params = useParams();
@@ -505,8 +510,8 @@ export default function DayPage() {
                 {MODULES.filter((m) => m.area === area && ADDABLE.includes(m.kind)).map((m) => (
                   <button key={m.kind} className="palette-item" onClick={() => addModule(m.kind)}>
                     <m.Icon size={48} />
-                    <span className="palette-label">{m.label}</span>
-                    <span className="palette-hint">{m.hint}</span>
+                    <span className="palette-label">{MERGED[m.kind]?.label ?? m.label}</span>
+                    <span className="palette-hint">{MERGED[m.kind]?.hint ?? m.hint}</span>
                   </button>
                 ))}
               </div>

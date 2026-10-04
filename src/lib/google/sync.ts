@@ -3,7 +3,7 @@
 // negli elementi collegati (reconcile), gli altri eventi sono mostrati in lettura.
 
 import { addDays, minutesOf } from '../dates';
-import type { Appointment, DayEntry, Settings, ShiftAssignment, Todo } from '../types';
+import type { Appointment, CourseModule, DayEntry, Settings, ShiftAssignment, Todo } from '../types';
 import { deleteEvent, eventLocal, hasToken, upsertEvent, type EventInput, type GEvent } from './calendar';
 
 export const SHIFT_KEYS = ['shift', 'guardia'] as const;
@@ -47,6 +47,23 @@ function todoInput(day: DayEntry, t: Todo): EventInput {
   const endT = end >= 1440 ? '23:59' : `${pad(Math.floor(end / 60))}:${pad(end % 60)}`;
   return { kind: 'todo', date: day.date, summary: `${t.done ? '✓ ' : '☐ '}${t.text}`, start: t.time, end: endT };
 }
+
+const COURSE_LABEL = { course: 'Corso', congress: 'Congresso', webinar: 'Webinar' } as const;
+
+function courseInput(m: CourseModule): EventInput {
+  const end = Math.min(minutesOf(m.startTime!) + 60, 23 * 60 + 59);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return {
+    kind: 'course',
+    date: m.startDate,
+    summary: `${COURSE_LABEL[m.type ?? 'course']}: ${m.title || 'senza titolo'}`,
+    start: m.startTime,
+    end: `${pad(Math.floor(end / 60))}:${pad(end % 60)}`,
+    reminders: m.remind ? [30, 5] : [],
+  };
+}
+
+const courses = (d: DayEntry) => d.modules.filter((m): m is CourseModule => m.kind === 'course');
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -97,6 +114,21 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
       t.gcalEventId = await upsertEvent(cal, t.gcalEventId, input);
     }
   }
+  // Courses, congresses and webinars with a start time (with their reminders)
+  for (const m of courses(out)) {
+    if (!m.startTime) {
+      if (m.gcalEventId) {
+        await deleteEvent(cal, m.gcalEventId);
+        m.gcalEventId = undefined;
+      }
+      continue;
+    }
+    const old = prev && courses(prev).find((x) => x.id === m.id);
+    const input = courseInput(m);
+    if (force || !m.gcalEventId || !old?.startTime || !same(input, courseInput(old))) {
+      m.gcalEventId = await upsertEvent(cal, m.gcalEventId, input);
+    }
+  }
   return out;
 }
 
@@ -107,6 +139,7 @@ export function trashRemoved(prev: DayEntry | undefined, next: DayEntry): DayEnt
   for (const k of SHIFT_KEYS) if (next[k]?.gcalEventId) keep.add(next[k]!.gcalEventId!);
   next.appointments.forEach((a) => a.gcalEventId && keep.add(a.gcalEventId));
   next.todos.forEach((t) => t.gcalEventId && keep.add(t.gcalEventId));
+  courses(next).forEach((m) => m.gcalEventId && keep.add(m.gcalEventId));
   const gone: string[] = [];
   for (const k of SHIFT_KEYS) {
     const id = prev[k]?.gcalEventId;
@@ -114,6 +147,7 @@ export function trashRemoved(prev: DayEntry | undefined, next: DayEntry): DayEnt
   }
   prev.appointments.forEach((a) => a.gcalEventId && !keep.has(a.gcalEventId) && gone.push(a.gcalEventId));
   prev.todos.forEach((t) => t.gcalEventId && !keep.has(t.gcalEventId) && gone.push(t.gcalEventId));
+  courses(prev).forEach((m) => m.gcalEventId && !keep.has(m.gcalEventId) && gone.push(m.gcalEventId));
   if (!gone.length) return next;
   return { ...next, gcalTrash: [...new Set([...(next.gcalTrash ?? []), ...gone])] };
 }
@@ -165,6 +199,7 @@ export function linkedIds(days: DayEntry[]): Set<string> {
     for (const k of SHIFT_KEYS) if (d[k]?.gcalEventId) s.add(d[k]!.gcalEventId!);
     d.appointments.forEach((a) => a.gcalEventId && s.add(a.gcalEventId));
     d.todos.forEach((t) => t.gcalEventId && s.add(t.gcalEventId));
+    courses(d).forEach((m) => m.gcalEventId && s.add(m.gcalEventId));
   }
   return s;
 }

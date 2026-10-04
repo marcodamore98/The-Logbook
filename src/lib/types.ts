@@ -146,7 +146,12 @@ export interface FileRef {
 export interface CourseModule {
   kind: 'course';
   id: string;
+  type?: 'course' | 'congress' | 'webinar';
   title: string;
+  startTime?: string; // HH:MM
+  /** Reminder 30 and 5 minutes before the start (Google Calendar + in-app). */
+  remind?: boolean;
+  gcalEventId?: string;
   startDate: ISODate;
   endDate: ISODate;
   program?: FileRef;

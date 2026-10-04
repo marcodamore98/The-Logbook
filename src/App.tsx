@@ -6,6 +6,7 @@ import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconHeart, IconMonth, Icon
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
 import { UndoProvider } from './components/Undo';
+import { useCourseReminders } from './components/useCourseReminders';
 import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
@@ -129,6 +130,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
   useBackClosesOverlays();
   useSheetSwipeDown();
   useRightDrawerSwipe();
+  useCourseReminders();
 
   // Keyboard: keep the focused field visible and give the page room to scroll.
   useEffect(() => {
