@@ -59,15 +59,52 @@ export interface Appointment {
 
 // ---- Modules (schede aggiungibili) ----
 
+/** One procedure done on a patient, with its own role and access route. */
+export interface SurgeryProcedure {
+  id: string;
+  procedureId: string; // vocab.PROCEDURES
+  role: string; // vocab.SURGICAL_ROLES
+  approach: string; // vocab.APPROACHES
+}
+
+/** One patient in the operating room ("Paziente 1, 2…": no identifying data). */
+export interface SurgeryCase {
+  id: string;
+  procedures: SurgeryProcedure[];
+  setting: string; // elezione / urgenza
+  durationMin?: number;
+  tutorId?: string;
+  notes?: string;
+  clavien?: string; // vocab.CLAVIEN
+  complicationNotes?: string;
+}
+
 export interface SurgeryModule {
   kind: 'surgery';
   id: string;
-  procedureId: string;
-  role: string; // vocab.SURGICAL_ROLES
-  approach: string; // vocab.APPROACHES
-  setting: string; // elezione / urgenza
+  cases?: SurgeryCase[];
+  // Entries saved before patients existed: one procedure per card (read through lib/worklog).
+  procedureId?: string;
+  role?: string;
+  approach?: string;
+  setting?: string;
   durationMin?: number;
-  clavien?: string; // vocab.CLAVIEN
+  clavien?: string;
+  tutorId?: string;
+  notes?: string;
+}
+
+export interface ClinicalItem {
+  id: string;
+  activityId: string; // vocab.CLINICAL_ACTIVITIES
+  role?: string; // vocab.CLINICAL_ROLES
+}
+
+/** One patient (or `count` patients with the same activities). */
+export interface ClinicalCase {
+  id: string;
+  items: ClinicalItem[];
+  count?: number;
   tutorId?: string;
   notes?: string;
 }
@@ -75,8 +112,10 @@ export interface SurgeryModule {
 export interface ClinicalModule {
   kind: 'clinical';
   id: string;
-  activityId: string; // vocab.CLINICAL_ACTIVITIES
-  count: number;
+  cases?: ClinicalCase[];
+  // Older entries: one activity with a count.
+  activityId?: string;
+  count?: number;
   notes?: string;
 }
 

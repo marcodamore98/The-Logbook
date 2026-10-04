@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Module, ModuleKind } from '../../lib/types';
-import { APPROACHES, labelOf, SURGICAL_ROLES, CLINICAL_ACTIVITIES, OUTING_TYPES, PROCEDURES, STUDY_TYPES, WORKOUT_TYPES } from '../../lib/vocab';
+import { labelOf, OUTING_TYPES, STUDY_TYPES, WORKOUT_TYPES } from '../../lib/vocab';
+import { clinicalSummary, surgerySummary } from '../../lib/worklog';
 import { IconClinical, IconCourse, IconNote, IconOuting, IconRun, IconTravel, IconPhotos, IconStudy, IconSurgery, IconWorkout } from '../icons';
 import { uid } from '../ui';
 import { fmtDuration, fmtKm, fmtPace } from '../../lib/running/geo';
@@ -27,18 +28,18 @@ export const MODULES: ModuleMeta[] = [
   {
     kind: 'surgery',
     label: 'Attività chirurgica',
-    hint: 'Intervento, ruolo, via d’accesso',
+    hint: 'Pazienti, interventi, ruolo per procedura',
     area: 'lavoro',
     Icon: IconSurgery,
-    create: () => ({ kind: 'surgery', id: uid(), procedureId: '', role: 'assistant', approach: 'laparoscopic', setting: 'elective', clavien: 'none' }),
+    create: () => ({ kind: 'surgery', id: uid(), cases: [{ id: uid(), procedures: [], setting: 'elective' }] }),
   },
   {
     kind: 'clinical',
     label: 'Attività clinica',
-    hint: 'Ambulatorio, ecografie, PS, sala parto',
+    hint: 'Pazienti di ambulatorio, ecografie, PS, sala parto',
     area: 'lavoro',
     Icon: IconClinical,
-    create: () => ({ kind: 'clinical', id: uid(), activityId: 'amb-gin', count: 1 }),
+    create: () => ({ kind: 'clinical', id: uid(), cases: [{ id: uid(), items: [] }] }),
   },
   {
     kind: 'study',
@@ -112,9 +113,9 @@ export const metaOf = (k: ModuleKind) => MODULES.find((m) => m.kind === k)!;
 export function summarize(m: Module): string {
   switch (m.kind) {
     case 'surgery':
-      return [labelOf(PROCEDURES, m.procedureId) || 'Intervento', labelOf(SURGICAL_ROLES, m.role), labelOf(APPROACHES, m.approach)].filter(Boolean).join(' · ');
+      return surgerySummary(m);
     case 'clinical':
-      return `${m.count}× ${labelOf(CLINICAL_ACTIVITIES, m.activityId)}`;
+      return clinicalSummary(m);
     case 'study':
       return `${m.title || labelOf(STUDY_TYPES, m.type)} · ${m.durationMin}′`;
     case 'workout':

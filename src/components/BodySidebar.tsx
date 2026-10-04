@@ -9,6 +9,7 @@ import { fmt } from './charts';
 import { GlyphClose, IconBolt, IconFlame, IconFood, IconScale, IconShift, IconSleep, IconSteps, IconTarget, IconWater, IconWorkout } from './icons';
 import { NumberInput, useCollapsible, Chevron } from './ui';
 import { BodyFatCalc } from './BodyFatCalc';
+import { clinicalTotals, surgeryTotals } from '../lib/worklog';
 
 type FieldDef = { key: keyof BodyLog; label: string; unit: string; step: number; goal?: keyof BodyGoals; Icon: (p: { size?: number }) => React.ReactElement };
 
@@ -127,8 +128,8 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
     return settings.shiftTypes.find((t) => t.id === sh.shiftTypeId)?.countsAsWork === false ? n : n + shiftMinutes(sh.start, sh.end) / 60;
   }, 0);
   const workouts = day.modules.filter((m) => m.kind === 'workout');
-  const surgeries = day.modules.filter((m) => m.kind === 'surgery' && m.procedureId).length;
-  const clinical = day.modules.reduce((n, m) => n + (m.kind === 'clinical' ? m.count : 0), 0);
+  const surgeries = surgeryTotals(day.modules).patients;
+  const clinical = clinicalTotals(day.modules).activities;
   const study = day.modules.reduce((n, m) => n + (m.kind === 'study' ? m.durationMin : 0), 0);
   const intake = dayIntake(day);
   const balance = intake.kcal !== undefined && body.kcalOut !== undefined ? intake.kcal - body.kcalOut : undefined;

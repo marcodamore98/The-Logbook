@@ -18,6 +18,7 @@ import {
 import { eventLocal } from '../lib/google/calendar';
 import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, ISODate, ModuleKind } from '../lib/types';
+import { surgeryTotals } from '../lib/worklog';
 
 /** Month · Week · Day switch at the top of the calendar pages. */
 function CalSwitch({ view, date }: { view: 'mese' | 'settimana'; date: ISODate }) {
@@ -134,7 +135,7 @@ export function MonthPage() {
     ['lav', count((d) => (d.shift ? 1 : 0)), 'Turni'],
     ['coral', count((d) => (d.guardia ? 1 : 0)), 'Guardie'],
     ['lime', count((d) => d.modules.filter((m) => m.kind === 'workout' || m.kind === 'run').length), 'Allenamenti'],
-    ['sky', count((d) => d.modules.filter((m) => m.kind === 'surgery').length), 'Interventi'],
+    ['sky', count((d) => surgeryTotals(d.modules).patients), 'Interventi'],
     ['amber', count((d) => d.modules.filter((m) => m.kind === 'course').length), 'Corsi e congressi'],
   ];
   const sel = picked ? store.day(picked) : null;

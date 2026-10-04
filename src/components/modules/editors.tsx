@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import { WorkoutLogger } from '../training/WorkoutLogger';
 import type {
-  ClinicalModule,
   Module,
   CourseModule,
   NoteModule,
@@ -10,100 +9,23 @@ import type {
   OutingModule,
   PhotoModule,
   StudyModule,
-  SurgeryModule,
   ISODate,
 } from '../../lib/types';
 import {
-  APPROACHES,
   CATEGORIES,
-  CLAVIEN,
-  CLINICAL_ACTIVITIES,
   OUTING_TYPES,
-  PROCEDURES,
-  SETTINGS_URGENCY,
   STUDY_AREAS,
   STUDY_TYPES,
-  SURGICAL_ROLES,
 } from '../../lib/vocab';
 import { GlyphPlus, GlyphTrash } from '../icons';
 import { FileSlot } from '../files/FileSlot';
 import { metaOf } from './meta';
-import { ChipChoice, Field, NumberInput, TimeTile, uid, VocabSelect } from '../ui';
+import { ClinicalEditor, SurgeryEditor } from './WorkLogEditors';
+import { useUndo } from '../Undo';
+import { Field, NumberInput, TimeTile, uid, VocabSelect } from '../ui';
 import { DurationField } from '../WheelPicker';
-import type { VocabItem } from '../../lib/vocab';
 
 type Props<M> = { value: M; onChange: (m: M) => void };
-
-function SurgeryEditor({ value: m, onChange }: Props<SurgeryModule>) {
-  const { settings } = useStore();
-  const set = (p: Partial<SurgeryModule>) => onChange({ ...m, ...p });
-  return (
-    <div className="grid">
-      <Field label="Intervento / procedura" wide>
-        <SearchPick items={PROCEDURES} value={m.procedureId} onChange={(procedureId) => set({ procedureId })} placeholder="Cerca intervento…" />
-      </Field>
-      <Field label="Ruolo in sala" wide>
-        <ChipChoice label="Ruolo in sala" items={SURGICAL_ROLES} value={m.role} onChange={(role) => set({ role })} />
-      </Field>
-      <Field label="Via d’accesso" wide>
-        <ChipChoice label="Via d’accesso" items={APPROACHES} value={m.approach} onChange={(approach) => set({ approach })} />
-      </Field>
-      <Field label="Regime">
-        <VocabSelect items={SETTINGS_URGENCY} value={m.setting} onChange={(setting) => set({ setting })} />
-      </Field>
-      <Field label="Durata">
-        <DurationField unit="min" label="Durata dell’intervento" value={m.durationMin} onChange={(durationMin) => set({ durationMin: durationMin || undefined })} />
-      </Field>
-      <div className="field field-wide compl-box">
-        <label className="switch-row">
-          <span>Complicanze</span>
-          <input
-            type="checkbox"
-            role="switch"
-            className="switch"
-            checked={!!m.clavien && m.clavien !== 'none'}
-            onChange={(e) => set({ clavien: e.target.checked ? 'I' : 'none' })}
-          />
-        </label>
-        {m.clavien && m.clavien !== 'none' && (
-          <Field label="Grado Clavien-Dindo">
-            <VocabSelect items={CLAVIEN.filter((c) => c.id !== 'none')} value={m.clavien} onChange={(clavien) => set({ clavien })} />
-          </Field>
-        )}
-      </div>
-      <Field label="Tutor / primo operatore">
-        <select value={m.tutorId ?? ''} onChange={(e) => set({ tutorId: e.target.value || undefined })}>
-          <option value="">—</option>
-          {settings.colleagues.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Note (senza dati identificativi della paziente)" wide>
-        <textarea rows={2} value={m.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
-      </Field>
-    </div>
-  );
-}
-
-function ClinicalEditor({ value: m, onChange }: Props<ClinicalModule>) {
-  const set = (p: Partial<ClinicalModule>) => onChange({ ...m, ...p });
-  return (
-    <div className="grid">
-      <Field label="Attività" wide>
-        <VocabSelect items={CLINICAL_ACTIVITIES} value={m.activityId} onChange={(activityId) => set({ activityId })} />
-      </Field>
-      <Field label="Numero">
-        <NumberInput value={m.count} min={1} onChange={(n) => set({ count: n ?? 1 })} />
-      </Field>
-      <Field label="Note" wide>
-        <textarea rows={2} value={m.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
-      </Field>
-    </div>
-  );
-}
 
 function StudyEditor({ value: m, onChange }: Props<StudyModule>) {
   const set = (p: Partial<StudyModule>) => onChange({ ...m, ...p });
@@ -376,6 +298,7 @@ const KIND_GROUPS: { kinds: Module['kind'][]; labels: string[] }[] = [
 ];
 
 export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: ISODate }) {
+  const offerUndo = useUndo();
   const group = KIND_GROUPS.find((g) => g.kinds.includes(value.kind));
   const editor = <KindEditor value={value} onChange={onChange} date={date} />;
   if (!group) return editor;
@@ -389,7 +312,11 @@ export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: 
             role="tab"
             aria-selected={value.kind === k}
             className={value.kind === k ? 'on' : ''}
-            onClick={() => value.kind !== k && onChange({ ...metaOf(k).create(date), id: value.id } as Module)}
+            onClick={() => {
+              if (value.kind === k) return;
+              onChange({ ...metaOf(k).create(date), id: value.id } as Module);
+              offerUndo(`Scheda cambiata in ${group.labels[i]}`, () => onChange(value));
+            }}
           >
             {group.labels[i]}
           </button>
@@ -423,65 +350,6 @@ function KindEditor({ value, onChange, date }: Props<Module> & { date: ISODate }
     case 'note':
       return <NoteEditor value={value} onChange={onChange} />;
   }
-}
-
-/** Pick one item by typing part of its name (long lists like the procedures). */
-function SearchPick({ items, value, onChange, placeholder }: { items: VocabItem[]; value: string | undefined; onChange: (id: string) => void; placeholder?: string }) {
-  const label = items.find((i) => i.id === value)?.label ?? '';
-  const [text, setText] = useState(label);
-  const [open, setOpen] = useState(false);
-  const latest = useRef(label);
-  latest.current = label;
-  useEffect(() => setText(label), [label]);
-  const q = text.trim().toLowerCase();
-  const hits = open ? items.filter((i) => !q || q === label.toLowerCase() || i.label.toLowerCase().includes(q)).slice(0, 8) : [];
-  return (
-    <div className="search-pick">
-      <span className="icon-input">
-        <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-          <circle cx="11" cy="11" r="6.5" />
-          <path d="M16 16l4.5 4.5" />
-        </svg>
-        <input
-          value={text}
-          placeholder={placeholder}
-          onFocus={(e) => {
-            setOpen(true);
-            e.target.select();
-          }}
-          onBlur={() => window.setTimeout(() => {
-            setOpen(false);
-            setText(latest.current);
-          }, 150)}
-          onChange={(e) => setText(e.target.value)}
-        />
-      </span>
-      {hits.length > 0 && (
-        <ul className="search-hits" role="listbox">
-          {hits.map((i) => (
-            <li key={i.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={i.id === value}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  onChange(i.id);
-                  latest.current = i.label;
-                  setText(i.label);
-                  setOpen(false);
-                  (document.activeElement as HTMLElement | null)?.blur();
-                }}
-              >
-                {i.label}
-                {i.group && <small>{i.group}</small>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
 }
 
 /** Names as pills with ×; type a name and press Invio (or leave the field) to add it. */

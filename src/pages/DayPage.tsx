@@ -38,6 +38,7 @@ import { diaryOf, withDiary } from '../lib/diary';
 import { eventLocal } from '../lib/google/calendar';
 import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
+import { clinicalTotals, surgeryTotals } from '../lib/worklog';
 
 /** Cards that can be added by hand; training, food and the diary have their own sections. */
 /** Small label above each card title, by block. */
@@ -683,16 +684,17 @@ export default function DayPage() {
 
 /** Key numbers of the day's clinical work, above the surgery/clinical cards. */
 function WorkTiles({ day }: { day: DayEntry }) {
-  const surg = day.modules.filter((m) => m.kind === 'surgery');
-  const clin = day.modules.filter((m) => m.kind === 'clinical');
-  if (!surg.length && !clin.length) return null;
-  const minutes = surg.reduce((n, m) => n + (m.kind === 'surgery' ? m.durationMin ?? 0 : 0), 0);
-  const compl = surg.filter((m) => m.kind === 'surgery' && m.clavien && m.clavien !== 'none').length;
+  const s = surgeryTotals(day.modules);
+  const c = clinicalTotals(day.modules);
+  if (!s.patients && !c.patients) return null;
+  const minutes = s.minutes;
   const tiles: [string, string, boolean?][] = [];
-  if (surg.length) tiles.push(['Interventi', String(surg.length), true]);
-  if (clin.length) tiles.push(['Prestazioni', String(clin.reduce((n, m) => n + (m.kind === 'clinical' ? m.count : 0), 0)), !surg.length]);
+  if (s.patients) tiles.push(['Interventi', String(s.patients), true]);
+  if (s.procedures > s.patients) tiles.push(['Procedure', String(s.procedures)]);
+  if (c.patients) tiles.push(['Pazienti in clinica', String(c.patients), !s.patients]);
+  if (c.activities > c.patients) tiles.push(['Prestazioni', String(c.activities)]);
   if (minutes) tiles.push(['Tempo operatorio', minutes >= 60 ? `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m` : `${minutes}m`]);
-  if (surg.length) tiles.push(['Complicanze', String(compl)]);
+  if (s.patients) tiles.push(['Complicanze', String(s.complications)]);
   return (
     <div className="stat-tiles">
       {tiles.map(([label, value, hi]) => (

@@ -4,10 +4,12 @@ import { dayFoodTotals, dayIntake } from './nutrition/foods';
 import { countsSet, setsPerMuscle, setVolume } from './training/analytics';
 import { exerciseDef } from './training/exercises';
 import type { DayEntry, ISODate, Settings } from './types';
+import { clinicalCases, surgeryCases, surgeryTotals } from './worklog';
 import {
   APPROACHES,
   CLAVIEN,
   CLINICAL_ACTIVITIES,
+  CLINICAL_ROLES,
   labelOf,
   OUTING_TYPES,
   PROCEDURES,
@@ -28,8 +30,8 @@ export interface Count {
 export interface Stats {
   days: number;
   work: { shifts: number; hours: number; nights: number; byType: Count[]; colleagues: Count[] };
-  surgery: { total: number; byGroup: Count[]; byProcedure: Count[]; byRole: Count[]; byApproach: Count[]; bySetting: Count[]; complications: number; minutes: number };
-  clinical: { total: number; byActivity: Count[] };
+  surgery: { total: number; patients: number; byGroup: Count[]; byProcedure: Count[]; byRole: Count[]; byApproach: Count[]; bySetting: Count[]; complications: number; minutes: number };
+  clinical: { total: number; patients: number; byActivity: Count[]; byRole: Count[] };
   study: { minutes: number; byArea: Count[]; byType: Count[] };
   workout: { sessions: number; minutes: number; volumeKg: number; km: number; sets: number; byType: Count[]; byExercise: Count[] };
   outings: { total: number; byType: Count[] };
@@ -69,12 +71,12 @@ const by = (list: VocabItem[]) => (id: string) => labelOf(list, id);
 export function computeStats(days: DayEntry[], settings: Settings): Stats {
   const shiftT = new Tally(), colleagues = new Tally();
   const sGroup = new Tally(), sProc = new Tally(), sRole = new Tally(), sAppr = new Tally(), sSet = new Tally();
-  const clin = new Tally(), stArea = new Tally(), stType = new Tally(), wType = new Tally(), wEx = new Tally(), oType = new Tally(), runMode = new Tally();
+  const clin = new Tally(), clinRole = new Tally(), stArea = new Tally(), stType = new Tally(), wType = new Tally(), wEx = new Tally(), oType = new Tally(), runMode = new Tally();
   const s: Stats = {
     days: days.length,
     work: { shifts: 0, hours: 0, nights: 0, byType: [], colleagues: [] },
-    surgery: { total: 0, byGroup: [], byProcedure: [], byRole: [], byApproach: [], bySetting: [], complications: 0, minutes: 0 },
-    clinical: { total: 0, byActivity: [] },
+    surgery: { total: 0, patients: 0, byGroup: [], byProcedure: [], byRole: [], byApproach: [], bySetting: [], complications: 0, minutes: 0 },
+    clinical: { total: 0, patients: 0, byActivity: [], byRole: [] },
     study: { minutes: 0, byArea: [], byType: [] },
     workout: { sessions: 0, minutes: 0, volumeKg: 0, km: 0, sets: 0, byType: [], byExercise: [] },
     outings: { total: 0, byType: [] },
@@ -136,20 +138,36 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
     for (const m of d.modules) {
       switch (m.kind) {
         case 'surgery': {
-          if (!m.procedureId) break;
-          s.surgery.total++;
-          sGroup.add(PROCEDURES.find((p) => p.id === m.procedureId)?.group ?? 'Altro');
-          sProc.add(m.procedureId);
-          sRole.add(m.role);
-          sAppr.add(m.approach);
-          sSet.add(m.setting);
-          if (m.clavien && m.clavien !== 'none') s.surgery.complications++;
-          s.surgery.minutes += m.durationMin ?? 0;
+          // Every procedure counts on its own (with its role); duration and complications are per patient.
+          for (const c of surgeryCases(m)) {
+            const ps = c.procedures.filter((p) => p.procedureId);
+            if (!ps.length) continue;
+            sSet.add(c.setting);
+            for (const p of ps) {
+              s.surgery.total++;
+              sGroup.add(PROCEDURES.find((x) => x.id === p.procedureId)?.group ?? 'Altro');
+              sProc.add(p.procedureId);
+              sRole.add(p.role);
+              sAppr.add(p.approach);
+            }
+          }
+          const t = surgeryTotals([m]);
+          s.surgery.patients += t.patients;
+          s.surgery.complications += t.complications;
+          s.surgery.minutes += t.minutes;
           break;
         }
         case 'clinical':
-          s.clinical.total += m.count;
-          clin.add(m.activityId, m.count);
+          for (const c of clinicalCases(m)) {
+            if (!c.items.length) continue;
+            const n = c.count ?? 1;
+            s.clinical.patients += n;
+            for (const it of c.items) {
+              s.clinical.total += n;
+              clin.add(it.activityId, n);
+              if (it.role) clinRole.add(it.role, n);
+            }
+          }
           break;
         case 'study':
           s.study.minutes += m.durationMin;
@@ -213,6 +231,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   s.surgery.byApproach = sAppr.list(by(APPROACHES));
   s.surgery.bySetting = sSet.list(by(SETTINGS_URGENCY));
   s.clinical.byActivity = clin.list(by(CLINICAL_ACTIVITIES));
+  s.clinical.byRole = clinRole.list(by(CLINICAL_ROLES));
   s.study.byArea = stArea.list(by(STUDY_AREAS));
   s.study.byType = stType.list(by(STUDY_TYPES));
   s.workout.byType = wType.list(by(WORKOUT_TYPES));
@@ -240,7 +259,7 @@ export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Se
   if (!day) return 0;
   switch (metric) {
     case 'surgery':
-      return day.modules.filter((m) => m.kind === 'surgery' && m.procedureId).length;
+      return surgeryTotals(day.modules).patients;
     case 'hours': {
       return [day.shift, day.guardia].reduce((n, sh) => {
         if (!sh) return n;
@@ -264,22 +283,31 @@ export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Se
 /** Surgical logbook as CSV (one row per procedure), for the specialty school's records. */
 export function surgeryCsv(days: DayEntry[], settings: Settings): string {
   const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows = [['Data', 'Gruppo', 'Intervento', 'Ruolo', 'Via d’accesso', 'Regime', 'Durata (min)', 'Complicanze', 'Tutor', 'Note']];
+  const rows = [['Data', 'Paziente', 'Gruppo', 'Intervento', 'Ruolo', 'Via d’accesso', 'Regime', 'Durata (min)', 'Complicanze', 'Descrizione complicanza', 'Tutor', 'Note']];
   for (const d of [...days].sort((a, b) => a.date.localeCompare(b.date))) {
+    let n = 0; // patients are numbered through the whole day
     for (const m of d.modules) {
-      if (m.kind !== 'surgery' || !m.procedureId) continue;
-      rows.push([
-        d.date,
-        PROCEDURES.find((p) => p.id === m.procedureId)?.group ?? '',
-        labelOf(PROCEDURES, m.procedureId),
-        labelOf(SURGICAL_ROLES, m.role),
-        labelOf(APPROACHES, m.approach),
-        labelOf(SETTINGS_URGENCY, m.setting),
-        String(m.durationMin ?? ''),
-        labelOf(CLAVIEN, m.clavien),
-        settings.colleagues.find((c) => c.id === m.tutorId)?.name ?? '',
-        m.notes ?? '',
-      ]);
+      if (m.kind !== 'surgery') continue;
+      for (const c of surgeryCases(m)) {
+        const ps = c.procedures.filter((p) => p.procedureId);
+        if (!ps.length) continue;
+        n++;
+        for (const p of ps)
+          rows.push([
+            d.date,
+            `Paziente ${n}`,
+            PROCEDURES.find((x) => x.id === p.procedureId)?.group ?? '',
+            labelOf(PROCEDURES, p.procedureId),
+            labelOf(SURGICAL_ROLES, p.role),
+            labelOf(APPROACHES, p.approach),
+            labelOf(SETTINGS_URGENCY, c.setting),
+            String(c.durationMin ?? ''),
+            labelOf(CLAVIEN, c.clavien ?? 'none'),
+            c.complicationNotes ?? '',
+            settings.colleagues.find((x) => x.id === c.tutorId)?.name ?? '',
+            c.notes ?? '',
+          ]);
+      }
     }
   }
   return '﻿' + rows.map((r) => r.map(esc).join(';')).join('\n');

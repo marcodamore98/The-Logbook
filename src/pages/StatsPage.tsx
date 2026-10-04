@@ -186,11 +186,11 @@ export default function StatsPage() {
             <IconSurgery size={26} />
             <span className="bt-cat">Chirurgia</span>
           </span>
-          <span className="bt-value">{stats.surgery.total}</span>
-          <span className="bt-label">interventi</span>
+          <span className="bt-value">{stats.surgery.patients}</span>
+          <span className="bt-label">interventi · {stats.surgery.total} procedure</span>
           {stats.surgery.total > 0 && (
             <span className="bt-pill">
-              {firstOp} da primo ({fmt(firstOp / stats.surgery.total * 100)}%)
+              {firstOp} procedure da primo ({fmt(firstOp / stats.surgery.total * 100)}%)
             </span>
           )}
         </div>
@@ -199,8 +199,8 @@ export default function StatsPage() {
             <IconClinical size={26} />
             <span className="bt-cat">Clinica</span>
           </span>
-          <span className="bt-value">{stats.clinical.total}</span>
-          <span className="bt-label">prestazioni cliniche</span>
+          <span className="bt-value">{stats.clinical.patients}</span>
+          <span className="bt-label">pazienti · {stats.clinical.total} prestazioni</span>
         </div>
         <div className="bento-tile" data-print="lavoro">
           <span className="bt-head">
@@ -259,7 +259,7 @@ export default function StatsPage() {
             {stats.categories.todosTotal > 0 && <Ring value={stats.categories.todosDone} of={stats.categories.todosTotal} label="Promemoria completati" color={PALETTE[3]} />}
             {stats.nutrition.days > 0 && store.settings.goals?.kcalIn && <Ring value={stats.nutrition.daysOnKcal} of={stats.nutrition.days} label="Giorni nel target calorico" color={PALETTE[2]} />}
             {stats.nutrition.days > 0 && store.settings.goals?.proteinG && <Ring value={stats.nutrition.daysOnProtein} of={stats.nutrition.days} label="Giorni con proteine" color={PALETTE[4]} />}
-            {stats.surgery.total > 0 && <Ring value={firstOp} of={stats.surgery.total} label="Interventi da primo operatore" color={PALETTE[0]} />}
+            {stats.surgery.total > 0 && <Ring value={firstOp} of={stats.surgery.total} label="Procedure da primo operatore" color={PALETTE[0]} />}
           </div>
         </div>
       </section>
@@ -318,13 +318,13 @@ export default function StatsPage() {
           ) : (
             <p className="muted small">Nessun dato nel periodo.</p>
           )}
-          <h3 className="sub">Interventi più frequenti</h3>
+          <h3 className="sub">Procedure più frequenti</h3>
           <BarList data={stats.surgery.byProcedure} />
           <h3 className="sub">Ruolo</h3>
           <BarList data={stats.surgery.byRole} />
           {stats.surgery.total > 0 && (
             <p className="muted small">
-              Complicanze: {stats.surgery.complications} ({fmt((stats.surgery.complications / stats.surgery.total) * 100, 1)}%) · tempo operatorio{' '}
+              Complicanze: {stats.surgery.complications} su {stats.surgery.patients} pazienti ({fmt((stats.surgery.complications / Math.max(1, stats.surgery.patients)) * 100, 1)}%) · tempo operatorio{' '}
               {fmt(stats.surgery.minutes / 60, 1)} h
             </p>
           )}
@@ -345,6 +345,12 @@ export default function StatsPage() {
             <h2>Attività clinica</h2>
           </div>
           <Donut data={stats.clinical.byActivity} />
+          {stats.clinical.byRole.length > 0 && (
+            <>
+              <h3 className="sub">Ruolo</h3>
+              <BarList data={stats.clinical.byRole} />
+            </>
+          )}
         </section>
         <section className="card" data-print="lavoro">
           <div className="card-head">
