@@ -9,6 +9,7 @@ import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, Wor
 import { GlyphCheck, GlyphPlus, IconTimer } from '../icons';
 import { AutoText, NumberInput, uid } from '../ui';
 import { useUndo } from '../Undo';
+import { useBlockDrag } from '../useBlockDrag';
 import { ExAvatar } from './ExAvatar';
 import { FinishFlow } from './FinishFlow';
 import { ExerciseDetail } from './ExerciseDetail';
@@ -44,9 +45,36 @@ export function unlink<T extends { supersetId?: string }>(list: T[], i: number):
   return out;
 }
 
-export function SetTypeBadge({ type, index, onChange }: { type: SetType; index: number; onChange: (t: SetType) => void }) {
+/** Warm-up sets only at the start: a warm-up after a working set becomes a normal set. */
+export function warmupsFirst<T extends { type?: SetType; warmup?: boolean }>(sets: T[]): T[] {
+  let working = false;
+  return sets.map((x) => {
+    const isWarm = (x.type ?? (x.warmup ? 'warmup' : 'normal')) === 'warmup';
+    if (!isWarm) working = true;
+    return isWarm && working ? { ...x, type: 'normal' as SetType, warmup: undefined } : x;
+  });
+}
+
+/** Supersets must stay side by side: after a move, a split group is dissolved. */
+export function keepSupersets<T extends { supersetId?: string }>(list: T[]): T[] {
+  const broken = new Set<string>();
+  const seen = new Map<string, number>();
+  list.forEach((e, i) => {
+    if (!e.supersetId) return;
+    const last = seen.get(e.supersetId);
+    if (last !== undefined && last !== i - 1) broken.add(e.supersetId);
+    seen.set(e.supersetId, i);
+  });
+  const counts = new Map<string, number>();
+  list.forEach((e) => e.supersetId && counts.set(e.supersetId, (counts.get(e.supersetId) ?? 0) + 1));
+  return list.map((e) => (e.supersetId && (broken.has(e.supersetId) || counts.get(e.supersetId)! < 2) ? { ...e, supersetId: undefined } : e));
+}
+
+/** Tap cycles the set type; "W" (warm-up) is offered only while all earlier sets are warm-ups. */
+export function SetTypeBadge({ type, index, onChange, allowWarmup = true }: { type: SetType; index: number; onChange: (t: SetType) => void; allowWarmup?: boolean }) {
   const meta = SET_TYPES.find((t) => t.id === type)!;
-  const next = SET_TYPES[(SET_TYPES.findIndex((t) => t.id === type) + 1) % SET_TYPES.length].id;
+  const cycle = SET_TYPES.filter((t) => allowWarmup || t.id !== 'warmup' || t.id === type);
+  const next = cycle[(cycle.findIndex((t) => t.id === type) + 1) % cycle.length].id;
   return (
     <button type="button" className={`set-badge set-${type}`} title={`${meta.label} (tocca per cambiare)`} onClick={() => onChange(next)}>
       {meta.short || index}
@@ -69,12 +97,14 @@ function SetRow({
   prevSet,
   prs,
   locked,
+  allowWarmup,
   onChange,
   onDone,
   onRemove,
 }: {
   s: WorkoutSet;
   n: number;
+  allowWarmup: boolean;
   def: ExerciseDef;
   prevSet?: WorkoutSet;
   prs: string[];
@@ -121,7 +151,7 @@ function SetRow({
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <SetTypeBadge type={type} index={n} onChange={(t) => onChange({ ...s, type: t, warmup: undefined })} />
+        <SetTypeBadge type={type} index={n} allowWarmup={allowWarmup} onChange={(t) => onChange({ ...s, type: t, warmup: undefined })} />
         <button type="button" className="prev-btn" title="Copia valori precedenti" onClick={() => prevSet && onChange({ ...s, kg: prevSet.kg, reps: prevSet.reps, seconds: prevSet.seconds })}>
           {prevLabel(prevSet, def)}
         </button>
@@ -161,6 +191,7 @@ function ExerciseBlock({
   onChange,
   onMove,
   onRemove,
+  onReplace,
   onLink,
   onUnlink,
   onSetDone,
@@ -174,6 +205,7 @@ function ExerciseBlock({
   onChange: (e: WorkoutExercise) => void;
   onMove: (d: -1 | 1) => void;
   onRemove: () => void;
+  onReplace: () => void;
   onLink: () => void;
   onUnlink: () => void;
   /** Called instead of onChange when a set gets ticked, so the parent can start timers in the same update. */
@@ -184,7 +216,7 @@ function ExerciseBlock({
   const def = exerciseDef(ex.exerciseId, settings.exercises);
   const prev = previousSession(history, ex.exerciseId, workout.id, date);
   const bests = bestsBefore(history, ex.exerciseId, workout.id, date);
-  const setAt = (k: number, s: WorkoutSet) => onChange({ ...ex, sets: ex.sets.map((x, i) => (i === k ? s : x)) });
+  const setAt = (k: number, s: WorkoutSet) => onChange({ ...ex, sets: warmupsFirst(ex.sets.map((x, i) => (i === k ? s : x))) });
   const [menu, setMenu] = useState(false);
   const [info, setInfo] = useState(false);
   let n = 0;
@@ -206,6 +238,9 @@ function ExerciseBlock({
             <>
               <div className="menu-cover" onClick={() => setMenu(false)} />
               <ul className="menu" role="menu">
+                <li>
+                  <button role="menuitem" onClick={() => { setMenu(false); onReplace(); }}>Sostituisci esercizio</button>
+                </li>
                 {index > 0 && (
                   <li>
                     <button role="menuitem" onClick={() => { onMove(-1); setMenu(false); }}>Sposta su</button>
@@ -271,10 +306,11 @@ function ExerciseBlock({
               def={def}
               prevSet={p}
               prs={prsOf(s, bests)}
+              allowWarmup={ex.sets.slice(0, k).every((x) => setTypeOf(x) === 'warmup')}
               locked={s.done ? ex.sets.slice(k + 1).some((x) => x.done) : ex.sets.slice(0, k).some((x) => !x.done)}
               onChange={(ns) => setAt(k, ns)}
               onRemove={() => {
-                onChange({ ...ex, sets: ex.sets.filter((_, i) => i !== k) });
+                onChange({ ...ex, sets: warmupsFirst(ex.sets.filter((_, i) => i !== k)) });
                 offerUndo('Serie eliminata', () => onChange(ex));
               }}
               onDone={() => {
@@ -307,7 +343,9 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
   const { settings, history } = store;
   const timer = useRestTimer();
   const [picking, setPicking] = useState(false);
+  const [replacing, setReplacing] = useState<number | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const offerUndo = useUndo();
   const [, tick] = useState(0);
   const set = (p: Partial<WorkoutModule>) => onChange({ ...w, ...p });
   const running = !!w.startedAt && !w.finishedAt;
@@ -324,11 +362,20 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
   }, [running]);
 
   const setExercises = (exercises: WorkoutExercise[]) => set({ exercises });
+  // Hold an exercise's header and drag it, like the cards of the day page.
+  const order = w.exercises.map((_, i) => String(i));
+  const { drag, settling, onPointerDown } = useBlockDrag(order, (o) => setExercises(keepSupersets(o.map((k) => w.exercises[Number(k)]))), { attr: 'ex', handle: '.exercise-head' });
+  /** Sets for an exercise just added or swapped in: last session's sets when there is one. */
+  const freshSets = (exerciseId: string, fallback?: WorkoutSet[]): WorkoutSet[] => {
+    const prev = previousSession(history, exerciseId, w.id, date);
+    if (prev?.sets.length) return prev.sets.map((s) => ({ type: setTypeOf(s), reps: s.reps, kg: s.kg, seconds: s.seconds, done: false }));
+    return fallback?.length ? fallback.map((s) => ({ type: setTypeOf(s), reps: s.reps, done: false })) : [{ type: 'normal', reps: 0, done: false }];
+  };
   const volume = workoutVolume(w);
   const sets = workingSets(w);
 
   return (
-    <div className="workout">
+    <div className={`workout${drag ? ' is-dragging' : ''}`} onPointerDown={onPointerDown}>
       <div className="workout-bar hevy-bar">
         <div className="stat">
           <span className="stat-cap">Durata</span>
@@ -343,9 +390,18 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
           <span className="stat-val">{sets}</span>
         </div>
       </div>
-      {w.exercises.map((ex, i) => (
-        <ExerciseBlock
+      {w.exercises.map((ex, i) => {
+        const id = String(i);
+        const me = drag?.id === id;
+        const shift = drag && !me ? drag.shifts[id] ?? 0 : 0;
+        return (
+        <div
           key={i}
+          data-ex={id}
+          className={`blk ex-blk${me ? ' dragging' : ''}${drag && !me ? ' shifting' : ''}${settling ? ' settling' : ''}`}
+          style={me ? { transform: `translate3d(0, ${drag!.dy}px, 0) scale(1.02)` } : shift ? { transform: `translate3d(0, ${shift}px, 0)` } : undefined}
+        >
+        <ExerciseBlock
           ex={ex}
           index={i}
           count={w.exercises.length}
@@ -355,6 +411,7 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
           onChange={(e) => setExercises(w.exercises.map((x, k) => (k === i ? e : x)))}
           onMove={(d) => setExercises(move(w.exercises, i, d))}
           onRemove={() => setExercises(unlink(w.exercises, i).filter((_, k) => k !== i))}
+          onReplace={() => setReplacing(i)}
           onLink={() => setExercises(linkNext(w.exercises, i))}
           onUnlink={() => setExercises(unlink(w.exercises, i))}
           onSetDone={(e) => {
@@ -366,7 +423,9 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
             timer.start(ex.restSec ?? 90, exerciseDef(ex.exerciseId, settings.exercises).name);
           }}
         />
-      ))}
+        </div>
+        );
+      })}
 
       <button type="button" className="add-ex" onClick={() => setPicking(true)}>
         <GlyphPlus /> Aggiungi esercizi
@@ -407,14 +466,22 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
             setPicking(false);
             setExercises([
               ...w.exercises,
-              ...ids.map((exerciseId) => {
-                const prev = previousSession(history, exerciseId, w.id, date);
-                const sets: WorkoutSet[] = prev?.sets.length
-                  ? prev.sets.map((s) => ({ type: setTypeOf(s), reps: s.reps, kg: s.kg, seconds: s.seconds, done: false }))
-                  : [{ type: 'normal', reps: 0, done: false }];
-                return { exerciseId, sets, restSec: 90 };
-              }),
+              ...ids.map((exerciseId) => ({ exerciseId, sets: freshSets(exerciseId), restSec: 90 })),
             ]);
+          }}
+        />
+      )}
+      {replacing !== null && (
+        <ExercisePicker
+          onClose={() => setReplacing(null)}
+          onPick={([exerciseId]) => {
+            const i = replacing;
+            setReplacing(null);
+            const old = w.exercises[i];
+            if (!exerciseId || !old || exerciseId === old.exerciseId) return;
+            // Same place, rest and superset; the sets come from the new exercise's last session.
+            setExercises(w.exercises.map((x, k) => (k === i ? { ...x, exerciseId, sets: freshSets(exerciseId, x.sets), notes: undefined } : x)));
+            offerUndo(`Sostituito con ${exerciseDef(exerciseId, settings.exercises).name}`, () => setExercises(w.exercises));
           }}
         />
       )}

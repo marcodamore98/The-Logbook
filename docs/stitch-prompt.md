@@ -112,8 +112,8 @@ Exercise detail sheet: initials avatar, label DETTAGLIO ESERCIZIO, "Panca piana 
 ```
 Screen: active workout (dark mode). Header: back chevron, big bold editable title "Push" (tap to edit, a ✓ to confirm), date below, trash icon.
 A stats row with three columns: "Durata 0:42:10", "Volume 4.300 kg", "Serie 18".
-Exercise blocks: round avatar, exercise name in lime (tappable → detail sheet), "⋮" menu, an auto-growing notes field, a single line "Riposo: 2 min 30 s ▾".
-Set table columns: SERIE · PRECEDENTE · KG · RIP · ✓. Completed rows lime-tinted with a lime check; a small gold crown on a personal record. One row swiped left revealing a coral "Elimina". Sets must be ticked in order.
+Exercise blocks: round avatar, exercise name in lime (tappable → detail sheet), "⋮" menu (Sostituisci esercizio, Sposta su/giù, Superserie con il successivo, coral Rimuovi esercizio), an auto-growing notes field, a single line "Riposo: 2 min 30 s ▾". Holding an exercise header lifts the whole block (slight scale and shadow) and it can be dragged to a new place while the others slide aside, like the day-page cards; the routine editor works the same way and has a "⇄" replace button.
+Set table columns: SERIE · PRECEDENTE · KG · RIP · ✓. The amber "W" warm-up badge only appears on the first sets (never after a working set); tapping a badge cycles 1 → D → F. Completed rows lime-tinted with a lime check; a small gold crown on a personal record. One row swiped left revealing a coral "Elimina". Sets must be ticked in order.
 Below the last exercise: "+ Aggiungi esercizi" and, at the very bottom, the lime "Termina" pill.
 Floating at the bottom: a dark rest bar "Recupero 1:29" with −15 / +15 / × and a thin lime progress line; dragged up it becomes a full-screen stopwatch.
 ```

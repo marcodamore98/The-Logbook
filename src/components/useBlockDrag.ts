@@ -22,7 +22,10 @@ export interface DragState {
  * always shows where the block will land. A short touch still taps and a normal swipe
  * still scrolls the page.
  */
-export function useBlockDrag(order: string[], onReorder: (order: string[]) => void) {
+export function useBlockDrag(order: string[], onReorder: (order: string[]) => void, opts: { attr?: string; handle?: string } = {}) {
+  // `attr`: the data attribute holding each item's id ("block" → data-block); `handle`: where a long press starts a drag.
+  const attr = opts.attr ?? 'block';
+  const handleSel = opts.handle ?? '.card-head';
   const [drag, setDrag] = useState<DragState | null>(null);
   const [settling, setSettling] = useState(false);
   const live = useRef({ order, onReorder });
@@ -45,10 +48,10 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
     } | null = null;
 
     const measure = () => {
-      const els = Array.from(document.querySelectorAll<HTMLElement>('[data-block]'));
+      const els = Array.from(document.querySelectorAll<HTMLElement>(`[data-${attr}]`));
       const slots = els.map((el) => {
         const r = el.getBoundingClientRect();
-        return { id: el.dataset.block!, center: r.top + window.scrollY + r.height / 2, height: r.height, top: r.top + window.scrollY, bottom: r.bottom + window.scrollY };
+        return { id: el.getAttribute(`data-${attr}`)!, center: r.top + window.scrollY + r.height / 2, height: r.height, top: r.top + window.scrollY, bottom: r.bottom + window.scrollY };
       });
       const gap = slots.length > 1 ? Math.max(0, slots[1].top - slots[0].bottom) : 14;
       return { slots, gap };
@@ -129,12 +132,12 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
     const onPointerDown = (e: React.PointerEvent) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       const target = e.target as HTMLElement;
-      const head = target.closest('.card-head');
-      const el = target.closest<HTMLElement>('[data-block]');
-      if (!head || !el || target.closest('input, select, textarea, a, .icon-btn:not(.chevron-btn)')) return;
+      const head = target.closest(handleSel);
+      const el = target.closest<HTMLElement>(`[data-${attr}]`);
+      if (!head || !el || target.closest('input, select, textarea, a, .menu-wrap, .icon-btn:not(.chevron-btn)')) return;
       finish(false);
       s = {
-        id: el.dataset.block!,
+        id: el.getAttribute(`data-${attr}`)!,
         startX: e.clientX,
         startY: e.clientY,
         startScroll: window.scrollY,

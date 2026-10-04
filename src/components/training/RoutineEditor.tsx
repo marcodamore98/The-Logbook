@@ -3,10 +3,11 @@ import { useStore } from '../../lib/store/StoreContext';
 import { exerciseDef, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
 import { REST_OPTIONS, restLabel, supersetLetters } from '../../lib/training/routines';
 import type { PlannedSet, Routine, RoutineExercise } from '../../lib/types';
-import { GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash } from '../icons';
+import { GlyphClose, GlyphPlus, GlyphTrash } from '../icons';
+import { useBlockDrag } from '../useBlockDrag';
 import { Field, NumberInput } from '../ui';
 import { ExercisePicker } from './ExercisePicker';
-import { linkNext, move, SetTypeBadge, unlink } from './WorkoutLogger';
+import { keepSupersets, linkNext, SetTypeBadge, unlink, warmupsFirst } from './WorkoutLogger';
 
 function PlannedBlock({
   ex,
@@ -14,7 +15,7 @@ function PlannedBlock({
   count,
   letter,
   onChange,
-  onMove,
+  onReplace,
   onRemove,
   onLink,
   onUnlink,
@@ -24,14 +25,14 @@ function PlannedBlock({
   count: number;
   letter?: string;
   onChange: (e: RoutineExercise) => void;
-  onMove: (d: -1 | 1) => void;
+  onReplace: () => void;
   onRemove: () => void;
   onLink: () => void;
   onUnlink: () => void;
 }) {
   const { settings } = useStore();
   const def = exerciseDef(ex.exerciseId, settings.exercises);
-  const setAt = (k: number, s: PlannedSet) => onChange({ ...ex, sets: ex.sets.map((x, i) => (i === k ? s : x)) });
+  const setAt = (k: number, s: PlannedSet) => onChange({ ...ex, sets: warmupsFirst(ex.sets.map((x, i) => (i === k ? s : x))) });
   let n = 0;
   return (
     <div className={`exercise${ex.supersetId ? ' in-superset' : ''}`}>
@@ -43,11 +44,8 @@ function PlannedBlock({
             {def.muscle} · {def.equipment}
           </span>
         </div>
-        <button type="button" className="icon-btn small" aria-label="Sposta su" disabled={index === 0} onClick={() => onMove(-1)}>
-          <GlyphPrev />
-        </button>
-        <button type="button" className="icon-btn small" aria-label="Sposta giù" disabled={index === count - 1} onClick={() => onMove(1)}>
-          <GlyphNext />
+        <button type="button" className="icon-btn small" aria-label="Sostituisci esercizio" title="Sostituisci esercizio" onClick={onReplace}>
+          ⇄
         </button>
         <button type="button" className="icon-btn small" aria-label="Rimuovi esercizio" onClick={onRemove}>
           <GlyphTrash />
@@ -91,7 +89,7 @@ function PlannedBlock({
             return (
               <tr key={k} className={`set-row-${s.type}`}>
                 <td>
-                  <SetTypeBadge type={s.type} index={n} onChange={(type) => setAt(k, { ...s, type })} />
+                  <SetTypeBadge type={s.type} index={n} allowWarmup={ex.sets.slice(0, k).every((x) => x.type === 'warmup')} onChange={(type) => setAt(k, { ...s, type })} />
                 </td>
                 {usesWeight(def.kind) && (
                   <td>
@@ -114,7 +112,7 @@ function PlannedBlock({
                   <NumberInput value={s.rpe} step={0.5} placeholder="–" onChange={(rpe) => setAt(k, { ...s, rpe })} />
                 </td>
                 <td>
-                  <button type="button" className="icon-btn small" aria-label="Rimuovi serie" onClick={() => onChange({ ...ex, sets: ex.sets.filter((_, i) => i !== k) })}>
+                  <button type="button" className="icon-btn small" aria-label="Rimuovi serie" onClick={() => onChange({ ...ex, sets: warmupsFirst(ex.sets.filter((_, i) => i !== k)) })}>
                     <GlyphClose />
                   </button>
                 </td>
@@ -136,11 +134,15 @@ function PlannedBlock({
 
 export function RoutineEditor({ value: r, onChange }: { value: Routine; onChange: (r: Routine) => void }) {
   const [picking, setPicking] = useState(false);
+  const [replacing, setReplacing] = useState<number | null>(null);
   const set = (p: Partial<Routine>) => onChange({ ...r, ...p, updatedAt: Date.now() });
   const setExercises = (exercises: RoutineExercise[]) => set({ exercises });
+  // Hold an exercise's header and drag it to reorder.
+  const order = r.exercises.map((_, i) => String(i));
+  const { drag, settling, onPointerDown } = useBlockDrag(order, (o) => setExercises(keepSupersets(o.map((k) => r.exercises[Number(k)]))), { attr: 'ex', handle: '.exercise-head' });
   const letters = supersetLetters(r.exercises);
   return (
-    <div className="routine-editor">
+    <div className={`routine-editor${drag ? ' is-dragging' : ''}`} onPointerDown={onPointerDown}>
       <div className="grid">
         <Field label="Nome scheda">
           <input value={r.name} onChange={(e) => set({ name: e.target.value })} placeholder="es. Push A" />
@@ -150,20 +152,31 @@ export function RoutineEditor({ value: r, onChange }: { value: Routine; onChange
         </Field>
       </div>
       <p className="muted small">Il peso lasciato vuoto viene preso dall'ultima volta.</p>
-      {r.exercises.map((ex, i) => (
-        <PlannedBlock
+      {r.exercises.map((ex, i) => {
+        const id = String(i);
+        const me = drag?.id === id;
+        const shift = drag && !me ? drag.shifts[id] ?? 0 : 0;
+        return (
+        <div
           key={i}
+          data-ex={id}
+          className={`blk ex-blk${me ? ' dragging' : ''}${drag && !me ? ' shifting' : ''}${settling ? ' settling' : ''}`}
+          style={me ? { transform: `translate3d(0, ${drag!.dy}px, 0) scale(1.02)` } : shift ? { transform: `translate3d(0, ${shift}px, 0)` } : undefined}
+        >
+        <PlannedBlock
           ex={ex}
           index={i}
           count={r.exercises.length}
           letter={ex.supersetId ? letters.get(ex.supersetId) : undefined}
           onChange={(e) => setExercises(r.exercises.map((x, k) => (k === i ? e : x)))}
-          onMove={(d) => setExercises(move(r.exercises, i, d))}
+          onReplace={() => setReplacing(i)}
           onRemove={() => setExercises(unlink(r.exercises, i).filter((_, k) => k !== i))}
           onLink={() => setExercises(linkNext(r.exercises, i))}
           onUnlink={() => setExercises(unlink(r.exercises, i))}
         />
-      ))}
+        </div>
+        );
+      })}
       <button type="button" className="btn-ghost" onClick={() => setPicking(true)}>
         <GlyphPlus /> Aggiungi esercizi
       </button>
@@ -181,6 +194,16 @@ export function RoutineEditor({ value: r, onChange }: { value: Routine; onChange
                 sets: [1, 2, 3].map((): PlannedSet => ({ type: 'normal', reps: 8, repsMax: 12 })),
               })),
             ]);
+          }}
+        />
+      )}
+      {replacing !== null && (
+        <ExercisePicker
+          onClose={() => setReplacing(null)}
+          onPick={([exerciseId]) => {
+            const i = replacing;
+            setReplacing(null);
+            if (exerciseId) setExercises(r.exercises.map((x, k) => (k === i ? { ...x, exerciseId, notes: undefined, sets: x.sets.map((s) => ({ ...s, kg: undefined })) } : x)));
           }}
         />
       )}
