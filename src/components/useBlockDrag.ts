@@ -175,3 +175,27 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
 
   return { drag, settling, onPointerDown: ctl.onPointerDown };
 }
+
+/**
+ * Hold-and-drag reordering for any list (sets, steps, reminders…), same feel as the
+ * day-page cards. Spread `container` on the list element and `item(i)` on each row;
+ * a long press on `handle` (inside a row) lifts it, and dropping it calls onReorder.
+ */
+export function useSortableList<T>(items: T[], onReorder: (items: T[]) => void, opts: { attr: string; handle: string }) {
+  const order = items.map((_, i) => String(i));
+  const { drag, settling, onPointerDown } = useBlockDrag(order, (o) => onReorder(o.map((k) => items[Number(k)])), opts);
+  return {
+    dragging: !!drag,
+    container: { onPointerDown },
+    item: (i: number) => {
+      const id = String(i);
+      const me = drag?.id === id;
+      const shift = drag && !me ? drag.shifts[id] ?? 0 : 0;
+      return {
+        [`data-${opts.attr}`]: id,
+        className: `sortable${me ? ' sort-lifted' : ''}${drag && !me ? ' sort-shifting' : ''}${settling ? ' sort-settling' : ''}`,
+        style: me ? { transform: `translate3d(0, ${drag!.dy}px, 0) scale(1.02)` } : shift ? { transform: `translate3d(0, ${shift}px, 0)` } : undefined,
+      };
+    },
+  };
+}

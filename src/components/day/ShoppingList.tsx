@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import type { ShopItem } from '../../lib/types';
 import { useUndo } from '../Undo';
-import { uid } from '../ui';
+import { DragGrip, uid } from '../ui';
+import { useSortableList } from '../useBlockDrag';
 
 /**
  * Shopping list inside "Da ricordare": just ticks and names. One list shared by every day,
@@ -42,12 +43,16 @@ export function ShoppingList({ addSignal }: { addSignal: number }) {
 
   const open = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
+  const shown = [...open, ...done];
+  // Hold an item and drag it up or down (ticked ones stay at the bottom).
+  const sort = useSortableList(shown, (list) => save([...list.filter((i) => !i.done), ...list.filter((i) => i.done)]), { attr: 'shop', handle: '.shop-item' });
 
   return (
     <div className="shop">
-      <ul className="shop-list">
-        {[...open, ...done].map((it) => (
-          <li key={it.id} className={`shop-item${it.done ? ' done' : ''}`}>
+      <ul className="shop-list" {...sort.container}>
+        {shown.map((it, k) => (
+          <li key={it.id} {...sort.item(k)} className={`shop-item${it.done ? ' done' : ''} ${sort.item(k).className}`}>
+            <DragGrip />
             <input type="checkbox" checked={it.done} aria-label={it.done ? 'Da comprare' : 'Comprato'} onChange={(e) => save(items.map((x) => (x.id === it.id ? { ...x, done: e.target.checked } : x)))} />
             <input
               ref={(el) => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { GlyphPlus, GlyphTrash } from '../icons';
-import { NumField } from '../ui';
+import { DragGrip, NumField } from '../ui';
+import { useSortableList } from '../useBlockDrag';
 import { KIND_LABEL, planSummary } from '../../lib/running/geo';
 import { repeats, step } from '../../lib/running/plans';
 import type { RunStep } from '../../lib/types';
@@ -8,11 +9,12 @@ import type { RunStep } from '../../lib/types';
 const KINDS: RunStep['kind'][] = ['warmup', 'work', 'rest', 'cooldown'];
 
 /** value in the unit shown to the user: time → minutes:seconds as seconds, distance → metres. */
-function StepRow({ s, onChange, onRemove }: { s: RunStep; onChange: (s: RunStep) => void; onRemove: () => void }) {
+function StepRow({ s, onChange, onRemove, sortProps }: { s: RunStep; onChange: (s: RunStep) => void; onRemove: () => void; sortProps: { className: string; style?: React.CSSProperties } }) {
   const min = Math.floor(s.value / 60);
   const sec = s.value % 60;
   return (
-    <li className={`plan-step step-${s.kind}`}>
+    <li {...sortProps} className={`plan-step step-${s.kind} ${sortProps.className}`}>
+      <DragGrip />
       <select value={s.kind} onChange={(e) => onChange({ ...s, kind: e.target.value as RunStep['kind'] })} aria-label="Tipo di fase">
         {KINDS.map((k) => (
           <option key={k} value={k}>
@@ -50,6 +52,7 @@ export function PlanBuilder({ steps, onChange }: { steps: RunStep[]; onChange: (
   const [warm, setWarm] = useState(10);
   const [cool, setCool] = useState(5);
 
+  const sort = useSortableList(steps, onChange, { attr: 'rstep', handle: '.plan-step' });
   const generate = () => onChange(repeats(n, { by: workBy, value: workV }, { by: 'time', value: restSec }, warm * 60, cool * 60));
 
   return (
@@ -89,9 +92,9 @@ export function PlanBuilder({ steps, onChange }: { steps: RunStep[]; onChange: (
       {steps.length > 0 && (
         <>
           <p className="muted small">{planSummary(steps)}</p>
-          <ol className="plan-steps">
+          <ol className="plan-steps" {...sort.container}>
             {steps.map((s, i) => (
-              <StepRow key={s.id} s={s} onChange={(ns) => onChange(steps.map((x, k) => (k === i ? ns : x)))} onRemove={() => onChange(steps.filter((_, k) => k !== i))} />
+              <StepRow key={s.id} sortProps={sort.item(i)} s={s} onChange={(ns) => onChange(steps.map((x, k) => (k === i ? ns : x)))} onRemove={() => onChange(steps.filter((_, k) => k !== i))} />
             ))}
           </ol>
         </>
