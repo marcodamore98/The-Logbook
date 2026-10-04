@@ -81,7 +81,18 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
   return (
     <>
       <Card id="day.training" print="palestra" icon={<IconWorkout />} title="Allenamento" defaultOpen={true} summary={cardSummary}>
-        {workouts.length === 0 ? (
+        {workouts.length === 0 && runs.length === 0 ? (
+          <div className="start-pair">
+            <Link className="lime-banner" to="/palestra">
+              <span>Inizia allenamento</span>
+              <span aria-hidden="true">›</span>
+            </Link>
+            <Link className="lime-banner" to="/corsa">
+              <span>Inizia corsa</span>
+              <span aria-hidden="true">›</span>
+            </Link>
+          </div>
+        ) : workouts.length === 0 ? (
           <Link className="lime-banner" to="/palestra">
             <span>Inizia allenamento</span>
             <span aria-hidden="true">›</span>
@@ -122,7 +133,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           })
         )}
         {runs.length === 0 ? (
-          <Link className="lime-banner" to="/corsa">
+          workouts.length > 0 && <Link className="lime-banner" to="/corsa">
             <span>Inizia corsa</span>
             <span aria-hidden="true">›</span>
           </Link>

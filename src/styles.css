@@ -2026,3 +2026,16 @@ i[class^='dot-'] { background: var(--c) !important; }
 .cal-page .week-items li.gcal { padding: 0.25rem 0.5rem; border-radius: 0 8px 8px 0; background: var(--surface-2); }
 .month-cell .shift-tag { font-size: 0.56rem; padding: 0.05rem 0.2rem; letter-spacing: -0.02em; text-overflow: clip; }
 @media (max-width: 600px) { .month-cell .st-code { display: none; } }
+
+/* Compact lime banners: a slim pill instead of a big block */
+.lime-banner, .start-banner { min-height: 2.5rem; padding: 0.5rem 0.75rem 0.5rem 1rem; border-radius: 999px; font-size: 0.9rem; font-weight: 700; }
+.lime-banner span:last-child, .start-banner span:last-child { font-size: 1.15rem; }
+.card-body > .lime-banner { margin-top: 0.2rem; }
+.lime-banner .dj-count { font-size: 0.68rem; }
+/* "‹ Pagina del giorno": small and quiet */
+.back-day { font-size: 0.76rem; font-weight: 700; padding: 0.22rem 0.7rem 0.22rem 0.5rem; margin-bottom: 0.5rem; background: color-mix(in srgb, var(--lime) 16%, transparent); color: var(--ink); border: 1px solid color-mix(in srgb, var(--lime) 40%, transparent); }
+.back-day span { font-size: 0.95rem; }
+:root[data-theme='dark'] .back-day { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .back-day { color: var(--lime); } }
+.start-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; } .start-pair .lime-banner { padding-left: 0.85rem; }
+.start-pair .lime-banner { font-size: 0.82rem; white-space: nowrap; padding-right: 0.6rem; gap: 0.25rem; } .start-pair .lime-banner span:first-child { overflow: hidden; text-overflow: ellipsis; }

@@ -1,6 +1,6 @@
 # Prompt per Google Stitch — The Logbook
 
-*Aggiornato al 4 ottobre 2026, dopo il restyling Stitch portato nell'app principale. Questo file viene aggiornato a ogni modifica dell'app (vedi `CLAUDE.md`).*
+*Aggiornato al 4 ottobre 2026 (banner lime più piccoli e discreti), dopo il restyling Stitch portato nell'app principale. Questo file viene aggiornato a ogni modifica dell'app (vedi `CLAUDE.md`).*
 
 **Stato delle schermate**
 
@@ -42,11 +42,12 @@ VISUAL STYLE — modern, bold and friendly, like the best fitness apps (Hevy, St
 - Tiles: key numbers live in small rounded tiles (surface #2C2C2E) with an uppercase label on top and a big extra-bold value; lime for the main value in dark mode.
 - Two-way switches: dark track, the active option is a raised pill with LIME text.
 - Charts: minimal, rounded bars, thin lines with dots, donuts with a thick stroke; lime as the main series in dark mode, lavender as the second; goals as a dashed line.
-- "Lime banner": a full-width lime pill button with bold dark text on the left and a "›" chevron on the right. It is THE pattern for every navigation command and every "start" action (e.g. "Inizia allenamento ›", "Apri il diario alimentare ›", "‹ Pagina del giorno").
+- "Lime banner": a SLIM lime pill (about 40px tall, 14px semibold dark text, small "›" at the right) for navigation commands and "start" actions (e.g. "Apri il diario alimentare ›"); two of them can sit side by side ("Inizia allenamento ›" | "Inizia corsa ›"). It must stay discreet and never dominate the card.
+- "‹ Pagina del giorno": a small quiet pill (12px text) with a light lime tint and lime text in dark mode, not a filled lime button.
 
 LAYOUT AND BEHAVIOUR
 - Top bar: hamburger + app logo + "The Logbook" on the left (tap opens the left menu), the current section name in muted text, a small "Ricollega Google" ghost pill only when the Google session expired, and on the right a pill button "♡ Corpo" that opens the right "Corpo" panel. No bottom tab bar.
-- Under the top bar, on every section except the day page, a small lime pill "‹ Pagina del giorno".
+- Under the top bar, on every section except the day page, a small quiet lime-tinted pill "‹ Pagina del giorno".
 - Sections are collapsible cards: pastel-disc icon, small uppercase category label above a bold title (LAVORO, AGENDA, SPORT, SALUTE, FORMAZIONE, TEMPO LIBERO, PERSONALE), one-line summary when collapsed, a six-dot drag handle and a chevron inside a round grey button. Cards can be reordered with a long press.
 - Gestures (show as states, not as arrows): swipe left/right moves between days or tabs following the finger; swipe from the left edge opens the menu; swipe down closes bottom sheets; back closes the topmost overlay.
 - Deletions never use confirmation dialogs: a dark snackbar with a coral dot says "Allenamento eliminato · ANNULLA" (ANNULLA in lime, uppercase).
@@ -70,7 +71,7 @@ Cards in this order:
 3. Three tiles above the surgery cards: "INTERVENTI 2", "TEMPO OPERATORIO 3h 40m", "COMPLICANZE 0".
 4. LAVORO "Attività chirurgica" cards (collapsed, summary "Isterectomia laparoscopica · Primo operatore").
 5. AGENDA "Impegni" ("14:30 Journal club") and AGENDA "Da ricordare" ("2 da fare · Firmare lettere") side by side, compact, each with a round "+".
-6. SPORT "Allenamento": a summary block "Push" with an amber banner "👑 Nuovo record · Panca piana 82,5 kg × 6" and three tiles CARICO SOLLEVATO 975 kg (lime) · DURATA 1h 02m · ORARIO 07:00–08:02; a run block with tiles DISTANZA 5,20 km · DURATA 21:40 · PASSO 4:10/km; a "QUESTA SETTIMANA · 2 h 53 min" mini bar chart L–D with the current day ringed in lime. If nothing is logged: two lime banners "Inizia allenamento ›" and "Inizia corsa ›".
+6. SPORT "Allenamento": a summary block "Push" with an amber banner "👑 Nuovo record · Panca piana 82,5 kg × 6" and three tiles CARICO SOLLEVATO 975 kg (lime) · DURATA 1h 02m · ORARIO 07:00–08:02; a run block with tiles DISTANZA 5,20 km · DURATA 21:40 · PASSO 4:10/km; a "QUESTA SETTIMANA · 2 h 53 min" mini bar chart L–D with the current day ringed in lime. If nothing is logged: two slim lime pills side by side "Inizia allenamento ›" | "Inizia corsa ›".
 7. SALUTE "Alimentazione" (always open): "1.850 / 2.300 kcal" at the right of the title, a lime progress bar, "Proteine 120 / 175 g" with a thin lavender bar, lime banner "Apri il diario alimentare ›".
 8. FORMAZIONE "Corsi e congressi" (collapsed) showing a box: "● Congresso SIGO" with a date pill "4 OTT – 7 OTT" and chips "📎 Programma", "👑 Attestato".
 9. PERSONALE "Diario": italic muted "Nessuna pagina scritta per questo giorno." and a ghost "✎ Scrivi" pill on the same row.
