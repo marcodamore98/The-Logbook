@@ -128,7 +128,8 @@ export function useRightDrawerSwipe() {
   useEffect(() => {
     let g: { el: HTMLElement; x: number; y: number; dx: number; lock: 'x' | 'y' | null } | null = null;
     const start = (e: TouchEvent) => {
-      const el = (e.target as HTMLElement).closest<HTMLElement>('.drawer-backdrop:not(.left) .drawer');
+      // From the panel or the strip beside it: a rightward swipe pushes the panel away.
+      const el = (e.target as HTMLElement).closest<HTMLElement>('.drawer-backdrop:not(.left)')?.querySelector<HTMLElement>('.drawer');
       if (!el || e.touches.length !== 1) return;
       g = { el, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, lock: null };
     };

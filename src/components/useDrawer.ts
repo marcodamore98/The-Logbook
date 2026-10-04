@@ -36,7 +36,8 @@ export function useDrawer() {
       const t = e.touches[0];
       const cur = state.current;
       let mode: 'open' | 'close' | null = null;
-      if (!cur.visible && t.clientX <= EDGE_PX) mode = 'open';
+      // Never open over another panel (e.g. Corpo): that swipe closes the other panel instead.
+      if (!cur.visible && t.clientX <= EDGE_PX && !document.querySelector('.drawer-backdrop:not(.left)')) mode = 'open';
       else if (cur.visible && cur.p > 0.5 && (e.target as HTMLElement).closest('.drawer-backdrop.left')) mode = 'close';
       g = mode ? { mode, x: t.clientX, y: t.clientY, t: Date.now(), engaged: false, w: width(), lastX: t.clientX, lastT: Date.now(), v: 0 } : null;
     };
