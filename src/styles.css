@@ -1599,3 +1599,51 @@ strong.mb-c1 { color: var(--accent); }
 .set-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.8rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 0.85rem; font-weight: 600; }
 .set-pill.is-pr { color: var(--ink); background: var(--surface-2); border-color: color-mix(in srgb, var(--amber) 55%, transparent); font-weight: 800; }
 .set-pill b { font-size: 0.66rem; padding: 0.05rem 0.4rem; border-radius: 999px; background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber); }
+
+/* ---- Stitch restyle, round 5: finish flow ---- */
+.finish-dialog { background: var(--surface); border: 1px solid var(--line); padding: 1.6rem 1.3rem; gap: 0.65rem; }
+.finish-dialog > p { margin: -0.2rem 0 0.4rem; font-size: 0.9rem; }
+.finish-icon { align-self: center; width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; margin-bottom: 0.3rem; }
+.finish-dialog .btn, .finish-dialog .btn-ghost, .finish-danger { border-radius: 999px; min-height: 3.2rem; font-weight: 700; }
+.finish-primary { background: var(--lime) !important; color: #1d1d1f !important; font-weight: 800 !important; }
+.finish-dialog .btn-ghost { background: var(--surface-2); border-color: transparent; }
+.finish-danger { background: transparent; border: 1px solid color-mix(in srgb, var(--coral) 45%, transparent); color: var(--coral); font: inherit; font-weight: 700; }
+
+.finish-name-card { display: flex; align-items: center; gap: 0.8rem; padding: 1rem 1.1rem; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); }
+.finish-name-dot { flex: none; width: 42px; height: 42px; border-radius: 50%; background: var(--lime); display: grid; place-items: center; color: #1d1d1f; }
+.finish-name-card .finish-title { flex: 1; min-width: 0; margin: 0; }
+.finish-tiles { border: none; padding: 0; }
+.finish-tiles > div { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.finish-tiles dt { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.finish-notes-card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 0.9rem 1rem; }
+.routine-check { display: flex; align-items: flex-start; gap: 0.8rem; padding: 1rem 1.1rem; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); cursor: pointer; }
+.routine-check input { position: absolute; opacity: 0; pointer-events: none; }
+.rc-box { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--muted); display: grid; place-items: center; color: transparent; font-weight: 900; font-size: 0.8rem; margin-top: 0.1rem; }
+.routine-check input:checked + .rc-box { background: var(--lime); border-color: var(--lime); color: #1d1d1f; }
+.routine-check input:focus-visible + .rc-box { outline: 2px solid var(--focus); outline-offset: 2px; }
+.routine-check > span:last-child { display: flex; flex-direction: column; gap: 0.15rem; }
+.routine-check small { color: var(--muted); font-size: 0.8rem; }
+.finish-abandon { color: var(--coral); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--coral) 40%, transparent); font-weight: 600; }
+
+.finish-done { background: var(--bg); color: var(--ink); justify-content: flex-start; padding-top: calc(3rem + env(safe-area-inset-top)); }
+.done-check { width: 80px; height: 80px; border-radius: 50%; background: var(--lime); color: #1d1d1f; display: grid; place-items: center; font-size: 2.4rem; font-weight: 900; box-shadow: 0 0 0 6px color-mix(in srgb, var(--lime) 18%, transparent), 0 0 28px color-mix(in srgb, var(--lime) 30%, transparent); }
+.finish-sub { font-size: 0.95rem; line-height: 1.5; opacity: 1; color: var(--accent); font-weight: 600; }
+.finish-sub span { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+.done-strip { width: min(420px, 100%); margin: 0.4rem 0 0; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 1.1rem 0.4rem; }
+.done-strip > div { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.done-strip > div + div { border-left: 1px solid var(--line); }
+.done-strip dt { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.done-strip dd { margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.done-strip dd small { font-size: 0.75rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+:root[data-theme='dark'] .done-strip dd.lime { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .done-strip dd.lime { color: var(--lime); } }
+.done-records { width: min(420px, 100%); text-align: left; display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; border-radius: 22px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent); }
+.done-records h2 { margin: 0 0 0.3rem; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.dr-medal { width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb, var(--amber) 16%, transparent); color: var(--amber); display: grid; place-items: center; }
+.dr-row { padding: 0.65rem 0.8rem; border-radius: 14px; background: var(--surface-2); }
+.dr-row > span { display: flex; flex-direction: column; gap: 0.15rem; }
+.dr-set { display: flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 0.95rem; }
+.dr-set b { font-size: 0.7rem; padding: 0.1rem 0.45rem; border-radius: 6px; background: color-mix(in srgb, var(--lime) 18%, transparent); color: var(--ink); }
+:root[data-theme='dark'] .dr-set b { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .dr-set b { color: var(--lime); } }
+.finish-done .finish-ok { margin-top: auto; border-radius: 999px; }
