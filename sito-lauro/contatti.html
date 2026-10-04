@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contatti — Antonio Lauro</title>
+  <meta name="description" content="Contatti e informazioni sulle opere di Antonio Lauro, pittore e scultore di Napoli.">
+  <link rel="canonical" href="https://www.lauroantonio.it/contatti.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="it_IT">
+  <meta property="og:site_name" content="Antonio Lauro">
+  <meta property="og:title" content="Contatti — Antonio Lauro">
+  <meta property="og:description" content="Contatti e informazioni sulle opere di Antonio Lauro, pittore e scultore di Napoli.">
+  <meta property="og:url" content="https://www.lauroantonio.it/contatti.html">
+  <meta property="og:image" content="https://www.lauroantonio.it/img/antonio-lauro.jpg">
+  <meta name="theme-color" content="#4a1a1a">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <a class="skip-link" href="#contenuto">Vai al contenuto</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="./">Antonio <span>Lauro</span></a>
+      <button class="nav-toggle" aria-expanded="false" aria-controls="nav">Menu</button>
+      <nav class="nav" id="nav" aria-label="Principale">
+        <a href="./">Home</a>
+        <a href="galleria.html">Galleria</a>
+        <a href="mostre.html">Mostre</a>
+        <a href="contatti.html" aria-current="page">Contatti</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenuto">
+    <section class="page-hero">
+      <div class="wrap">
+        <p class="eyebrow">Contatti</p>
+        <h1>Scrivere all’artista</h1>
+        <p>Per informazioni sulle opere, sulle mostre e sulle collezioni.</p>
+      </div>
+    </section>
+    <section class="section" style="padding-top: 1.5rem">
+      <div class="wrap contact">
+        <div>
+          <p class="lead">Antonio Lauro vive e lavora a <strong>Napoli</strong>. Per richieste di informazioni, visite in studio o collaborazioni, puoi usare i recapiti qui a fianco.</p>
+          <a class="btn" href="galleria.html">Torna alla galleria</a>
+        </div>
+        <div>
+          <ul id="contact-list">
+            <li><span class="k">Città</span><span class="v">Napoli</span></li>
+          </ul>
+          <p class="note" id="contact-empty">I recapiti saranno pubblicati a breve.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <a class="brand" href="./">Antonio Lauro</a>
+      <nav aria-label="Footer">
+        <a href="galleria.html">Galleria</a>
+        <a href="mostre.html">Mostre</a>
+        <a href="contatti.html">Contatti</a>
+      </nav>
+      <p>© 2026 Antonio Lauro · Pittore e scultore · Napoli. Tutte le opere sono protette dal diritto d’autore.</p>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/main.js" defer></script>
+  <script>
+    (function () {
+      var c = window.SITE_CONFIG || {};
+      var ul = document.getElementById('contact-list');
+      var empty = document.getElementById('contact-empty');
+      function add(k, node) {
+        var li = document.createElement('li');
+        var a = document.createElement('span'); a.className = 'k'; a.textContent = k;
+        var b = document.createElement('span'); b.className = 'v'; b.appendChild(node);
+        li.appendChild(a); li.appendChild(b); ul.appendChild(li);
+      }
+      var shown = false;
+      if (c.email) {
+        var m = document.createElement('a'); m.href = 'mailto:' + c.email; m.textContent = c.email;
+        add('Email', m); shown = true;
+      }
+      if (c.telefono) {
+        var t = document.createElement('a'); t.href = 'tel:' + c.telefono.replace(/\s+/g, ''); t.textContent = c.telefono;
+        add('Telefono', t); shown = true;
+      }
+      if (shown) empty.remove();
+    })();
+  </script>
+</body>
+</html>
