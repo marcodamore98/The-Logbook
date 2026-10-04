@@ -160,7 +160,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
           s.run.sessions++;
           s.run.km += m.distanceM / 1000;
           s.run.minutes += m.durationSec / 60;
-          runMode.add(m.mode === 'intervals' ? 'A intervalli' : 'Continua');
+          runMode.add(m.mode === 'intervals' ? 'A intervalli' : m.mode === 'treadmill' ? 'Tapis roulant' : 'Continua');
           {
             const km = m.distanceM / 1000;
             const pace = km > 0 ? m.durationSec / km : 0;

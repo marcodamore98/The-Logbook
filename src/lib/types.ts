@@ -94,12 +94,15 @@ export interface RunStep {
   kind: 'warmup' | 'work' | 'rest' | 'cooldown';
   by: 'time' | 'distance';
   value: number;
+  paceSec?: number; // tapis roulant: passo in secondi al km
+  incline?: number; // tapis roulant: pendenza in %
 }
 
 export interface RunPlan {
   id: string;
   name: string;
   steps: RunStep[];
+  treadmill?: boolean; // sessione per tapis roulant (passo e pendenza per fase)
 }
 
 /** [lat, lon, seconds from start] */
@@ -112,13 +115,15 @@ export interface RunLap {
   value: number;
   seconds: number;
   meters: number;
+  paceSec?: number;
+  incline?: number;
 }
 
 export interface RunModule {
   kind: 'run';
   id: string;
   title?: string;
-  mode: 'continuous' | 'intervals';
+  mode: 'continuous' | 'intervals' | 'treadmill';
   planName?: string;
   steps?: RunStep[];
   distanceM: number;

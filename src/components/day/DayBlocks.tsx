@@ -140,7 +140,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
         ) : (
           runs.map((m) => (
             <button key={m.id} type="button" onClick={() => setPickedRun(m)} className="workout-summary run">
-              <strong className="ws-name">{m.title || (m.mode === 'intervals' ? m.planName ?? 'Corsa a intervalli' : 'Corsa')}</strong>
+              <strong className="ws-name">{m.title || (m.mode === 'intervals' ? m.planName ?? 'Corsa a intervalli' : m.mode === 'treadmill' ? m.planName ?? 'Tapis roulant' : 'Corsa')}</strong>
               <dl className="ws-stats">
                 <div>
                   <dt>Distanza</dt>

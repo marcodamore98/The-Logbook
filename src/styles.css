@@ -2147,3 +2147,24 @@ i[class^='dot-'] { background: var(--c) !important; }
 .shop-new input.grow::placeholder { color: var(--muted); }
 .shop-clear { align-self: flex-start; background: none; border: none; padding: 0.2rem 0; font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
 @media print { .todo-switch, .shop-new, .shop-clear { display: none !important; } }
+
+/* ---------- Corsa: tapis roulant (passo min/km e pendenza % per fase) ---------- */
+.tm-pace-field, .tm-incline-field { display: inline-flex; align-items: center; gap: 0.2rem; }
+.tm-pace-field input, .tm-incline-field input { width: 3rem; text-align: center; padding-inline: 0.2rem; }
+.tm-pace-field small, .tm-incline-field small { color: var(--muted); font-weight: 600; }
+.tm-gen .tm-pace-field input { width: 2.8rem; }
+.tm-step { flex-direction: column; align-items: stretch; gap: 0.45rem; }
+.tm-step-top { display: flex; align-items: center; gap: 0.4rem; }
+.tm-step-top select { flex: 1 1 auto; }
+.tm-step-set { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; }
+.tm-step-set label { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+.tm-step input, .tm-step select { min-height: 2.5rem; }
+.tm-step .plan-value input { width: 3rem; }
+.tm-kmh { text-transform: none; letter-spacing: 0; }
+.tm-cap { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.tm-kmh { font-weight: 700; color: var(--muted); white-space: nowrap; }
+.tm-now { display: grid; grid-template-columns: 1fr auto; gap: 0.8rem; margin: 0.6rem 0 0.3rem; }
+.tm-now > div { display: flex; flex-direction: column; padding: 0.7rem 0.9rem; border-radius: 16px; background: var(--surface-2); }
+.tm-now strong { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.tm-now span { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.tm-now > div:last-child strong { color: var(--lavender); }

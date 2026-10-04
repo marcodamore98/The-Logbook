@@ -18,7 +18,7 @@ interface Props {
   useGps: boolean;
   track: TrackPoint[];
   laps: RunLap[];
-  mode: 'continuous' | 'intervals';
+  mode: 'continuous' | 'intervals' | 'treadmill';
   planName?: string;
   previous: RunModule[];
   onSave: (r: RunResult) => void;
@@ -69,7 +69,7 @@ export function RunSummary({ elapsed, gpsDistanceM, useGps, track, laps, mode, p
         <div className="run-win">
           <IconRun size={72} />
           <h2>Corsa completata!</h2>
-          <p className="muted">{mode === 'intervals' ? planName ?? 'Intervalli' : 'Corsa continua'}</p>
+          <p className="muted">{mode === 'intervals' ? planName ?? 'Intervalli' : mode === 'treadmill' ? planName ?? 'Tapis roulant' : 'Corsa continua'}</p>
           {badges.length > 0 && (
             <div className="run-badges">
               {badges.map((b) => (

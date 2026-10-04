@@ -10,7 +10,7 @@ const dm = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('it-IT', 
 export const rangeLabel = (a: string, b: string) => (!b || a === b ? dm(a) : `${dm(a)} – ${dm(b)}`);
 
 export const runLine = (m: Extract<Module, { kind: 'run' }>) =>
-  [m.title || (m.mode === 'intervals' ? m.planName ?? 'Intervalli' : 'Corsa'), m.distanceM ? `${fmtKm(m.distanceM)} km` : '', m.durationSec ? fmtDuration(m.durationSec) : '', m.distanceM && m.durationSec ? `${fmtPace(m.distanceM, m.durationSec)}/km` : '']
+  [m.title || (m.mode === 'intervals' ? m.planName ?? 'Intervalli' : m.mode === 'treadmill' ? m.planName ?? 'Tapis roulant' : 'Corsa'), m.distanceM ? `${fmtKm(m.distanceM)} km` : '', m.durationSec ? fmtDuration(m.durationSec) : '', m.distanceM && m.durationSec ? `${fmtPace(m.distanceM, m.durationSec)}/km` : '']
     .filter(Boolean)
     .join(' · ');
 
