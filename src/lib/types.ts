@@ -343,6 +343,10 @@ export interface BodyLog {
   sleepH?: number;
   restingHr?: number;
   waterL?: number;
+  // misure per il calcolo della massa grassa (metodo US Navy), in cm
+  neckCm?: number;
+  waistCm?: number;
+  hipCm?: number;
 }
 
 export interface BodyGoals {
@@ -411,6 +415,7 @@ export interface Settings {
   exercises?: ExerciseDef[]; // esercizi personalizzati
   routines?: Routine[];
   goals?: BodyGoals;
+  profile?: { sex?: 'f' | 'm'; heightCm?: number }; // per il calcolo della massa grassa
   mealPlans?: MealPlan[];
   foods?: Food[]; // alimenti personali e salvati da Open Food Facts
   favoriteFoods?: string[];

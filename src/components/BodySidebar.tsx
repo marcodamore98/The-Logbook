@@ -6,8 +6,9 @@ import { dayIntake } from '../lib/nutrition/foods';
 import { workingSets, workoutVolume } from '../lib/training/analytics';
 import type { BodyGoals, BodyLog, DayEntry, ISODate } from '../lib/types';
 import { fmt } from './charts';
-import { GlyphClose, IconBolt, IconFlame, IconFood, IconHeart, IconScale, IconShift, IconSleep, IconSteps, IconTarget, IconWater, IconWorkout } from './icons';
+import { GlyphClose, IconBolt, IconFlame, IconFood, IconScale, IconShift, IconSleep, IconSteps, IconTarget, IconWater, IconWorkout } from './icons';
 import { NumberInput, useCollapsible, Chevron } from './ui';
+import { BodyFatCalc } from './BodyFatCalc';
 
 type FieldDef = { key: keyof BodyLog; label: string; unit: string; step: number; goal?: keyof BodyGoals; Icon: (p: { size?: number }) => React.ReactElement };
 
@@ -15,7 +16,6 @@ const FIELDS: FieldDef[] = [
   { key: 'weightKg', label: 'Peso', unit: 'kg', step: 0.1, goal: 'weightKg', Icon: IconScale },
   { key: 'bodyFatPct', label: 'Massa grassa', unit: '%', step: 0.1, Icon: IconTarget },
   { key: 'sleepH', label: 'Sonno', unit: 'h', step: 0.25, goal: 'sleepH', Icon: IconSleep },
-  { key: 'restingHr', label: 'FC a riposo', unit: 'bpm', step: 1, Icon: IconHeart },
   { key: 'steps', label: 'Passi', unit: '', step: 500, goal: 'steps', Icon: IconSteps },
   { key: 'waterL', label: 'Acqua', unit: 'L', step: 0.25, goal: 'waterL', Icon: IconWater },
 ];
@@ -94,6 +94,7 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
   const day = store.day(date);
   const goals = settings.goals ?? {};
   const [goalsOpen, toggleGoals] = useCollapsible('side.goals', false);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   useEffect(() => {
     store.loadRange(addDays(date, -35), date);
@@ -111,6 +112,8 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
     .filter((d) => d.body?.weightKg)
     .map((d) => ({ date: d.date, kg: d.body!.weightKg! }))
     .reverse();
+  // Most recent tape measurements, to prefill the calculator.
+  const lastMeasures = recent.find((d) => d.body?.waistCm)?.body ?? {};
   const last7 = recent.slice(0, 7);
   const prev7 = recent.slice(7, 14);
   const w7 = avg(last7.map((d) => d.body?.weightKg));
@@ -142,6 +145,18 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
         <span className="unit">{f.unit}</span>
       </span>
       {f.goal && f.key !== 'weightKg' && <Meter value={body[f.key]} goal={goals[f.goal]} unit={f.unit} />}
+      {f.key === 'bodyFatPct' && (
+        <button
+          type="button"
+          className="link-quiet small calc-link"
+          onClick={(e) => {
+            e.preventDefault();
+            setCalcOpen(true);
+          }}
+        >
+          Calcola
+        </button>
+      )}
     </label>
   );
 
@@ -200,6 +215,7 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
       <section className="side-section">
         <h3 className="sub">Corpo</h3>
         <div className="side-grid">{FIELDS.map(input)}</div>
+        {calcOpen && <BodyFatCalc last={lastMeasures} onUse={setBody} onClose={() => setCalcOpen(false)} />}
       </section>
 
       <section className="side-section">

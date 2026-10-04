@@ -1323,3 +1323,14 @@ body.has-bar .snackbar { bottom: calc(5.2rem + env(safe-area-inset-bottom)); }
 .switch:checked { background: var(--lime); }
 .switch:checked::after { transform: translateX(22px); }
 .switch-row span { font-size: 0.92rem; line-height: 1.25; }
+
+/* Body-fat calculator */
+.bf-calc { display: flex; flex-direction: column; gap: 0.8rem; }
+.bf-calc > p { margin: 0; }
+.bf-result { text-align: center; font-size: 1rem; padding: 0.4rem 0; }
+.bf-result strong { font-size: 1.8rem; color: var(--ink); margin-right: 0.3rem; }
+:root[data-theme='dark'] .bf-result strong { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .bf-result strong { color: var(--lime); } }
+.bf-calc .lime-banner:disabled { opacity: 0.4; }
+.calc-link { align-self: flex-start; background: none; border: 0; padding: 0; margin-top: 0.15rem; font: inherit; cursor: pointer; }
+.bf-calc .side-input input { background: var(--surface-2); border: 1px solid var(--line); }
