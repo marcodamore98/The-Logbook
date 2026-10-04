@@ -139,19 +139,20 @@ export default function StatsPage() {
   }
 
   const m = METRICS.find((x) => x.id === metric)!;
+  const firstOp = stats.surgery.byRole.find((r) => r.label === 'Primo operatore')?.value ?? 0;
 
   const swipeRef = useSwipeNav<HTMLDivElement>(() => setAnchor(shift(period, anchor, -1)), () => setAnchor(shift(period, anchor, 1)), `${period}:${from}`);
 
   return (
     <div ref={swipeRef} className="page stats-page swipe-page">
-      <div className="segmented no-print" role="tablist">
+      <div className="segmented kind-switch no-print" role="tablist">
         {(['week', 'month', 'year'] as Period[]).map((p) => (
           <button key={p} role="tab" aria-selected={period === p} className={period === p ? 'on' : ''} onClick={() => setPeriod(p)}>
             {p === 'week' ? 'Settimana' : p === 'month' ? 'Mese' : 'Anno'}
           </button>
         ))}
       </div>
-      <header className="page-head">
+      <header className="page-head period-strip">
         <button className="icon-btn no-print" aria-label="Periodo precedente" onClick={() => setAnchor(shift(period, anchor, -1))}>
           <GlyphPrev />
         </button>
@@ -164,47 +165,86 @@ export default function StatsPage() {
         </button>
       </header>
 
-      <div className="tiles">
-        <div className="tile" data-print="lavoro">
-          <IconShift size={32} />
-          <span className="tile-value">{fmt(stats.work.hours, 1)} h</span>
-          <span className="tile-label">{stats.work.shifts} turni · {stats.work.nights} notti</span>
+      <h2 className="bento-title">Il periodo in sintesi</h2>
+      <div className="bento">
+        <div className="bento-tile big" data-print="lavoro">
+          <span className="bt-head">
+            <span className="bt-cat">Ospedale e turni</span>
+            <IconShift size={30} />
+          </span>
+          <span className="bt-value">
+            {fmt(stats.work.hours, 1)}
+            <small> h</small>
+          </span>
+          <span className="bt-label">di turno</span>
+          <span className="bt-foot">
+            {stats.work.shifts} turni · {stats.work.nights} notti
+          </span>
         </div>
-        <div className="tile" data-print="lavoro">
-          <IconSurgery size={32} />
-          <span className="tile-value">{stats.surgery.total}</span>
-          <span className="tile-label">interventi · {stats.surgery.byRole.find((r) => r.label === 'Primo operatore')?.value ?? 0} da primo</span>
+        <div className="bento-tile lav" data-print="lavoro">
+          <span className="bt-head">
+            <IconSurgery size={26} />
+            <span className="bt-cat">Chirurgia</span>
+          </span>
+          <span className="bt-value">{stats.surgery.total}</span>
+          <span className="bt-label">interventi</span>
+          {stats.surgery.total > 0 && (
+            <span className="bt-pill">
+              {firstOp} da primo ({fmt(firstOp / stats.surgery.total * 100)}%)
+            </span>
+          )}
         </div>
-        <div className="tile" data-print="lavoro">
-          <IconClinical size={32} />
-          <span className="tile-value">{stats.clinical.total}</span>
-          <span className="tile-label">prestazioni cliniche</span>
+        <div className="bento-tile" data-print="lavoro">
+          <span className="bt-head">
+            <IconClinical size={26} />
+            <span className="bt-cat">Clinica</span>
+          </span>
+          <span className="bt-value">{stats.clinical.total}</span>
+          <span className="bt-label">prestazioni cliniche</span>
         </div>
-        <div className="tile" data-print="lavoro">
-          <IconStudy size={32} />
-          <span className="tile-value">{fmt(stats.study.minutes / 60, 1)} h</span>
-          <span className="tile-label">di studio</span>
+        <div className="bento-tile" data-print="lavoro">
+          <span className="bt-head">
+            <IconStudy size={26} />
+            <span className="bt-cat">Studio</span>
+          </span>
+          <span className="bt-value">
+            {fmt(stats.study.minutes / 60, 1)}
+            <small> h</small>
+          </span>
+          <span className="bt-label">di studio</span>
         </div>
-        <div className="tile" data-print="palestra">
-          <IconWorkout size={32} />
-          <span className="tile-value">{stats.workout.sessions}</span>
-          <span className="tile-label">allenamenti · {fmt(stats.workout.minutes / 60, 1)} h</span>
+        <div className="bento-tile limev" data-print="palestra">
+          <span className="bt-head">
+            <IconWorkout size={26} />
+            <span className="bt-cat">Palestra</span>
+          </span>
+          <span className="bt-value">{stats.workout.sessions}</span>
+          <span className="bt-label">allenamenti</span>
+          <span className="bt-foot">{fmt(stats.workout.minutes / 60, 1)} h in palestra</span>
         </div>
-        <div className="tile" data-print="palestra">
-          <IconRun size={32} />
-          <span className="tile-value">{fmt(stats.run.km, 1)} km</span>
-          <span className="tile-label">{stats.run.sessions} corse · {fmtPaceSec(stats.run.paceSecKm)}/km</span>
+        <div className="bento-tile wide" data-print="palestra">
+          <IconRun size={34} />
+          <span className="bt-row">
+            <strong>
+              {stats.run.sessions} {stats.run.sessions === 1 ? 'corsa' : 'corse'} · <em>{fmt(stats.run.km, 1)} km</em>
+            </strong>
+            <span>passo medio {fmtPaceSec(stats.run.paceSecKm)}/km</span>
+          </span>
         </div>
-        <div className="tile" data-print="privato">
-          <IconOuting size={32} />
-          <span className="tile-value">{stats.outings.total}</span>
-          <span className="tile-label">gite e uscite</span>
+        <div className="bento-tile wide" data-print="privato">
+          <IconOuting size={34} />
+          <span className="bt-row">
+            <strong>
+              {stats.outings.total} {stats.outings.total === 1 ? 'gita o uscita' : 'gite e uscite'}
+            </strong>
+            <span>vita privata</span>
+          </span>
         </div>
       </div>
 
       <section className="card" data-print="andamento">
         <div className="card-head">
-          <h2>Il periodo in sintesi</h2>
+          <h2>Tempo e obiettivi</h2>
         </div>
         <div className="hero-stats">
           <Donut
@@ -219,7 +259,7 @@ export default function StatsPage() {
             {stats.categories.todosTotal > 0 && <Ring value={stats.categories.todosDone} of={stats.categories.todosTotal} label="Promemoria completati" color={PALETTE[3]} />}
             {stats.nutrition.days > 0 && store.settings.goals?.kcalIn && <Ring value={stats.nutrition.daysOnKcal} of={stats.nutrition.days} label="Giorni nel target calorico" color={PALETTE[2]} />}
             {stats.nutrition.days > 0 && store.settings.goals?.proteinG && <Ring value={stats.nutrition.daysOnProtein} of={stats.nutrition.days} label="Giorni con proteine" color={PALETTE[4]} />}
-            {stats.surgery.total > 0 && <Ring value={stats.surgery.byRole.find((r) => r.label === 'Primo operatore')?.value ?? 0} of={stats.surgery.total} label="Interventi da primo operatore" color={PALETTE[0]} />}
+            {stats.surgery.total > 0 && <Ring value={firstOp} of={stats.surgery.total} label="Interventi da primo operatore" color={PALETTE[0]} />}
           </div>
         </div>
       </section>
@@ -247,14 +287,41 @@ export default function StatsPage() {
               <GlyphDownload /> CSV
             </button>
           </div>
+          {stats.surgery.total > 0 && (
+            <div className="role-split">
+              <div>
+                <span className="stat-label">Primo operatore</span>
+                <strong>
+                  {firstOp} <small>({fmt(firstOp / stats.surgery.total * 100)}%)</small>
+                </strong>
+              </div>
+              <div>
+                <span className="stat-label">Altri ruoli</span>
+                <strong>
+                  {stats.surgery.total - firstOp} <small>({fmt((1 - firstOp / stats.surgery.total) * 100)}%)</small>
+                </strong>
+              </div>
+            </div>
+          )}
           <h3 className="sub">Per area</h3>
-          <Donut data={stats.surgery.byGroup} />
+          <StackBar data={stats.surgery.byGroup} />
+          <h3 className="sub">Via d’accesso</h3>
+          {stats.surgery.byApproach.length ? (
+            <div className="approach-tiles">
+              {stats.surgery.byApproach.slice(0, 6).map((x) => (
+                <div key={x.label}>
+                  <span>{x.label}</span>
+                  <strong>{x.value}</strong>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted small">Nessun dato nel periodo.</p>
+          )}
           <h3 className="sub">Interventi più frequenti</h3>
           <BarList data={stats.surgery.byProcedure} />
           <h3 className="sub">Ruolo</h3>
-          <Donut data={stats.surgery.byRole} />
-          <h3 className="sub">Via d’accesso</h3>
-          <Donut data={stats.surgery.byApproach} />
+          <BarList data={stats.surgery.byRole} />
           {stats.surgery.total > 0 && (
             <p className="muted small">
               Complicanze: {stats.surgery.complications} ({fmt((stats.surgery.complications / stats.surgery.total) * 100, 1)}%) · tempo operatorio{' '}
@@ -450,6 +517,32 @@ export default function StatsPage() {
             </div>
           </dl>
         </section>
+      </div>
+    </div>
+  );
+}
+
+const STACK_COLORS = ['var(--lime)', 'var(--lavender)', 'var(--terra)', 'var(--sky)', 'var(--sage)', 'var(--plum)'];
+
+/** Parts of a whole as one rounded bar with a legend. */
+function StackBar({ data }: { data: { label: string; value: number }[] }) {
+  const total = data.reduce((n, x) => n + x.value, 0);
+  if (!total) return <p className="muted small">Nessun dato nel periodo.</p>;
+  const rows = data.slice(0, 6);
+  return (
+    <div className="stackbar">
+      <div className="sb-bar">
+        {rows.map((x, i) => (
+          <span key={x.label} style={{ width: `${(x.value / total) * 100}%`, background: STACK_COLORS[i] }} title={`${x.label}: ${x.value}`} />
+        ))}
+      </div>
+      <div className="sb-legend">
+        {rows.map((x, i) => (
+          <span key={x.label}>
+            <i style={{ background: STACK_COLORS[i] }} />
+            {x.label} {fmt((x.value / total) * 100)}%
+          </span>
+        ))}
       </div>
     </div>
   );
