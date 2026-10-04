@@ -1,70 +1,53 @@
-// Treadmill sessions: every step is by time, with a pace (min/km) and an incline (%),
-// so the machine can be set step by step. Distance is estimated from pace × time.
+// Treadmill sessions: a list of series, each with a speed (km/h), an incline (%) and a
+// duration, so the machine can be set series by series. Distance = speed × time.
 
 import { uid } from '../../components/ui';
 import type { RunLap, RunPlan, RunStep } from '../types';
-import { fmtPaceSec } from './geo';
+import { fmtDuration } from './geo';
 
-export const tStep = (kind: RunStep['kind'], sec: number, paceSec: number, incline = 0): RunStep => ({ id: uid(), kind, by: 'time', value: sec, paceSec, incline });
+export const tStep = (sec: number, kmh: number, incline = 0): RunStep => ({ id: uid(), kind: 'work', by: 'time', value: sec, kmh, incline });
 
-/** km/h shown by the treadmill for a pace in seconds per km, e.g. 330 → "10,9". */
-export const fmtKmh = (paceSec?: number) => (paceSec ? (3600 / paceSec).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '–');
+/** Speed of a series; the first treadmill sessions stored a pace instead. */
+export const kmhOf = (s: { kmh?: number; paceSec?: number }) => s.kmh ?? (s.paceSec ? 3600 / s.paceSec : 0);
+
+const num = (n: number, d = 1) => n.toLocaleString('it-IT', { minimumFractionDigits: d, maximumFractionDigits: d });
+export const fmtKmh = (kmh: number) => (kmh ? num(kmh) : '–');
 export const fmtIncline = (n?: number) => (n ?? 0).toLocaleString('it-IT', { maximumFractionDigits: 1 });
+/** Pace shown next to the speed: 10 km/h → "6:00". */
+export const paceFromKmh = (kmh: number) => {
+  if (!kmh) return '–';
+  const sec = Math.round(3600 / kmh);
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+};
 
-/** "5:30 /km · 10,9 km/h · 2%" */
-export const treadmillSettings = (s: { paceSec?: number; incline?: number }) => `${fmtPaceSec(s.paceSec)} /km · ${fmtKmh(s.paceSec)} km/h · ${fmtIncline(s.incline)}%`;
+/** "6,0 km/h · 8% · 2:30" */
+export const treadmillSettings = (s: RunStep) => `${fmtKmh(kmhOf(s))} km/h · ${fmtIncline(s.incline)}% · ${fmtDuration(s.value)}`;
 
-const metersFor = (sec: number, paceSec?: number) => (paceSec ? (sec * 1000) / paceSec : 0);
+const metersFor = (sec: number, kmh: number) => (kmh * sec) / 3.6;
 
-/** Estimated distance of a whole plan, in metres. */
-export const planMeters = (steps: RunStep[]) => steps.reduce((n, s) => n + metersFor(s.value, s.paceSec), 0);
+/** Estimated distance of a whole session, in metres. */
+export const planMeters = (steps: RunStep[]) => steps.reduce((n, s) => n + metersFor(s.value, kmhOf(s)), 0);
 
-/** Estimated distance so far: completed steps plus the part of the current one. */
+/** Estimated distance so far: completed series plus the part of the current one. */
 export function doneMeters(laps: RunLap[], cur: RunStep | undefined, stepLeft: number | null) {
-  const done = laps.reduce((n, l) => n + metersFor(l.seconds, l.paceSec), 0);
-  return done + (cur && stepLeft !== null ? metersFor(Math.max(0, cur.value - stepLeft), cur.paceSec) : 0);
+  const done = laps.reduce((n, l) => n + metersFor(l.seconds, kmhOf(l)), 0);
+  return done + (cur && stepLeft !== null ? metersFor(Math.max(0, cur.value - stepLeft), kmhOf(cur)) : 0);
 }
 
-/** warm-up, n × (fast / easy) at the same incline, cool-down. The last recovery is dropped. */
-export function treadmillRepeats(
-  n: number,
-  work: { sec: number; pace: number },
-  rest: { sec: number; pace: number },
-  incline: number,
-  warm: { sec: number; pace: number },
-  cool: { sec: number; pace: number },
-): RunStep[] {
-  const steps: RunStep[] = [];
-  if (warm.sec) steps.push(tStep('warmup', warm.sec, warm.pace, Math.min(incline, 1)));
-  for (let i = 0; i < n; i++) {
-    steps.push(tStep('work', work.sec, work.pace, incline));
-    if (i < n - 1) steps.push(tStep('rest', rest.sec, rest.pace, incline));
-  }
-  if (cool.sec) steps.push(tStep('cooldown', cool.sec, cool.pace, 0));
-  return steps;
-}
+export const lapMeters = (l: RunLap) => Math.round(metersFor(l.seconds, kmhOf(l)));
 
 export const treadmillPresets = (): RunPlan[] => [
-  {
-    id: 't-12-3-30',
-    name: 'Camminata in salita 12% · 30′',
-    treadmill: true,
-    steps: [tStep('warmup', 300, 750, 2), tStep('work', 1800, 750, 12), tStep('cooldown', 300, 800, 0)],
-  },
-  {
-    id: 't-6x2',
-    name: 'Intervalli 6 × 2′',
-    treadmill: true,
-    steps: treadmillRepeats(6, { sec: 120, pace: 330 }, { sec: 120, pace: 450 }, 1, { sec: 300, pace: 450 }, { sec: 300, pace: 500 }),
-  },
+  { id: 't-12-3-30', name: 'Camminata in salita 12% · 30′', treadmill: true, steps: [tStep(300, 4.5, 3), tStep(1800, 5, 12), tStep(300, 4.5, 0)] },
   {
     id: 't-salite',
-    name: 'Salite progressive 2-4-6-8%',
+    name: 'Salite progressive (2 → 10%)',
     treadmill: true,
-    steps: [
-      tStep('warmup', 300, 450, 1),
-      ...[2, 4, 6, 8, 6, 4, 2].map((inc) => tStep('work', 180, 420, inc)),
-      tStep('cooldown', 300, 500, 0),
-    ],
+    steps: [tStep(300, 5, 1), ...[2, 4, 6, 8, 10, 8, 6, 4, 2].map((inc) => tStep(180, 5.5, inc)), tStep(300, 5, 0)],
+  },
+  {
+    id: 't-alterna',
+    name: 'Corsa e camminata 5 × (2′ + 2′)',
+    treadmill: true,
+    steps: [tStep(300, 6, 1), ...Array.from({ length: 5 }, () => [tStep(120, 10, 1), tStep(120, 6, 1)]).flat(), tStep(300, 5.5, 0)],
   },
 ];

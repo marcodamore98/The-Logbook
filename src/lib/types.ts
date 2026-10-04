@@ -96,8 +96,9 @@ export interface RunStep {
   kind: 'warmup' | 'work' | 'rest' | 'cooldown';
   by: 'time' | 'distance';
   value: number;
-  paceSec?: number; // tapis roulant: passo in secondi al km
-  incline?: number; // tapis roulant: pendenza in %
+  kmh?: number; // tapis roulant: velocità in km/h
+  incline?: number; // tapis roulant: inclinazione in %
+  paceSec?: number; // (prime sessioni tapis roulant: passo in secondi al km)
 }
 
 export interface RunPlan {
@@ -117,8 +118,9 @@ export interface RunLap {
   value: number;
   seconds: number;
   meters: number;
-  paceSec?: number;
+  kmh?: number;
   incline?: number;
+  paceSec?: number;
 }
 
 export interface RunModule {

@@ -1,60 +1,47 @@
-import { useState } from 'react';
 import { GlyphPlus, GlyphTrash } from '../icons';
 import { DragGrip, NumField } from '../ui';
 import { useSortableList } from '../useBlockDrag';
-import { fmtDuration, fmtKm, KIND_LABEL } from '../../lib/running/geo';
-import { fmtKmh, planMeters, tStep, treadmillRepeats } from '../../lib/running/treadmill';
+import { fmtDuration, fmtKm } from '../../lib/running/geo';
+import { kmhOf, paceFromKmh, planMeters, tStep } from '../../lib/running/treadmill';
 import type { RunStep } from '../../lib/types';
 
-const KINDS: RunStep['kind'][] = ['warmup', 'work', 'rest', 'cooldown'];
-
-/** Pace as minutes : seconds per km, with the matching km/h for the treadmill display. */
-function PaceField({ value, onChange }: { value: number; onChange: (sec: number) => void }) {
-  const min = Math.floor(value / 60);
-  const sec = Math.round(value % 60);
-  return (
-    <span className="tm-pace-field">
-      <NumField value={min} min={2} max={20} label="Passo, minuti" onChange={(n) => onChange(Math.round(n) * 60 + sec)} />:
-      <NumField value={sec} max={59} label="Passo, secondi" onChange={(n) => onChange(min * 60 + Math.round(n))} />
-      <small>/km</small>
-    </span>
-  );
-}
-
-function StepRow({ s, onChange, onRemove, sortProps }: { s: RunStep; onChange: (s: RunStep) => void; onRemove: () => void; sortProps: { className: string; style?: React.CSSProperties } }) {
+/** One series: speed (km/h), incline (%) and duration, as set on the treadmill. */
+function SeriesRow({ s, n, onChange, onRemove, sortProps }: { s: RunStep; n: number; onChange: (s: RunStep) => void; onRemove: () => void; sortProps: { className: string; style?: React.CSSProperties } }) {
   const min = Math.floor(s.value / 60);
   const sec = s.value % 60;
+  const kmh = kmhOf(s);
   return (
-    <li {...sortProps} className={`plan-step tm-step step-${s.kind} ${sortProps.className}`}>
+    <li {...sortProps} className={`plan-step tm-step ${sortProps.className}`}>
       <div className="tm-step-top">
         <DragGrip />
-        <select value={s.kind} onChange={(e) => onChange({ ...s, kind: e.target.value as RunStep['kind'] })} aria-label="Tipo di fase">
-          {KINDS.map((k) => (
-            <option key={k} value={k}>
-              {KIND_LABEL[k]}
-            </option>
-          ))}
-        </select>
-        <span className="plan-value">
-          <NumField value={min} label="Durata, minuti" onChange={(n) => onChange({ ...s, value: Math.max(5, Math.round(n) * 60 + sec) })} />′
-          <NumField value={sec} max={59} label="Durata, secondi" onChange={(n) => onChange({ ...s, value: Math.max(5, min * 60 + Math.round(n)) })} />″
-        </span>
-        <button type="button" className="icon-btn small" aria-label="Elimina fase" onClick={onRemove}>
+        <strong className="tm-series">Serie {n}</strong>
+        <span className="tm-pace">{paceFromKmh(kmh)} /km</span>
+        <button type="button" className="icon-btn small" aria-label={`Elimina la serie ${n}`} onClick={onRemove}>
           <GlyphTrash />
         </button>
       </div>
       <div className="tm-step-set">
         <label>
-          <span className="tm-cap">
-            Passo <span className="tm-kmh">· {fmtKmh(s.paceSec ?? 420)} km/h</span>
+          <span className="tm-cap">Velocità</span>
+          <span className="tm-unit-field">
+            <NumField value={kmh} max={30} label="Velocità in km/h" onChange={(v) => onChange({ ...s, kmh: Math.round(v * 10) / 10, paceSec: undefined })} />
+            <small>km/h</small>
           </span>
-          <PaceField value={s.paceSec ?? 420} onChange={(paceSec) => onChange({ ...s, paceSec })} />
         </label>
         <label>
-          <span className="tm-cap">Pendenza</span>
-          <span className="tm-incline-field">
-            <NumField value={s.incline ?? 0} max={30} label="Pendenza in percentuale" onChange={(incline) => onChange({ ...s, incline: Math.round(incline * 2) / 2 })} />
+          <span className="tm-cap">Inclinazione</span>
+          <span className="tm-unit-field">
+            <NumField value={s.incline ?? 0} max={30} label="Inclinazione in percentuale" onChange={(v) => onChange({ ...s, incline: Math.round(v * 2) / 2 })} />
             <small>%</small>
+          </span>
+        </label>
+        <label>
+          <span className="tm-cap">Durata</span>
+          <span className="tm-unit-field">
+            <NumField value={min} label="Durata, minuti" onChange={(v) => onChange({ ...s, value: Math.max(5, Math.round(v) * 60 + sec) })} />
+            <small>′</small>
+            <NumField value={sec} max={59} label="Durata, secondi" onChange={(v) => onChange({ ...s, value: Math.max(5, min * 60 + Math.round(v)) })} />
+            <small>″</small>
           </span>
         </label>
       </div>
@@ -62,85 +49,32 @@ function StepRow({ s, onChange, onRemove, sortProps }: { s: RunStep; onChange: (
   );
 }
 
-/** Builds a treadmill session: generated repeats or any sequence of time / pace / incline steps. */
+/** A treadmill session is just a list of series, each with its own speed, incline and duration. */
 export function TreadmillBuilder({ steps, onChange }: { steps: RunStep[]; onChange: (s: RunStep[]) => void }) {
-  const [n, setN] = useState(6);
-  const [workMin, setWorkMin] = useState(2);
-  const [workPace, setWorkPace] = useState(330);
-  const [restMin, setRestMin] = useState(2);
-  const [restPace, setRestPace] = useState(450);
-  const [incline, setIncline] = useState(1);
-  const [warm, setWarm] = useState(5);
-  const [cool, setCool] = useState(5);
-
-  const generate = () =>
-    onChange(treadmillRepeats(n, { sec: Math.round(workMin * 60), pace: workPace }, { sec: Math.round(restMin * 60), pace: restPace }, incline, { sec: Math.round(warm * 60), pace: restPace }, { sec: Math.round(cool * 60), pace: restPace + 30 }));
-
   const sort = useSortableList(steps, onChange, { attr: 'tstep', handle: '.plan-step' });
   const total = steps.reduce((t, s) => t + s.value, 0);
+  const addSeries = () => {
+    const last = steps[steps.length - 1];
+    onChange([...steps, last ? { ...tStep(last.value, kmhOf(last), last.incline ?? 0) } : tStep(180, 5, 0)]);
+  };
 
   return (
     <div className="plan-builder tm-builder">
-      <div className="plan-gen tm-gen">
-        <label className="field">
-          <span className="field-label">Ripetizioni</span>
-          <NumField value={n} min={1} max={50} onChange={(v) => setN(Math.round(v))} />
-        </label>
-        <label className="field">
-          <span className="field-label">Veloce (min)</span>
-          <NumField value={workMin} onChange={setWorkMin} />
-        </label>
-        <label className="field">
-          <span className="field-label">Passo veloce</span>
-          <PaceField value={workPace} onChange={setWorkPace} />
-        </label>
-        <label className="field">
-          <span className="field-label">Recupero (min)</span>
-          <NumField value={restMin} onChange={setRestMin} />
-        </label>
-        <label className="field">
-          <span className="field-label">Passo recupero</span>
-          <PaceField value={restPace} onChange={setRestPace} />
-        </label>
-        <label className="field">
-          <span className="field-label">Pendenza (%)</span>
-          <NumField value={incline} max={30} onChange={(v) => setIncline(Math.round(v * 2) / 2)} />
-        </label>
-        <label className="field">
-          <span className="field-label">Riscaldamento (min)</span>
-          <NumField value={warm} onChange={setWarm} />
-        </label>
-        <label className="field">
-          <span className="field-label">Defaticamento (min)</span>
-          <NumField value={cool} onChange={setCool} />
-        </label>
-        <button type="button" className="btn" onClick={generate}>
-          Crea le fasi
-        </button>
-      </div>
-
       {steps.length > 0 && (
         <>
           <p className="muted small">
-            {steps.length} fasi · {fmtDuration(total)} · circa {fmtKm(planMeters(steps))} km
+            {steps.length} serie · {fmtDuration(total)} · circa {fmtKm(planMeters(steps))} km
           </p>
           <ol className="plan-steps" {...sort.container}>
             {steps.map((s, i) => (
-              <StepRow key={s.id} sortProps={sort.item(i)} s={s} onChange={(ns) => onChange(steps.map((x, k) => (k === i ? ns : x)))} onRemove={() => onChange(steps.filter((_, k) => k !== i))} />
+              <SeriesRow key={s.id} n={i + 1} sortProps={sort.item(i)} s={s} onChange={(ns) => onChange(steps.map((x, k) => (k === i ? ns : x)))} onRemove={() => onChange(steps.filter((_, k) => k !== i))} />
             ))}
           </ol>
         </>
       )}
       <div className="row">
-        <button
-          type="button"
-          className="btn-ghost small"
-          onClick={() => {
-            const last = steps[steps.length - 1];
-            onChange([...steps, tStep('work', last?.value ?? 120, last?.paceSec ?? 420, last?.incline ?? 1)]);
-          }}
-        >
-          <GlyphPlus /> Aggiungi una fase
+        <button type="button" className={steps.length ? 'btn-ghost small' : 'btn'} onClick={addSeries}>
+          <GlyphPlus /> Aggiungi una serie
         </button>
         {steps.length > 0 && (
           <button type="button" className="btn-ghost small" onClick={() => onChange([])}>
