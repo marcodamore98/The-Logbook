@@ -1,7 +1,8 @@
 name: Pubblica su GitHub Pages
 
-# Pubblica a ogni push sul branch predefinito e sul branch di prova.
-# L'app principale va su /<repo>/, la versione di prova su /<repo>/prova/.
+# Pubblica a ogni push sul branch predefinito, sul branch di prova e sulla copia precedente.
+# L'app principale va su /<repo>/, la versione di prova su /<repo>/prova/,
+# la copia dell'app prima dell'ultimo aggiornamento su /<repo>/precedente/.
 on:
   push:
   workflow_dispatch:
@@ -14,11 +15,12 @@ permissions:
 
 env:
   TEST_BRANCH: claude/prova-navigazione
+  BACKUP_BRANCH: claude/copia-precedente
 
 jobs:
   # Only the default branch may deploy to Pages: a push on the test branch asks it to rebuild.
   trigger:
-    if: github.ref_name == 'claude/prova-navigazione'
+    if: github.ref_name == 'claude/prova-navigazione' || github.ref_name == 'claude/copia-precedente'
     runs-on: ubuntu-latest
     steps:
       - run: gh workflow run deploy.yml --repo "${{ github.repository }}" --ref "${{ github.event.repository.default_branch }}"
@@ -62,6 +64,23 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/prova/
           APP_VARIANT: prova
+      - name: Scarica la copia precedente (se esiste)
+        id: backup
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${{ github.repository }}.git" "$BACKUP_BRANCH" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.backup.outputs.exists == 'true'
+        with:
+          ref: ${{ env.BACKUP_BRANCH }}
+          path: precedente
+      - name: Copia precedente
+        if: steps.backup.outputs.exists == 'true'
+        working-directory: precedente
+        run: npm ci && npm run build && cp -r dist ../main/dist/precedente
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/precedente/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: main/dist

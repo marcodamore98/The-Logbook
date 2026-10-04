@@ -42,7 +42,8 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: isTest ? [] : [/\/prova\//],
+        // The main app must not answer for the test copy and the previous copy published next to it.
+        navigateFallbackDenylist: isTest ? [] : [/\/prova\//, /\/precedente\//],
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
       },
     }),
