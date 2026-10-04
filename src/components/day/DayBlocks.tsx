@@ -102,7 +102,8 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             const i = info(w);
             const prs = i.running ? [] : records(w);
             return (
-              <button key={w.id} type="button" onClick={() => setPicked(w)} className={`workout-summary${i.running ? ' running' : ''}`}>
+              <div key={w.id} className="ws-wrap">
+              <button type="button" onClick={() => nav(`/palestra/allenamento/${day.date}/${w.id}`)} className={`workout-summary${i.running ? ' running' : ''}`}>
                 <strong className="ws-name">{i.name}</strong>
                 {i.running && <span className="ws-live">In corso</span>}
                 {prs.length > 0 && (
@@ -129,6 +130,10 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
                   </div>
                 </dl>
               </button>
+              <button type="button" className="icon-btn small ws-more" aria-label="Altre azioni" onClick={() => setPicked(w)}>
+                ⋮
+              </button>
+              </div>
             );
           })
         )}
@@ -139,7 +144,8 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           </Link>
         ) : (
           runs.map((m) => (
-            <button key={m.id} type="button" onClick={() => setPickedRun(m)} className="workout-summary run">
+            <div key={m.id} className="ws-wrap">
+            <button type="button" onClick={() => nav('/corsa')} className="workout-summary run">
               <strong className="ws-name">{m.title || (m.mode === 'intervals' ? m.planName ?? 'Corsa a intervalli' : m.mode === 'treadmill' ? m.planName ?? 'Tapis roulant' : 'Corsa')}</strong>
               <dl className="ws-stats">
                 <div>
@@ -156,6 +162,10 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
                 </div>
               </dl>
             </button>
+            <button type="button" className="icon-btn small ws-more" aria-label="Altre azioni" onClick={() => setPickedRun(m)}>
+              ⋮
+            </button>
+            </div>
           ))
         )}
         <WeekTraining date={day.date} />
@@ -165,10 +175,6 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           <div className="sheet action-sheet" role="dialog" aria-label="Allenamento" onClick={(e) => e.stopPropagation()}>
             <div className="grabber" />
             <h2 className="sheet-title">{picked.title || 'Allenamento'}</h2>
-            <button className="lime-banner" onClick={() => nav(`/palestra/allenamento/${day.date}/${picked.id}`)}>
-              <span>{picked.startedAt && !picked.finishedAt ? 'Riprendi allenamento' : 'Apri allenamento'}</span>
-              <span aria-hidden="true">›</span>
-            </button>
             <button
               className="danger-banner"
               onClick={() => {
@@ -189,10 +195,6 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           <div className="sheet action-sheet" role="dialog" aria-label="Corsa" onClick={(e) => e.stopPropagation()}>
             <div className="grabber" />
             <h2 className="sheet-title">{pickedRun.title || 'Corsa'}</h2>
-            <button className="lime-banner" onClick={() => nav('/corsa')}>
-              <span>Apri Corsa</span>
-              <span aria-hidden="true">›</span>
-            </button>
             <button
               className="danger-banner"
               onClick={() => {

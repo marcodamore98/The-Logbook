@@ -79,6 +79,7 @@ Cards in this order:
 9. PERSONALE "Diario": italic muted "Nessuna pagina scritta per questo giorno." and a ghost "✎ Scrivi" pill on the same row.
 At the bottom a dashed full-width pill "+ Aggiungi scheda" (lime text in dark mode).
 Also show the snackbar state: "● Guardia medica eliminata   ANNULLA".
+Workout and run summaries in the day page: tapping one opens the workout (or Corsa) directly; a small "⋮" in its top-right corner opens a sheet with only "Elimina" (coral) and "Annulla".
 ```
 
 ---
@@ -102,7 +103,7 @@ Then show three opened cards, each with a two-way switch at the top (dark track,
 
 ```
 Screen: "Palestra" (dark mode). Title "Palestra" with a pill "🔥 3 sett. di fila" (consecutive weeks with a workout). Lime two-way-style switch with four options Routine · Storico · Esercizi · Progressi.
-Routine tab: "Nuova routine" (grey) and lime "Inizia un allenamento vuoto" side by side. Routine cards: coloured disc with a dumbbell, name "Push", muscles "Petto · Tricipiti · Spalle", exercises on one line "Panca piana · Panca inclinata · Spinte manubri · +1", a divider, "2 giorni fa · 62 min" and a small lime pill "Inizia"; "⋯" menu.
+Routine tab: "Nuova routine" (grey) and lime "Inizia un allenamento vuoto" side by side. Routine cards can be reordered by holding their header and dragging (they shrink to one-line rows while dragging). The exercise search matches every typed word in any order ("french cavi" → "French press ai cavi"). Routine cards: coloured disc with a dumbbell, name "Push", muscles "Petto · Tricipiti · Spalle", exercises on one line "Panca piana · Panca inclinata · Spinte manubri · +1", a divider, "2 giorni fa · 62 min" and a small lime pill "Inizia"; "⋯" menu.
 "Panoramica 7 giorni": tiles ALLENAMENTI 2 (lime) and VOLUME TOTALE 2.923 kg (lavender) with "+14% vs 7 giorni prima"; card "Volume per giorno" with rounded bars and today ringed; card "Serie per muscolo · 7 giorni" with coloured horizontal bars (lime, lavender, mint…).
 Exercise detail sheet: initials avatar, label DETTAGLIO ESERCIZIO, "Panca piana con bilanciere", "Petto · Bilanciere"; tabs Sommario / Cronologia; two big tiles PESO MASSIMO 82,5 kg (5 rip.) and 1RM STIMATO 96,3 kg in amber ("formula di Epley"); line chart with period select and metric chips; "ULTIME SERIE REGISTRATE" as pills with an amber "PR" badge on the record; "ALTRI RECORD" list.
 ```
@@ -114,7 +115,7 @@ Exercise detail sheet: initials avatar, label DETTAGLIO ESERCIZIO, "Panca piana 
 ```
 Screen: active workout (dark mode). Header: back chevron, big bold editable title "Push" (tap to edit, a ✓ to confirm), date below, trash icon.
 A stats row with three columns: "Durata 0:42:10", "Volume 4.300 kg", "Serie 18".
-Exercise blocks: round avatar, exercise name in lime (tappable → detail sheet), "⋮" menu (Sostituisci esercizio, Superserie con il successivo, coral Rimuovi esercizio — no move up/down: exercises move only by dragging), an auto-growing notes field, a single line "Riposo: 2 min 30 s ▾". Holding an exercise header lifts the whole block (slight scale and shadow) and it can be dragged to a new place while the others slide aside, like the day-page cards; the routine editor works the same way and has a "⇄" replace button.
+Exercise blocks: round avatar, exercise name in lime (tappable → detail sheet), "⋮" menu (Sostituisci esercizio, Superserie con il successivo, coral Rimuovi esercizio — no move up/down: exercises move only by dragging), an auto-growing notes field, a single line "Riposo: 2 min 30 s ▾". Each superset has its own colour on its left rule and "Superset A/B" pill (A lavender, B lime, C blue, D coral, E green). Holding an exercise header lifts the whole block (slight scale and shadow) and it can be dragged to a new place while the others slide aside, like the day-page cards; the routine editor works the same way and has a "⇄" replace button.
 Set table columns: SERIE · PRECEDENTE · KG · RIP · ✓. Typing a weight or reps in a working set copies them to the next working sets not ticked yet. The amber "W" warm-up badge only appears on the first sets (never after a working set); tapping a badge cycles 1 → D → F. Completed rows lime-tinted with a lime check; a small gold crown on a personal record. One row swiped left revealing a coral "Elimina". Sets must be ticked in order.
 Below the last exercise: "+ Aggiungi esercizi" and, at the very bottom, the lime "Termina" pill.
 Floating at the bottom: a dark rest bar "Recupero 1:29" with −15 / +15 / × and a thin lime progress line; dragged up it becomes a full-screen stopwatch.
@@ -129,6 +130,7 @@ Three steps, dark mode:
 (a) Dialog: round icon on top, "Vuoi terminare l'allenamento?", muted "Verrà salvato nella pagina del giorno.", lime "✓ Termina e salva", grey "Torna all'allenamento", coral-outlined "Abbandona ed elimina".
 (b) Full screen "Salva allenamento" (back chevron, lime "Salva" top right): a card with a lime dumbbell disc and the big editable name "Push"; three tiles DURATA (editable minutes) · VOLUME · SERIE; a card "Note sull'allenamento"; a card with a round lime check "Salva questo allenamento come routine · Crea una nuova scheda pronta per i prossimi allenamenti"; an underlined coral link "Abbandona ed elimina allenamento".
 (c) Full screen "Ottimo lavoro!": big lime check disc with a soft glow, lavender "Push completato · oggi · 09:53", muted "È il tuo allenamento numero 4"; one card with three numbers divided by hairlines DURATA 60 min · VOLUME 1.225 kg (lime) · SERIE 3; an amber-bordered card "👑 2 nuovi record personali" with rows "Panca piana con bilanciere · 85 kg × 5 rip · +2,5 kg"; lime "Fine" at the bottom.
+Save screen: instead of a single checkbox, a "LA ROUTINE “PUSH”" choice of three radio cards (selected one with a lime border): "Lasciala com’è — Le modifiche valgono solo per oggi", "Aggiorna “Push” — Sovrascrive la routine con esercizi e serie di oggi", "Salva come nuova routine — “Push” resta com’è"; choosing the last shows a name field prefilled "Push (2)". Without a starting routine only "Non salvare come routine" / "Salva come nuova routine".
 ```
 
 ---

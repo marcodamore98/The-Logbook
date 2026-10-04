@@ -31,7 +31,10 @@ export function FinishFlow({
 }) {
   const nav = useNavigate();
   const { allDays, history, settings, saveSettings } = useStore();
-  const [asRoutine, setAsRoutine] = useState(false);
+  // What to do with the routine this workout came from: keep it (one-off), overwrite it, or save a new one.
+  const source = (settings.routines ?? []).find((r) => r.id === w.routineId);
+  const [routineChoice, setRoutineChoice] = useState<'keep' | 'update' | 'new'>('keep');
+  const [newName, setNewName] = useState('');
   const endedAt = useMemo(() => Date.now(), []);
   const measured = Math.max(1, Math.round((endedAt - (w.startedAt ?? endedAt)) / 60000));
   const [step, setStep] = useState<'confirm' | 'save' | 'done'>('confirm');
@@ -94,7 +97,12 @@ export function FinishFlow({
           <button
             className="btn small"
             onClick={() => {
-              if (asRoutine && w.exercises.length) saveSettings({ ...settings, routines: [...(settings.routines ?? []), routineFromWorkout(w, uid(), title.trim() || 'Nuova routine')] });
+              if (w.exercises.length && routineChoice === 'new') {
+                saveSettings({ ...settings, routines: [...(settings.routines ?? []), routineFromWorkout(w, uid(), newName.trim() || title.trim() || 'Nuova routine')] });
+              } else if (w.exercises.length && routineChoice === 'update' && source) {
+                const updated = { ...source, ...routineFromWorkout(w, source.id, source.name), notes: source.notes, folder: source.folder };
+                saveSettings({ ...settings, routines: (settings.routines ?? []).map((r) => (r.id === source.id ? updated : r)) });
+              }
               onSave({ title: title.trim() || undefined, notes: notes.trim() || undefined, durationMin: Math.max(1, Math.round(minutes)), finishedAt: Math.round(minutes) !== measured && w.startedAt ? w.startedAt + Math.round(minutes) * 60000 : endedAt });
               setStep('done');
             }}
@@ -130,14 +138,41 @@ export function FinishFlow({
             <AutoText className="finish-notes" value={notes} placeholder="Come è andato il tuo allenamento? Lascia qualche nota qui…" onChange={setNotes} />
           </label>
           {w.exercises.length > 0 && (
-            <label className="routine-check">
-              <input type="checkbox" checked={asRoutine} onChange={(e) => setAsRoutine(e.target.checked)} />
-              <span className="rc-box" aria-hidden="true">✓</span>
-              <span>
-                <strong>Salva questo allenamento come routine</strong>
-                <small>Crea una nuova scheda pronta per i prossimi allenamenti</small>
-              </span>
-            </label>
+            <fieldset className="routine-choice">
+              <legend>{source ? `La routine “${source.name}”` : 'Routine'}</legend>
+              <label className={routineChoice === 'keep' ? 'on' : ''}>
+                <input type="radio" name="routine-choice" checked={routineChoice === 'keep'} onChange={() => setRoutineChoice('keep')} />
+                <span>
+                  <strong>{source ? 'Lasciala com’è' : 'Non salvare come routine'}</strong>
+                  <small>{source ? 'Le modifiche valgono solo per oggi' : 'Resta solo nel diario di oggi'}</small>
+                </span>
+              </label>
+              {source && (
+                <label className={routineChoice === 'update' ? 'on' : ''}>
+                  <input type="radio" name="routine-choice" checked={routineChoice === 'update'} onChange={() => setRoutineChoice('update')} />
+                  <span>
+                    <strong>Aggiorna “{source.name}”</strong>
+                    <small>Sovrascrive la routine con esercizi e serie di oggi</small>
+                  </span>
+                </label>
+              )}
+              <label className={routineChoice === 'new' ? 'on' : ''}>
+                <input
+                  type="radio"
+                  name="routine-choice"
+                  checked={routineChoice === 'new'}
+                  onChange={() => {
+                    setRoutineChoice('new');
+                    if (!newName) setNewName(source ? `${source.name} (2)` : title.trim() || 'Nuova routine');
+                  }}
+                />
+                <span>
+                  <strong>Salva come nuova routine</strong>
+                  <small>{source ? `“${source.name}” resta com’è` : 'Pronta per i prossimi allenamenti'}</small>
+                </span>
+              </label>
+              {routineChoice === 'new' && <input className="routine-name" value={newName} autoFocus placeholder="Nome della nuova routine" aria-label="Nome della nuova routine" onChange={(e) => setNewName(e.target.value)} />}
+            </fieldset>
           )}
           <button
             className="finish-abandon"

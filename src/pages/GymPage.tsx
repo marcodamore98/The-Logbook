@@ -6,6 +6,7 @@ import { GlyphPlus, GlyphTrash, IconStats, IconWorkout } from '../components/ico
 import { RoutineEditor } from '../components/training/RoutineEditor';
 import { Empty, uid } from '../components/ui';
 import { addDays, fromISO, isoWeek, startOfWeek, today } from '../lib/dates';
+import { useBlockDrag } from '../components/useBlockDrag';
 import { useStore } from '../lib/store/StoreContext';
 import { e1rm, isWorkingSet, setsPerMuscle, setVolume, workingSets, workoutVolume } from '../lib/training/analytics';
 import { allExercises, exerciseDef, MUSCLES } from '../lib/training/exercises';
@@ -24,6 +25,12 @@ function Routines() {
   const [msg, setMsg] = useState<string>();
   const hevyFile = useRef<HTMLInputElement>(null);
   const save = (list: Routine[]) => store.saveSettings({ ...store.settings, routines: list });
+  // Hold a routine's header and drag it up or down; while dragging every routine becomes a row.
+  const { drag, settling, compact, onPointerDown } = useBlockDrag(
+    routines.map((r) => r.id),
+    (ids) => save(ids.map((id) => routines.find((r) => r.id === id)!)),
+    { attr: 'routine', handle: '.routine-top', compact: true },
+  );
   async function startEmpty() {
     const date = today();
     const id = uid();
@@ -137,13 +144,20 @@ function Routines() {
           Nessuna routine. Creane una con “Nuova routine”, oppure fai un allenamento e usa “Salva come scheda”.
         </Empty>
       )}
-          <div className="routine-grid">
+          <div className={`routine-grid${drag ? ' is-dragging' : ''}${compact ? ' is-compacting' : ''}`} onPointerDown={onPointerDown}>
             {routines.map((r, k) => {
+              const me = drag?.id === r.id;
+              const shift = drag && !me ? drag.shifts[r.id] ?? 0 : 0;
               const defs = r.exercises.map((ex) => exerciseDef(ex.exerciseId, store.settings.exercises));
               const muscles = [...new Set(defs.map((d) => d.muscle))].slice(0, 3);
               const last = lastDone(r);
               return (
-              <article key={r.id} className="card routine-card">
+              <article
+                key={r.id}
+                data-routine={r.id}
+                className={`card routine-card blk${me ? ' dragging' : ''}${drag && !me ? ' shifting' : ''}${settling ? ' settling' : ''}`}
+                style={me ? { transform: `translate3d(0, ${drag!.dy}px, 0) scale(1.02)` } : shift ? { transform: `translate3d(0, ${shift}px, 0)` } : undefined}
+              >
                 <div className="routine-top">
                   <span className={`routine-dot dot-${k % 5}`} aria-hidden="true">
                     <IconWorkout size={22} />
@@ -189,9 +203,10 @@ function Exercises() {
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('');
   const [sel, setSel] = useState<string | null>(null);
-  const list = allExercises(custom).filter(
-    (e) => (!muscle || e.muscle === muscle) && (!q || e.name.toLowerCase().includes(q.toLowerCase())),
-  );
+  const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const words = norm(q).split(/\s+/).filter(Boolean);
+  // Every word, in any order: "french cavi" → "French press ai cavi".
+  const list = allExercises(custom).filter((e) => (!muscle || e.muscle === muscle) && words.every((w) => norm(`${e.name} ${e.equipment} ${e.muscle}`).includes(w)));
   const done = (id: string) => store.history.get(id)?.length ?? 0;
   list.sort((a, b) => done(b.id) - done(a.id));
 

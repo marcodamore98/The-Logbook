@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import { exerciseDef, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
-import { REST_OPTIONS, restLabel, supersetLetters } from '../../lib/training/routines';
+import { REST_OPTIONS, restLabel, supersetColor, supersetLetters } from '../../lib/training/routines';
 import type { PlannedSet, Routine, RoutineExercise } from '../../lib/types';
 import { GlyphClose, GlyphPlus, GlyphTrash } from '../icons';
 import { useBlockDrag, useSortableList } from '../useBlockDrag';
@@ -48,7 +48,7 @@ function PlannedBlock({
   const sort = useSortableList(ex.sets, (sets) => onChange({ ...ex, sets: warmupsFirst(sets) }), { attr: `rset${index}`, handle: 'tr' });
   let n = 0;
   return (
-    <div className={`exercise${ex.supersetId ? ' in-superset' : ''}`}>
+    <div className={`exercise${ex.supersetId ? ' in-superset' : ''}`} style={letter ? ({ ['--ss' as string]: supersetColor(letter) } as React.CSSProperties) : undefined}>
       <div className="exercise-head">
         {letter && <span className="superset-tag">{letter}</span>}
         <div className="exercise-title">

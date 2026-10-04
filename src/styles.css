@@ -2234,3 +2234,27 @@ tr.sortable.sort-lifted { display: table-row; }
 .set-wrap .set-delete { display: flex; align-items: center; justify-content: flex-end; padding-right: 1rem; overflow: hidden; white-space: nowrap; border-radius: inherit; transition: background-color 0.15s; }
 .set-delete.armed, .food-swipe-delete.armed { background: #e5392f; }
 .food-swipe-delete.armed { font-weight: 800; }
+
+/* Each superset has its own colour (set inline as --ss) */
+.exercise.in-superset { border-left-color: var(--ss, var(--lavender)) !important; }
+.superset-pill { background: var(--ss, var(--plum)) !important; color: #1d1d1f !important; }
+.superset-tag { background: var(--ss, var(--lavender)) !important; color: #1d1d1f !important; }
+
+/* Workout / run summary on the day page: tap opens it, ⋮ for delete */
+.ws-wrap { position: relative; }
+.ws-wrap > .workout-summary { width: 100%; }
+.ws-more { position: absolute; top: 0.55rem; right: 0.55rem; z-index: 1; font-size: 1.2rem; }
+.ws-wrap .ws-name { padding-right: 2.2rem; }
+
+/* Finish workout: what to do with the routine */
+.routine-choice { border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.routine-choice legend { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; padding: 0; }
+.routine-choice label { display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem 0.9rem; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); }
+.routine-choice label.on { border-color: var(--lime); }
+.routine-choice input[type='radio'] { width: 20px; height: 20px; flex: none; accent-color: var(--lime); }
+.routine-choice label > span { display: flex; flex-direction: column; gap: 0.1rem; }
+.routine-choice small { color: var(--muted); font-size: 0.8rem; }
+.routine-choice .routine-name { margin-top: 0.1rem; font-weight: 700; }
+.routine-grid.is-compacting .routine-card > :not(.routine-top), .routine-grid.is-compacting .routine-card .menu-details, .routine-grid.is-compacting .routine-muscles { display: none !important; }
+.routine-grid.is-compacting .routine-card { padding-block: 0.6rem; }
+.routine-card .routine-top { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }

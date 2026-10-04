@@ -56,6 +56,10 @@ export const REST_OPTIONS = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
 export const restLabel = (s: number) => (s === 0 ? 'Nessun recupero' : s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
 
 /** Letter for each superset group (A, B, …) in order of appearance. */
+/** Each superset has its own colour (A lavender, B lime, C blue, D coral, E green…), used for the link and the label. */
+const SUPERSET_COLORS = ['#b9b0f5', '#d6f25f', '#7cc4f0', '#ff9b7a', '#8fe0b0', '#f5b8e0'];
+export const supersetColor = (letter?: string) => (letter ? SUPERSET_COLORS[(letter.charCodeAt(0) - 65) % SUPERSET_COLORS.length] : undefined);
+
 export function supersetLetters(exs: { supersetId?: string }[]): Map<string, string> {
   const m = new Map<string, string>();
   for (const e of exs) if (e.supersetId && !m.has(e.supersetId)) m.set(e.supersetId, String.fromCharCode(65 + m.size));

@@ -19,9 +19,11 @@ export function ExercisePicker({ onPick, onClose, multiple }: { onPick: (ids: st
   const [creating, setCreating] = useState<ExerciseDef | null>(null);
 
   const list = useMemo(() => {
-    const t = q.trim().toLowerCase();
+    // Every typed word must appear somewhere, in any order and ignoring accents: "french cavi" → "French press ai cavi".
+    const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const words = norm(q).split(/\s+/).filter(Boolean);
     return allExercises(custom).filter(
-      (e) => (!muscle || e.muscle === muscle || e.secondary?.includes(muscle)) && (!equip || e.equipment === equip) && (!t || e.name.toLowerCase().includes(t) || e.equipment.toLowerCase().includes(t)),
+      (e) => (!muscle || e.muscle === muscle || e.secondary?.includes(muscle)) && (!equip || e.equipment === equip) && (!words.length || words.every((w) => norm(`${e.name} ${e.equipment} ${e.muscle}`).includes(w))),
     );
   }, [q, muscle, equip, custom]);
 

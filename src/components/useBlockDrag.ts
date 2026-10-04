@@ -49,6 +49,8 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
       gap: number;
       j: number;
       pending?: boolean;
+      el?: HTMLElement | null; // the dragged element, moved directly every frame
+      shown?: number; // j last rendered by React
     } | null = null;
 
     const measure = () => {
@@ -75,14 +77,20 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
         if (k >= s!.me && k < j) shifts[o.id] = -h;
         else if (k < s!.me && k >= j) shifts[o.id] = h;
       });
-      setDrag({ id: s.id, dy, shifts });
+      // The dragged element follows the finger directly (no re-render per frame); React only
+      // re-renders when the landing place changes, to slide the others aside.
+      if (s.el) s.el.style.transform = `translate3d(0, ${dy}px, 0) scale(1.02)`;
+      if (s.shown !== j) {
+        s.shown = j;
+        setDrag({ id: s.id, dy, shifts });
+      }
     };
 
     const tick = () => {
       if (!s?.active) return;
       const h = window.innerHeight;
-      if (s.y < 90) window.scrollBy(0, -(90 - s.y) / 5 - 2);
-      else if (s.y > h - 90) window.scrollBy(0, (s.y - (h - 90)) / 5 + 2);
+      if (s.y < 90) window.scrollBy({ top: -(90 - s.y) / 5 - 2, behavior: 'instant' as ScrollBehavior });
+      else if (s.y > h - 90) window.scrollBy({ top: (s.y - (h - 90)) / 5 + 2, behavior: 'instant' as ScrollBehavior });
       compute();
       s.raf = requestAnimationFrame(tick);
     };
@@ -101,14 +109,7 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onCancel);
       window.removeEventListener('touchmove', blockScroll);
-      if (compactMode) {
-        setCompact(false);
-        // Back to full size: keep the block that was moved in view.
-        if (cur.active)
-          requestAnimationFrame(() =>
-            requestAnimationFrame(() => document.querySelector(`[data-${attr}="${cur.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })),
-          );
-      }
+      let landed = -1; // position of the moved item in the new order
       if (cur.active) {
         // Swallow the click that follows the release so the card doesn't toggle.
         const eat = (e: Event) => e.stopPropagation();
@@ -125,12 +126,30 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
             at = last ? rest.indexOf(last) + 1 : rest.length;
           }
           const next = [...rest.slice(0, at), cur.id, ...rest.slice(at)];
+          landed = next.indexOf(cur.id);
           if (next.join() !== live.current.order.join()) live.current.onReorder(next);
-        }
+        } else landed = cur.me;
         setSettling(true);
         setTimeout(() => setSettling(false), 80);
       }
+      if (cur.el) cur.el.style.transform = '';
       setDrag(null);
+      if (compactMode) {
+        setCompact(false);
+        // Back to full size without jumping: the moved item's header stays where the finger left it.
+        if (cur.active && landed >= 0) {
+          const fingerY = cur.y;
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              const el = document.querySelectorAll<HTMLElement>(`[data-${attr}]`)[landed];
+              const head = el?.querySelector<HTMLElement>(handleSel) ?? el;
+              if (!head) return;
+              const r = head.getBoundingClientRect();
+              window.scrollTo({ top: window.scrollY + r.top + r.height / 2 - fingerY, behavior: 'instant' as ScrollBehavior });
+            }),
+          );
+        }
+      }
     }
 
     function onMove(e: PointerEvent) {
@@ -174,7 +193,7 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
                 const el = document.querySelector<HTMLElement>(`[data-${attr}="${s.id}"]`);
                 if (el) {
                   const r = el.getBoundingClientRect();
-                  window.scrollBy(0, r.top + r.height / 2 - s.y);
+                  window.scrollTo({ top: window.scrollY + r.top + r.height / 2 - s.y, behavior: 'instant' as ScrollBehavior });
                 }
                 s.pending = false;
                 s.startY = s.y;
@@ -197,6 +216,8 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
           s.me = m.slots.findIndex((x) => x.id === s!.id);
           if (s.me < 0) return finish(false);
           s.j = s.me;
+          s.shown = undefined;
+          s.el = document.querySelector<HTMLElement>(`[data-${attr}="${s.id}"]`);
           s.active = true;
           window.addEventListener('touchmove', blockScroll, { passive: false });
           window.getSelection()?.removeAllRanges();

@@ -4,7 +4,7 @@ import { chime } from '../../lib/sound';
 import { useStore } from '../../lib/store/StoreContext';
 import { bestsBefore, matchingSet, previousSession, prsOf, SET_TYPES, setTypeOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import { exerciseDef, usesDistance, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
-import { REST_OPTIONS, restLabel, supersetLetters } from '../../lib/training/routines';
+import { REST_OPTIONS, restLabel, supersetColor, supersetLetters } from '../../lib/training/routines';
 import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, WorkoutSet } from '../../lib/types';
 import { GlyphCheck, GlyphPlus, IconTimer } from '../icons';
 import { AutoText, NumberInput, uid } from '../ui';
@@ -249,7 +249,7 @@ function ExerciseBlock({
   const cols = [usesWeight(def.kind) && unit, usesDistance(def.kind) && 'KM', usesReps(def.kind) && 'RIP', usesTime(def.kind) && 'SEC'].filter(Boolean) as string[];
 
   return (
-    <div className={`exercise${ex.supersetId ? ' in-superset' : ''}`}>
+    <div className={`exercise${ex.supersetId ? ' in-superset' : ''}`} style={letter ? ({ ['--ss' as string]: supersetColor(letter) } as React.CSSProperties) : undefined}>
       <div className="exercise-head">
         <ExAvatar muscle={def.muscle} size={42} />
         <button type="button" className="exercise-title link-title" onClick={() => setInfo(true)}>
