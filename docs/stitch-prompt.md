@@ -54,6 +54,7 @@ LAYOUT AND BEHAVIOUR
 - Bottom sheets have a grabber, a centered bold title, a round × at the right, lime primary action and a neutral "Annulla" pill.
 - Floating only: the active-workout bar and the rest timer at the bottom.
 - Tone: quiet and professional, no confetti, no emoji. Never invent data the app does not record (no heart rate, HRV, cadence, calories burned by a watch, ECM "targets", patient IDs).
+Reordering rule for every list that has an order (day cards, exercises, sets, run phases, reminders, shopping items, section order): hold and drag. The lifted row scales slightly with a soft shadow and the others slide aside; rows made only of fields show a small muted six-dot grip on the left.
 ```
 
 ---

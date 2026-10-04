@@ -277,6 +277,17 @@ export function Chevron({ open }: { open: boolean }) {
 
 /** Card with a header that collapses the body; `summary` is shown while closed. */
 /** Decoration for every card inside a block (the day page sets the section label and the drag hint). */
+/** Six dots: "hold here and drag" on rows made only of fields. */
+export function DragGrip() {
+  return (
+    <span className="drag-hint row-grip no-print" aria-hidden="true" title="Tieni premuto per spostare">
+      <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor">
+        <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+      </svg>
+    </span>
+  );
+}
+
 export const CardDecor = createContext<{ kicker?: ReactNode; handle?: boolean }>({});
 const NO_DECOR = {};
 

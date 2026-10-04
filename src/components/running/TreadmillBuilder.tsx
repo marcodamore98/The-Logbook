@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { GlyphPlus, GlyphTrash } from '../icons';
-import { NumField } from '../ui';
+import { DragGrip, NumField } from '../ui';
+import { useSortableList } from '../useBlockDrag';
 import { fmtDuration, fmtKm, KIND_LABEL } from '../../lib/running/geo';
 import { fmtKmh, planMeters, tStep, treadmillRepeats } from '../../lib/running/treadmill';
 import type { RunStep } from '../../lib/types';
@@ -20,12 +21,13 @@ function PaceField({ value, onChange }: { value: number; onChange: (sec: number)
   );
 }
 
-function StepRow({ s, onChange, onRemove }: { s: RunStep; onChange: (s: RunStep) => void; onRemove: () => void }) {
+function StepRow({ s, onChange, onRemove, sortProps }: { s: RunStep; onChange: (s: RunStep) => void; onRemove: () => void; sortProps: { className: string; style?: React.CSSProperties } }) {
   const min = Math.floor(s.value / 60);
   const sec = s.value % 60;
   return (
-    <li className={`plan-step tm-step step-${s.kind}`}>
+    <li {...sortProps} className={`plan-step tm-step step-${s.kind} ${sortProps.className}`}>
       <div className="tm-step-top">
+        <DragGrip />
         <select value={s.kind} onChange={(e) => onChange({ ...s, kind: e.target.value as RunStep['kind'] })} aria-label="Tipo di fase">
           {KINDS.map((k) => (
             <option key={k} value={k}>
@@ -74,6 +76,7 @@ export function TreadmillBuilder({ steps, onChange }: { steps: RunStep[]; onChan
   const generate = () =>
     onChange(treadmillRepeats(n, { sec: Math.round(workMin * 60), pace: workPace }, { sec: Math.round(restMin * 60), pace: restPace }, incline, { sec: Math.round(warm * 60), pace: restPace }, { sec: Math.round(cool * 60), pace: restPace + 30 }));
 
+  const sort = useSortableList(steps, onChange, { attr: 'tstep', handle: '.plan-step' });
   const total = steps.reduce((t, s) => t + s.value, 0);
 
   return (
@@ -121,9 +124,9 @@ export function TreadmillBuilder({ steps, onChange }: { steps: RunStep[]; onChan
           <p className="muted small">
             {steps.length} fasi · {fmtDuration(total)} · circa {fmtKm(planMeters(steps))} km
           </p>
-          <ol className="plan-steps">
+          <ol className="plan-steps" {...sort.container}>
             {steps.map((s, i) => (
-              <StepRow key={s.id} s={s} onChange={(ns) => onChange(steps.map((x, k) => (k === i ? ns : x)))} onRemove={() => onChange(steps.filter((_, k) => k !== i))} />
+              <StepRow key={s.id} sortProps={sort.item(i)} s={s} onChange={(ns) => onChange(steps.map((x, k) => (k === i ? ns : x)))} onRemove={() => onChange(steps.filter((_, k) => k !== i))} />
             ))}
           </ol>
         </>

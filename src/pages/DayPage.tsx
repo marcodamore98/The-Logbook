@@ -21,9 +21,9 @@ import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
 import { DiaryEntryView } from '../components/diary/DiaryEntry';
 import { ShoppingList } from '../components/day/ShoppingList';
 import { useUndo } from '../components/Undo';
-import { useBlockDrag } from '../components/useBlockDrag';
+import { useBlockDrag, useSortableList } from '../components/useBlockDrag';
 import { useSwipeNav } from '../components/useSwipeNav';
-import { Card, CardDecor, ColleaguePicker, Empty, ShiftTypeSelect, TimeTile, uid } from '../components/ui';
+import { Card, CardDecor, ColleaguePicker, DragGrip, Empty, ShiftTypeSelect, TimeTile, uid } from '../components/ui';
 import { PrintButton } from '../components/PrintDialog';
 import { openFile } from '../components/files/FileSlot';
 import { rangeLabel } from '../components/modules/meta';
@@ -183,6 +183,9 @@ export default function DayPage() {
     }
   };
   const [shopAdd, setShopAdd] = useState(0);
+
+  // Hold and drag: reminders in "Da ricordare" and the sections in "Ordina le sezioni".
+  const todoSort = useSortableList(day.todos, (todos) => update((d) => ({ ...d, todos })), { attr: 'todo', handle: '.todo' });
   const shiftName = settings.shiftTypes.find((t) => t.id === day.shift?.shiftTypeId)?.name ?? 'Turno';
   const who = day.shift ? day.shift.colleagueIds.map((c) => settings.colleagues.find((x) => x.id === c)?.name).filter(Boolean).slice(0, 3).join(', ') : '';
   const shiftSummary = day.shift
@@ -191,6 +194,7 @@ export default function DayPage() {
       ? `Dal tabellone: ${myCodes.map(codeShort).join(' · ')}`
       : 'Nessun turno';
   const order = blockOrder(settings.dayLayout);
+  const orderSort = useSortableList(order, (o) => store.saveSettings({ ...settings, dayLayout: o }), { attr: 'ord', handle: '.order-list li' });
   // "Domenica 4 ottobre": the year only when it isn't the current one.
   const longDate = formatLong(date).replace(new RegExp(` ${today().slice(0, 4)}$`), '');
   const dayTitle = longDate.charAt(0).toUpperCase() + longDate.slice(1);
@@ -447,9 +451,10 @@ export default function DayPage() {
             ) : (
             <>
             {day.todos.length === 0 && <Empty>Niente da ricordare.</Empty>}
-            <ul className="todos">
-              {day.todos.map((t) => (
-                <li key={t.id} className={`todo${t.done ? ' done' : ''}`}>
+            <ul className="todos" {...todoSort.container}>
+              {day.todos.map((t, ti) => (
+                <li key={t.id} {...todoSort.item(ti)} className={`todo${t.done ? ' done' : ''} ${todoSort.item(ti).className}`}>
+                  <DragGrip />
                   <input type="checkbox" checked={t.done} aria-label="Fatto" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, done: e.target.checked } : x)) }))} />
                   <input className="grow" value={t.text} placeholder="Cosa ricordare…" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, text: e.target.value } : x)) }))} />
                   {catSelect(t.category, (category) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, category } : x)) })))}
@@ -639,10 +644,11 @@ export default function DayPage() {
                 <GlyphClose />
               </button>
             </div>
-            <p className="muted small">Puoi anche spostare una sezione tenendo premuta la sua intestazione e trascinandola col dito. Le nuove schede si inseriscono da sole nella loro sezione.</p>
-            <ol className="order-list">
+            <p className="muted small">Tieni premuta una riga (o l’intestazione di una sezione nella pagina) e trascinala per spostarla. Le nuove schede si inseriscono da sole nella loro sezione.</p>
+            <ol className="order-list" {...orderSort.container}>
               {order.map((id, i) => (
-                <li key={id} className={hidden.includes(id) ? 'is-hidden' : ''}>
+                <li key={id} {...orderSort.item(i)} className={`${hidden.includes(id) ? 'is-hidden' : ''} ${orderSort.item(i).className}`}>
+                  <DragGrip />
                   <span>{DAY_BLOCKS.find((b) => b.id === id)?.label}{hidden.includes(id) && ' (eliminato)'}</span>
                   {hidden.includes(id) && (
                     <button className="btn-ghost small" onClick={() => saveSettings({ ...settings, hiddenBlocks: hidden.filter((x) => x !== id) })}>

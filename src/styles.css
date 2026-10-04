@@ -2174,3 +2174,13 @@ i[class^='dot-'] { background: var(--c) !important; }
 .ex-blk .exercise-head { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: pan-y; }
 .workout.is-dragging, .routine-editor.is-dragging { user-select: none; -webkit-user-select: none; }
 .ex-blk.dragging > .exercise { box-shadow: 0 14px 28px rgb(0 0 0 / 0.3); }
+
+/* ---------- Hold and drag to reorder (any list) ---------- */
+.sortable { position: relative; -webkit-touch-callout: none; }
+.sortable.sort-shifting { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.sortable.sort-settling, .sortable.sort-settling * { transition: none !important; }
+.sortable.sort-lifted { z-index: 30; pointer-events: none; box-shadow: 0 12px 26px rgb(0 0 0 / 0.3); border-radius: 12px; background: var(--surface-2); }
+tr.sortable.sort-lifted { display: table-row; }
+.row-grip { flex: none; display: inline-grid; place-items: center; width: 18px; color: var(--muted); opacity: 0.7; cursor: grab; touch-action: none; }
+.order-list li .row-grip { margin-right: 0.2rem; }
+.tm-step-top .row-grip, .plan-step > .row-grip { margin-left: -0.15rem; }

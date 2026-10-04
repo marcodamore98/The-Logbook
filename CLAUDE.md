@@ -22,6 +22,7 @@ In sospeso: il **Prompt 12** (Menù, pannello "Riepilogo del giorno", Impostazio
 
 - Palette lime `#D6F25F` / lavanda `#B9B0F5` / antracite, Plus Jakarta Sans, icone disegnate su dischi pastello (non usare Material Symbols).
 - Quando arriva un HTML di Stitch: riporta solo ciò che l'app sa già fare o che l'utente approva; escludi dati inventati (FC, HRV, cadenza, ID pazienti, target ECM…) e dillo.
+- **Tutto ciò che si può spostare sopra/sotto si sposta tenendo premuto e trascinando** (schede del giorno, esercizi, serie, fasi della corsa, promemoria, spesa, "Ordina le sezioni"…): usa `useSortableList` / `useBlockDrag` (`src/components/useBlockDrag.ts`) e, sulle righe fatte solo di campi, la maniglia `DragGrip`. Vale anche per ogni nuovo elenco ordinabile.
 - Le kcal rimanenti nel pannello "Riepilogo del giorno" (ex Corpo) restano. Il pannello si apre scorrendo dal bordo destro, il Menù dal bordo sinistro o con ☰; niente pulsante "Corpo" in alto.
 
 ## Verifica

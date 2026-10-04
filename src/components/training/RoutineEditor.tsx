@@ -4,7 +4,7 @@ import { exerciseDef, usesReps, usesTime, usesWeight } from '../../lib/training/
 import { REST_OPTIONS, restLabel, supersetLetters } from '../../lib/training/routines';
 import type { PlannedSet, Routine, RoutineExercise } from '../../lib/types';
 import { GlyphClose, GlyphPlus, GlyphTrash } from '../icons';
-import { useBlockDrag } from '../useBlockDrag';
+import { useBlockDrag, useSortableList } from '../useBlockDrag';
 import { Field, NumberInput } from '../ui';
 import { ExercisePicker } from './ExercisePicker';
 import { keepSupersets, linkNext, SetTypeBadge, unlink, warmupsFirst } from './WorkoutLogger';
@@ -33,6 +33,8 @@ function PlannedBlock({
   const { settings } = useStore();
   const def = exerciseDef(ex.exerciseId, settings.exercises);
   const setAt = (k: number, s: PlannedSet) => onChange({ ...ex, sets: warmupsFirst(ex.sets.map((x, i) => (i === k ? s : x))) });
+  // Hold a set (its badge cell) and drag it up or down.
+  const sort = useSortableList(ex.sets, (sets) => onChange({ ...ex, sets: warmupsFirst(sets) }), { attr: `rset${index}`, handle: 'tr' });
   let n = 0;
   return (
     <div className={`exercise${ex.supersetId ? ' in-superset' : ''}`}>
@@ -83,11 +85,11 @@ function PlannedBlock({
             <th aria-label="Rimuovi" />
           </tr>
         </thead>
-        <tbody>
+        <tbody {...sort.container}>
           {ex.sets.map((s, k) => {
             if (s.type !== 'warmup') n++;
             return (
-              <tr key={k} className={`set-row-${s.type}`}>
+              <tr key={k} {...sort.item(k)} className={`set-row-${s.type} ${sort.item(k).className}`}>
                 <td>
                   <SetTypeBadge type={s.type} index={n} allowWarmup={ex.sets.slice(0, k).every((x) => x.type === 'warmup')} onChange={(type) => setAt(k, { ...s, type })} />
                 </td>

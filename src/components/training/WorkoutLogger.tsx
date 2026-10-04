@@ -9,7 +9,7 @@ import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, Wor
 import { GlyphCheck, GlyphPlus, IconTimer } from '../icons';
 import { AutoText, NumberInput, uid } from '../ui';
 import { useUndo } from '../Undo';
-import { useBlockDrag } from '../useBlockDrag';
+import { useBlockDrag, useSortableList } from '../useBlockDrag';
 import { ExAvatar } from './ExAvatar';
 import { FinishFlow } from './FinishFlow';
 import { ExerciseDetail } from './ExerciseDetail';
@@ -219,6 +219,8 @@ function ExerciseBlock({
   const setAt = (k: number, s: WorkoutSet) => onChange({ ...ex, sets: warmupsFirst(ex.sets.map((x, i) => (i === k ? s : x))) });
   const [menu, setMenu] = useState(false);
   const [info, setInfo] = useState(false);
+  // Hold a set (its number or the "previous" column) and drag it up or down.
+  const sort = useSortableList(ex.sets, (sets) => onChange({ ...ex, sets: warmupsFirst(sets) }), { attr: `set${index}`, handle: '.set-row' });
   let n = 0;
   const unit = def.kind === 'assisted_bodyweight' ? '−KG' : def.kind === 'weighted_bodyweight' ? '+KG' : 'KG';
   const cols = [usesWeight(def.kind) && unit, usesDistance(def.kind) && 'KM', usesReps(def.kind) && 'RIP', usesTime(def.kind) && 'SEC'].filter(Boolean) as string[];
@@ -285,7 +287,7 @@ function ExerciseBlock({
         </select>
       </div>
 
-      <div className="sets" style={{ ['--cols' as string]: cols.length }}>
+      <div className="sets" style={{ ['--cols' as string]: cols.length }} {...sort.container}>
         <div className="set-head">
           <span>SERIE</span>
           <span>PRECEDENTE</span>
@@ -299,8 +301,8 @@ function ExerciseBlock({
           if (type !== 'warmup') n++;
           const p = prev ? matchingSet(prev.sets, ex.sets, k) : undefined;
           return (
+            <div key={k} {...sort.item(k)}>
             <SetRow
-              key={k}
               s={s}
               n={n}
               def={def}
@@ -319,6 +321,7 @@ function ExerciseBlock({
                 else onSetDone(next);
               }}
             />
+            </div>
           );
         })}
       </div>
