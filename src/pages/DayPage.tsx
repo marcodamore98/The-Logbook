@@ -31,11 +31,12 @@ import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
 
 /** Cards that can be added by hand; training, food and the diary have their own sections. */
-const ADDABLE: ModuleKind[] = ['surgery', 'study', 'travel', 'outing'];
+const ADDABLE: ModuleKind[] = ['surgery', 'study', 'travel'];
 /** Entries that stand for two kinds of card: you pick the exact one inside the card. */
 const MERGED: Partial<Record<ModuleKind, { label: string; hint: string }>> = {
   surgery: { label: 'Attività chirurgica e clinica', hint: 'Interventi, ambulatorio, ecografie, PS, sala parto' },
   study: { label: 'Studio, corsi e congressi', hint: 'Articoli, linee guida, corsi, congressi, webinar' },
+  travel: { label: 'Viaggi e uscite', hint: 'Viaggi di più giorni, gite, cene, eventi' },
 };
 
 export default function DayPage() {
@@ -209,7 +210,7 @@ export default function DayPage() {
     switch (id) {
       case 'shift': {
         // The card shows when there is a shift, or a roster/suggestion to start from; otherwise add it with "Aggiungi scheda".
-        if (!day.shift && !suggestion && !rosterFor(date)) return null;
+        if (!day.shift) return null;
         return (
           <Card
             key="shift"

@@ -335,6 +335,7 @@ function TravelEditor({ value: m, onChange }: Props<TravelModule>) {
 const KIND_GROUPS: { kinds: Module['kind'][]; labels: string[] }[] = [
   { kinds: ['surgery', 'clinical'], labels: ['Chirurgica', 'Clinica'] },
   { kinds: ['study', 'course'], labels: ['Studio', 'Corsi e congressi'] },
+  { kinds: ['travel', 'outing'], labels: ['Viaggio', 'Gita / uscita'] },
 ];
 
 export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: ISODate }) {
