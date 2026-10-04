@@ -1936,3 +1936,33 @@ li.best-lap .rs-idx { background: color-mix(in srgb, var(--amber) 22%, transpare
 .ct-date { font-size: 0.75rem; color: var(--muted); }
 .ct-foot { display: flex; justify-content: space-between; margin-top: 0.4rem; padding-top: 0.5rem; border-top: 1px solid var(--line); font-size: 0.68rem; color: var(--muted); font-weight: 600; }
 .ct-foot span:last-child { color: var(--ink); }
+
+/* ---- Stitch restyle, round 11: diary ---- */
+.diary-strip { padding: 0.4rem; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.diary-strip .page-title { flex-direction: column; align-items: center; gap: 0.1rem; }
+.diary-strip h1 { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 1rem; }
+.diary-strip h1 svg { color: var(--accent); flex: none; }
+:root[data-theme='dark'] .diary-strip h1 svg { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .diary-strip h1 svg { color: var(--lime); } }
+.diary-strip .page-sub { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+:root[data-theme='dark'] .diary-strip .page-sub { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .diary-strip .page-sub { color: var(--lime); } }
+.diary-strip .icon-btn { background: transparent; }
+.diary-tools { display: flex; align-items: center; gap: 0.5rem; }
+.diary-jump { flex: 1; min-width: 0; }
+.dj-count { flex: none; font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.6rem; border-radius: 999px; background: #1d1d1f; color: var(--lime); }
+.diary-nav .btn-ghost { border-radius: 999px; }
+.diary-entry.with-photo-card .photo-card-head { display: flex; align-items: center; justify-content: space-between; margin-top: 0.4rem; padding-top: 0.8rem; border-top: 1px solid var(--line); }
+.photo-card-head strong { font-size: 0.95rem; }
+.photo-card-head .icon-btn { border-radius: 999px; background: var(--surface-2); }
+.with-photo-card .photos { grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
+.with-photo-card .photo { border-radius: 14px; }
+.with-photo-card .photo img { aspect-ratio: 1; }
+.diary-print { display: flex; flex-direction: column; gap: 0.8rem; }
+.diary-print .sheet-head { align-items: flex-start; }
+.diary-print .sheet-head h2 { margin: 0; }
+.diary-print .sheet-head p { margin: 0.15rem 0 0; }
+.diary-print .tile-grid .time-tile:last-child { grid-column: auto; }
+.lime-banner:disabled { opacity: 0.45; }
+.diary-jump .dj-count { color: var(--lime) !important; white-space: nowrap; }
+.diary-nav input[type='date'] { flex: 1; min-width: 8rem; text-align: center; }

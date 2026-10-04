@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GlyphClose, GlyphEdit, GlyphPlus, GlyphTrash } from '../icons';
 import { compress, StoredImage } from '../modules/editors';
 import { uid } from '../ui';
@@ -10,7 +10,7 @@ import type { DayEntry, DiaryEntry as Diary, PhotoItem } from '../../lib/types';
  * The diary of one day: free text and photos, nothing else. It is read-only until
  * "Modifica" is pressed, so it can't be changed or wiped by a stray tap.
  */
-export function DiaryEntryView({ day, onSave, placeholder = 'Come è andata oggi?' }: { day: DayEntry; onSave: (d: Diary) => void; placeholder?: string }) {
+export function DiaryEntryView({ day, onSave, placeholder = 'Come è andata oggi?', photoCard = false }: { day: DayEntry; onSave: (d: Diary) => void; placeholder?: string; /** Photos in their own card with a + (diary page). */ photoCard?: boolean }) {
   const { repo } = useStore();
   const saved = diaryOf(day);
   const [draft, setDraft] = useState<Diary | null>(null);
@@ -19,6 +19,14 @@ export function DiaryEntryView({ day, onSave, placeholder = 'Come è andata oggi
   const removed = useRef<PhotoItem[]>([]);
   const input = useRef<HTMLInputElement>(null);
   const editing = draft !== null;
+  // "+" on the photo card: open the editor, then the file picker.
+  const pick = useRef(false);
+  useEffect(() => {
+    if (editing && pick.current) {
+      pick.current = false;
+      input.current?.click();
+    }
+  }, [editing]);
   const empty = !saved.text.trim() && saved.photos.length === 0;
 
   const start = () => {
@@ -71,7 +79,7 @@ export function DiaryEntryView({ day, onSave, placeholder = 'Come è andata oggi
   const photos = editing ? draft.photos : saved.photos;
 
   return (
-    <div className={`diary-entry${editing ? ' editing' : ''}${empty && !editing ? ' is-empty' : ''}`}>
+    <div className={`diary-entry${editing ? ' editing' : ''}${empty && !editing && !photoCard ? ' is-empty' : ''}${photoCard ? ' with-photo-card' : ''}`}>
       {editing ? (
         <textarea
           className="diary-text"
@@ -87,6 +95,25 @@ export function DiaryEntryView({ day, onSave, placeholder = 'Come è andata oggi
         <p className="diary-empty">{empty ? 'Nessuna pagina scritta per questo giorno.' : 'Nessun testo, solo foto.'}</p>
       )}
 
+      {photoCard && (
+        <div className="photo-card-head">
+          <strong>Foto della giornata{photos.length ? ` (${photos.length})` : ''}</strong>
+          <button
+            type="button"
+            className="icon-btn small"
+            aria-label="Aggiungi foto"
+            onClick={() => {
+              if (editing) input.current?.click();
+              else {
+                pick.current = true;
+                start();
+              }
+            }}
+          >
+            <GlyphPlus />
+          </button>
+        </div>
+      )}
       {photos.length > 0 && (
         <div className="photos">
           {photos.map((p) => (
