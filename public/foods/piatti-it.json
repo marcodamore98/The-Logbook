@@ -1,5 +1,6 @@
 {
-  "version": 1,
+  "version": 2,
+  "label": "stima",
   "source": "Stime per piatti tipici di mensa e ristorante (valori per 100 g di piatto pronto, arrotondati): ricetta e condimento cambiano da cucina a cucina, margine circa ±20-30%.",
   "columns": ["id", "name", "category", "kcal", "protein", "carbs", "fat", "fiber", "portionG", "portionName"],
   "rows": [

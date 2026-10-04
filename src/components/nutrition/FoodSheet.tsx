@@ -31,11 +31,14 @@ const TONES = ['lime', 'lav', 'sage', 'sky', 'terra'];
 /** Lower case without accents, so "ragu" finds "ragù". */
 const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-/** Best first: name starts with the query, then a word of the name does, then anything else. */
+/** Best first: name starts with the query as whole words, then the whole words anywhere, then word starts, then anything else. */
 function rankOf(name: string, text: string, words: string[]) {
-  if (name.startsWith(words.join(' '))) return 0;
-  if (words.every((w) => name.split(/[\s,'(/-]+/).some((x) => x.startsWith(w)))) return 1;
-  return text.startsWith(words[0]) ? 2 : 3;
+  const parts = name.split(/[\s,'(/-]+/);
+  const whole = words.every((w) => parts.includes(w));
+  if (name.startsWith(words.join(' '))) return whole ? 0 : 1;
+  if (whole) return 2;
+  if (words.every((w) => parts.some((x) => x.startsWith(w)))) return 3;
+  return text.startsWith(words[0]) ? 4 : 5;
 }
 
 function FoodRow({ food, onPick, fav, onFav, picked }: { food: Food; onPick: () => void; fav: boolean; onFav: () => void; picked?: boolean }) {
@@ -50,7 +53,7 @@ function FoodRow({ food, onPick, fav, onFav, picked }: { food: Food; onPick: () 
           {food.brand && <span className="muted"> · {food.brand}</span>}
         </span>
         <span className="ex-meta">
-          <b>{food.kcal} kcal</b> / 100 g · P {food.protein} · C {food.carbs} · G {food.fat}{food.source === 'off' ? ' · Open Food Facts' : food.source === 'library' ? ' · stima' : ''}
+          <b>{food.kcal} kcal</b> / 100 g · P {food.protein} · C {food.carbs} · G {food.fat}{food.source === 'off' ? ' · Open Food Facts' : food.origin ? ` · ${food.origin}` : ''}
         </span>
       </button>
       <button className={`fav${fav ? ' on' : ''}`} aria-label={fav ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'} aria-pressed={fav} onClick={onFav}>
@@ -159,17 +162,18 @@ export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId;
 
   const library = useLibrary();
   const foods = useMemo(() => [...allFoods(custom), ...library], [custom, library]);
+  // Normalised once per list (over 3,000 foods), not on every keystroke.
+  const index = useMemo(() => foods.map((f) => ({ f, name: norm(f.name), text: norm(`${f.name} ${f.brand ?? ''} ${f.category ?? ''}`) })), [foods]);
   const local = useMemo(() => {
     const words = norm(q).split(/\s+/).filter(Boolean);
     if (!words.length) return foods.slice(0, 40);
-    return foods
-      .map((f) => ({ f, text: norm(`${f.name} ${f.brand ?? ''} ${f.category ?? ''}`) }))
+    return index
       .filter(({ text }) => words.every((w) => text.includes(w)))
-      .map(({ f, text }) => ({ f, rank: rankOf(norm(f.name), text, words) }))
+      .map(({ f, name, text }) => ({ f, rank: rankOf(name, text, words) }))
       .sort((a, b) => a.rank - b.rank || a.f.name.length - b.f.name.length)
       .slice(0, 60)
       .map(({ f }) => f);
-  }, [q, foods]);
+  }, [q, foods, index]);
 
   const recent = useMemo(() => {
     const seen = new Set<string>();

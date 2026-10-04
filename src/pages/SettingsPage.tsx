@@ -332,6 +332,9 @@ function AppVersion() {
         Cerca aggiornamenti
       </button>
       {msg && <p className="small">{msg}</p>}
+      <p className="muted small">
+        Dati nutrizionali: CIQUAL 2025 (ANSES, Licence Ouverte Etalab), Open Food Facts (ODbL) e stime per i piatti di mensa e ristorante.
+      </p>
     </section>
   );
 }

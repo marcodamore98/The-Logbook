@@ -292,6 +292,7 @@ export interface Food {
   category?: string; // vocab FOOD_CATEGORIES
   barcode?: string;
   source: 'builtin' | 'custom' | 'off' | 'library';
+  origin?: string; // libreria di provenienza ("stima", "CIQUAL")
 }
 
 export interface FoodEntry {

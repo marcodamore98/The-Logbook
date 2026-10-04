@@ -2109,4 +2109,4 @@ i[class^='dot-'] { background: var(--c) !important; }
 .select-delete svg { width: 16px; height: 16px; }
 .app-version { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; }
 .app-version p { margin: 0; }
-.app-version > p:last-child { flex-basis: 100%; }
+.app-version > p:not(:first-child) { flex-basis: 100%; }

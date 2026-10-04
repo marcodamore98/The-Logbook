@@ -7,10 +7,11 @@ import { useSyncExternalStore } from 'react';
 import { createStore, get, set } from 'idb-keyval';
 import type { Food } from '../types';
 
-const PACKS = ['piatti-it'] as const;
+const PACKS = ['piatti-it', 'ciqual'] as const;
 
 interface Pack {
   version: number;
+  label?: string; // shown next to each food, e.g. "stima" or "CIQUAL"
   source: string;
   columns: string[];
   rows: (string | number | null)[][];
@@ -41,6 +42,7 @@ function publish() {
         fiber: num(r, 'fiber'),
         portionG: num(r, 'portionG'),
         portionName: str(r, 'portionName'),
+        origin: p.label,
         source: 'library',
       }),
     );
