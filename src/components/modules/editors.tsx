@@ -306,6 +306,18 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
       <Field label="Titolo" wide>
         <input value={m.title} placeholder="es. Congresso nazionale SIGO" onChange={(e) => onChange({ ...m, title: e.target.value })} />
       </Field>
+      <Field label="Luogo">
+        <span className="icon-input">
+          <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" />
+            <circle cx="12" cy="10" r="2.3" />
+          </svg>
+          <input value={m.place ?? ''} placeholder="es. Roma" onChange={(e) => onChange({ ...m, place: e.target.value || undefined })} />
+        </span>
+      </Field>
+      <Field label="Crediti ECM">
+        <NumberInput value={m.ecm} step={0.5} onChange={(ecm) => onChange({ ...m, ecm })} />
+      </Field>
       <div className="field field-wide tile-grid">
         <TimeTile type="date" label="Dal" value={m.startDate} onChange={(v) => v && onChange({ ...m, startDate: v, endDate: m.endDate < v ? v : m.endDate })} />
         <TimeTile type="date" label="Al" value={m.endDate} min={m.startDate} onChange={(v) => v && onChange({ ...m, endDate: v < m.startDate ? m.startDate : v })} />

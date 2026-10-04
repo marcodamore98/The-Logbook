@@ -154,6 +154,9 @@ export interface CourseModule {
   gcalEventId?: string;
   startDate: ISODate;
   endDate: ISODate;
+  place?: string;
+  /** Crediti ECM riconosciuti. */
+  ecm?: number;
   program?: FileRef;
   certificate?: FileRef;
 }

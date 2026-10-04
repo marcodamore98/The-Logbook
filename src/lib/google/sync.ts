@@ -60,6 +60,7 @@ function courseInput(m: CourseModule): EventInput {
     start: m.startTime,
     end: `${pad(Math.floor(end / 60))}:${pad(end % 60)}`,
     reminders: m.remind ? [30, 5] : [],
+    location: m.place || undefined,
   };
 }
 
