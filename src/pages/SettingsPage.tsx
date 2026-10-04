@@ -7,6 +7,7 @@ import { firebaseConfigured, logOut } from '../lib/firebase';
 import { CoachCard } from '../components/coach/CoachCard';
 import { myRosterDays, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
+import { BUILD_TIME, checkForUpdate } from '../lib/update';
 import type { Colleague, DayEntry, Settings, ShiftType } from '../lib/types';
 
 /** Sub-list with its own arrow, closed by default (remembered on this device). */
@@ -303,6 +304,34 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           );
         })}
       </Card>
+      <AppVersion />
     </div>
+  );
+}
+
+/** Version of the app on this device, and a button to fetch the latest one. */
+function AppVersion() {
+  const [msg, setMsg] = useState<string>();
+  return (
+    <section className="card app-version">
+      <p className="muted small">
+        Versione del {BUILD_TIME.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}, ore{' '}
+        {BUILD_TIME.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+      </p>
+      <button
+        className="btn-ghost small"
+        onClick={async () => {
+          setMsg('Controllo…');
+          try {
+            setMsg((await checkForUpdate()) ? 'Nuova versione trovata: l’app si riavvia da sola tra un attimo.' : 'Hai già l’ultima versione.');
+          } catch {
+            setMsg('Nessuna connessione: riprova quando sei online.');
+          }
+        }}
+      >
+        Cerca aggiornamenti
+      </button>
+      {msg && <p className="small">{msg}</p>}
+    </section>
   );
 }

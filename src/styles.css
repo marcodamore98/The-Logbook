@@ -2107,3 +2107,6 @@ i[class^='dot-'] { background: var(--c) !important; }
 .select-bar select { width: auto; min-height: 2.3rem; background: #2c2c2e; color: #fff; border-color: #3a3a3c; font-size: 0.85rem; }
 .select-delete { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 2.3rem; padding: 0 0.85rem; border-radius: 999px; border: none; background: #c0392b; color: #fff; font: inherit; font-weight: 700; font-size: 0.85rem; }
 .select-delete svg { width: 16px; height: 16px; }
+.app-version { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.app-version p { margin: 0; }
+.app-version > p:last-child { flex-basis: 100%; }

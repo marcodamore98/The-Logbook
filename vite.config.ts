@@ -11,6 +11,7 @@ const isTest = process.env.APP_VARIANT === 'prova';
 
 export default defineConfig({
   base,
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
   build: {
     rollupOptions: {
       output: {
