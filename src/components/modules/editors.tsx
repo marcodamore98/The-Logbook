@@ -28,7 +28,8 @@ import {
 import { GlyphPlus, GlyphTrash } from '../icons';
 import { FileSlot } from '../files/FileSlot';
 import { metaOf } from './meta';
-import { Field, NumberInput, uid, VocabSelect } from '../ui';
+import { ChipChoice, Field, NumberInput, TimeTile, uid, VocabSelect } from '../ui';
+import type { VocabItem } from '../../lib/vocab';
 
 type Props<M> = { value: M; onChange: (m: M) => void };
 
@@ -37,14 +38,14 @@ function SurgeryEditor({ value: m, onChange }: Props<SurgeryModule>) {
   const set = (p: Partial<SurgeryModule>) => onChange({ ...m, ...p });
   return (
     <div className="grid">
-      <Field label="Intervento" wide>
-        <VocabSelect items={PROCEDURES} value={m.procedureId} onChange={(procedureId) => set({ procedureId })} placeholder="Seleziona intervento…" />
+      <Field label="Intervento / procedura" wide>
+        <SearchPick items={PROCEDURES} value={m.procedureId} onChange={(procedureId) => set({ procedureId })} placeholder="Cerca intervento…" />
       </Field>
-      <Field label="Ruolo">
-        <VocabSelect items={SURGICAL_ROLES} value={m.role} onChange={(role) => set({ role })} />
+      <Field label="Ruolo in sala" wide>
+        <ChipChoice label="Ruolo in sala" items={SURGICAL_ROLES} value={m.role} onChange={(role) => set({ role })} />
       </Field>
-      <Field label="Via d’accesso">
-        <VocabSelect items={APPROACHES} value={m.approach} onChange={(approach) => set({ approach })} />
+      <Field label="Via d’accesso" wide>
+        <ChipChoice label="Via d’accesso" items={APPROACHES} value={m.approach} onChange={(approach) => set({ approach })} />
       </Field>
       <Field label="Regime">
         <VocabSelect items={SETTINGS_URGENCY} value={m.setting} onChange={(setting) => set({ setting })} />
@@ -52,9 +53,23 @@ function SurgeryEditor({ value: m, onChange }: Props<SurgeryModule>) {
       <Field label="Durata (min)">
         <NumberInput value={m.durationMin} onChange={(durationMin) => set({ durationMin })} step={5} />
       </Field>
-      <Field label="Complicanze">
-        <VocabSelect items={CLAVIEN} value={m.clavien} onChange={(clavien) => set({ clavien })} />
-      </Field>
+      <div className="field field-wide compl-box">
+        <label className="switch-row">
+          <span>Complicanze</span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={!!m.clavien && m.clavien !== 'none'}
+            onChange={(e) => set({ clavien: e.target.checked ? 'I' : 'none' })}
+          />
+        </label>
+        {m.clavien && m.clavien !== 'none' && (
+          <Field label="Grado Clavien-Dindo">
+            <VocabSelect items={CLAVIEN.filter((c) => c.id !== 'none')} value={m.clavien} onChange={(clavien) => set({ clavien })} />
+          </Field>
+        )}
+      </div>
       <Field label="Tutor / primo operatore">
         <select value={m.tutorId ?? ''} onChange={(e) => set({ tutorId: e.target.value || undefined })}>
           <option value="">—</option>
@@ -123,10 +138,16 @@ function OutingEditor({ value: m, onChange }: Props<OutingModule>) {
         <VocabSelect items={OUTING_TYPES} value={m.type} onChange={(type) => set({ type })} />
       </Field>
       <Field label="Luogo">
-        <input value={m.place ?? ''} onChange={(e) => set({ place: e.target.value })} />
+        <span className="icon-input">
+          <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" />
+            <circle cx="12" cy="10" r="2.3" />
+          </svg>
+          <input value={m.place ?? ''} onChange={(e) => set({ place: e.target.value })} />
+        </span>
       </Field>
       <Field label="Con chi" wide>
-        <input value={m.people ?? ''} onChange={(e) => set({ people: e.target.value })} />
+        <PeoplePills value={m.people ?? ''} onChange={(people) => set({ people })} />
       </Field>
       <Field label="Racconto" wide>
         <textarea rows={3} value={m.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
@@ -285,15 +306,17 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
       <Field label="Titolo" wide>
         <input value={m.title} placeholder="es. Congresso nazionale SIGO" onChange={(e) => onChange({ ...m, title: e.target.value })} />
       </Field>
-      <div className="field field-wide">
-        <DateRange start={m.startDate} end={m.endDate} onChange={(startDate, endDate) => onChange({ ...m, startDate, endDate })} />
+      <div className="field field-wide tile-grid">
+        <TimeTile type="date" label="Dal" value={m.startDate} onChange={(v) => v && onChange({ ...m, startDate: v, endDate: m.endDate < v ? v : m.endDate })} />
+        <TimeTile type="date" label="Al" value={m.endDate} min={m.startDate} onChange={(v) => v && onChange({ ...m, endDate: v < m.startDate ? m.startDate : v })} />
+        <TimeTile label="Ora di inizio" value={m.startTime ?? ''} onChange={(v) => onChange({ ...m, startTime: v || undefined })} />
       </div>
-      <div className="field field-wide time-remind">
-        <Field label="Ora di inizio">
-          <input type="time" value={m.startTime ?? ''} onChange={(e) => onChange({ ...m, startTime: e.target.value || undefined })} />
-        </Field>
-        <label className={`switch-row${m.startTime ? '' : ' disabled'}`}>
-          <span>Avvisami 30 e 5 minuti prima</span>
+      <div className="field field-wide">
+        <label className={`switch-row remind-box${m.startTime ? '' : ' disabled'}`}>
+          <svg className="bell" viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" />
+          </svg>
+          <span>{m.startTime ? 'Avvisami 30 e 5 minuti prima' : 'Avvisami 30 e 5 minuti prima (serve l’ora di inizio)'}</span>
           <input
             type="checkbox"
             role="switch"
@@ -308,6 +331,7 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
         </label>
       </div>
       <div className="field field-wide file-slots">
+        <span className="field-label">Documenti allegati (PDF)</span>
         <FileSlot label="Aggiungi il programma (PDF)" doneLabel="Programma" file={m.program} onChange={(program) => onChange({ ...m, program })} />
         <FileSlot label="Aggiungi l’attestato" doneLabel="Attestato" crown file={m.certificate} onChange={(certificate) => onChange({ ...m, certificate })} />
       </div>
@@ -386,4 +410,97 @@ function KindEditor({ value, onChange, date }: Props<Module> & { date: ISODate }
     case 'note':
       return <NoteEditor value={value} onChange={onChange} />;
   }
+}
+
+/** Pick one item by typing part of its name (long lists like the procedures). */
+function SearchPick({ items, value, onChange, placeholder }: { items: VocabItem[]; value: string | undefined; onChange: (id: string) => void; placeholder?: string }) {
+  const label = items.find((i) => i.id === value)?.label ?? '';
+  const [text, setText] = useState(label);
+  const [open, setOpen] = useState(false);
+  const latest = useRef(label);
+  latest.current = label;
+  useEffect(() => setText(label), [label]);
+  const q = text.trim().toLowerCase();
+  const hits = open ? items.filter((i) => !q || q === label.toLowerCase() || i.label.toLowerCase().includes(q)).slice(0, 8) : [];
+  return (
+    <div className="search-pick">
+      <span className="icon-input">
+        <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="M16 16l4.5 4.5" />
+        </svg>
+        <input
+          value={text}
+          placeholder={placeholder}
+          onFocus={(e) => {
+            setOpen(true);
+            e.target.select();
+          }}
+          onBlur={() => window.setTimeout(() => {
+            setOpen(false);
+            setText(latest.current);
+          }, 150)}
+          onChange={(e) => setText(e.target.value)}
+        />
+      </span>
+      {hits.length > 0 && (
+        <ul className="search-hits" role="listbox">
+          {hits.map((i) => (
+            <li key={i.id}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i.id === value}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onChange(i.id);
+                  latest.current = i.label;
+                  setText(i.label);
+                  setOpen(false);
+                  (document.activeElement as HTMLElement | null)?.blur();
+                }}
+              >
+                {i.label}
+                {i.group && <small>{i.group}</small>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Names as pills with ×; type a name and press Invio (or leave the field) to add it. */
+function PeoplePills({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const names = value.split(',').map((x) => x.trim()).filter(Boolean);
+  const [draft, setDraft] = useState('');
+  const add = () => {
+    const n = draft.trim();
+    if (n) onChange([...names, n].join(', '));
+    setDraft('');
+  };
+  return (
+    <div className="people-pills">
+      {names.map((n, k) => (
+        <button key={`${n}-${k}`} type="button" className="person-pill" aria-label={`Rimuovi ${n}`} onClick={() => onChange(names.filter((_, j) => j !== k).join(', '))}>
+          {n} <span aria-hidden="true">×</span>
+        </button>
+      ))}
+      <input
+        className="people-add"
+        value={draft}
+        placeholder="+ Aggiungi"
+        enterKeyHint="done"
+        onChange={(e) => setDraft(e.target.value.replace(',', ''))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            add();
+          }
+        }}
+        onBlur={add}
+      />
+    </div>
+  );
 }

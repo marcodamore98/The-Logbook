@@ -376,12 +376,26 @@ export function AutoText({ value, onChange, placeholder, className }: { value: s
   return <textarea ref={ref} rows={1} className={`auto-text ${className ?? ''}`} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
 }
 
-/** Time field as a tile: small label inside, big bold time. */
-export function TimeTile({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+/** Time (or date) field as a tile: small label inside, big bold value. */
+export function TimeTile({ label, value, onChange, type = 'time', min }: { label: string; value: string; onChange: (v: string) => void; type?: 'time' | 'date'; min?: string }) {
   return (
-    <label className="time-tile">
+    <label className={`time-tile tile-${type}`}>
       <span className="tt-label">{label}</span>
-      <input type="time" value={value} onChange={(e) => onChange(e.target.value)} />
+      <input type={type} value={value} min={min} onChange={(e) => onChange(e.target.value)} />
     </label>
+  );
+}
+
+/** One choice among a few, as chips (the chosen one in lime with a check). */
+export function ChipChoice({ items, value, onChange, label }: { items: VocabItem[]; value: string | undefined; onChange: (id: string) => void; label: string }) {
+  return (
+    <div className="chips choice-chips" role="radiogroup" aria-label={label}>
+      {items.map((i) => (
+        <button key={i.id} type="button" role="radio" aria-checked={value === i.id} className={`chip${value === i.id ? ' chip-pick' : ''}`} onClick={() => onChange(i.id)}>
+          {value === i.id && <span aria-hidden="true">✓</span>}
+          {i.label}
+        </button>
+      ))}
+    </div>
   );
 }

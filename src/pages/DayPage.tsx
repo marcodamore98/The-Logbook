@@ -519,54 +519,65 @@ export default function DayPage() {
 
       {rendered}
 
-      {adding ? (
-        <div className="palette no-print" role="dialog" aria-label="Aggiungi scheda">
-          <div className="palette-head">
-            <h2>Aggiungi una scheda</h2>
-            <button className="icon-btn" aria-label="Chiudi" onClick={() => setAdding(false)}>
-              <GlyphClose />
-            </button>
+      <button className="btn-add no-print" onClick={() => setAdding(true)}>
+        <GlyphPlus /> Aggiungi scheda
+      </button>
+      {adding && (
+        <div className="sheet-backdrop no-print" onClick={() => setAdding(false)}>
+          <div className="sheet add-sheet" role="dialog" aria-label="Aggiungi una scheda" onClick={(e) => e.stopPropagation()}>
+            <div className="grabber" />
+            <div className="add-sheet-head">
+              <h2 className="sheet-title">Aggiungi una scheda</h2>
+              <button className="icon-btn small" aria-label="Chiudi" onClick={() => setAdding(false)}>
+                <GlyphClose />
+              </button>
+            </div>
+            {(!day.shift || (!day.guardia && guardiaTypes.length > 0)) && (
+              <section>
+                <h3 className="palette-area">Turni</h3>
+                <div className="add-tiles">
+                  {!day.shift && (
+                    <button className="add-tile" onClick={() => { addShift(); setAdding(false); }}>
+                      <IconShift size={38} />
+                      <span>
+                        <strong>Turno</strong>
+                        <small>Turno in ospedale</small>
+                      </span>
+                    </button>
+                  )}
+                  {!day.guardia && guardiaTypes.length > 0 && (
+                    <button className="add-tile" onClick={() => { chooseGuardia(guardiaTypes[0].id); setAdding(false); }}>
+                      <IconSleep size={38} />
+                      <span>
+                        <strong>Guardia medica</strong>
+                        <small>Dalle … alle …</small>
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </section>
+            )}
+            <section>
+              <h3 className="palette-area">Attività</h3>
+              <div className="add-rows">
+                {(['lavoro', 'personale'] as const).flatMap((area) =>
+                  MODULES.filter((m) => m.area === area && ADDABLE.includes(m.kind)).map((m) => (
+                    <button key={m.kind} className="add-row" onClick={() => addModule(m.kind)}>
+                      <m.Icon size={42} />
+                      <span>
+                        <strong>{MERGED[m.kind]?.label ?? m.label}</strong>
+                        <small>{MERGED[m.kind]?.hint ?? m.hint}</small>
+                      </span>
+                      <span className="add-plus" aria-hidden="true">
+                        <GlyphPlus />
+                      </span>
+                    </button>
+                  )),
+                )}
+              </div>
+            </section>
           </div>
-          {(!day.shift || !day.guardia) && (
-            <div>
-              <h3 className="palette-area">Turni</h3>
-              <div className="palette-grid">
-                {!day.shift && (
-                  <button className="palette-item" onClick={() => { addShift(); setAdding(false); }}>
-                    <IconShift size={48} />
-                    <span className="palette-label">Turno</span>
-                    <span className="palette-hint">Turno in ospedale</span>
-                  </button>
-                )}
-                {!day.guardia && guardiaTypes.length > 0 && (
-                  <button className="palette-item" onClick={() => { chooseGuardia(guardiaTypes[0].id); setAdding(false); }}>
-                    <IconSleep size={48} />
-                    <span className="palette-label">Guardia medica</span>
-                    <span className="palette-hint">Dalle … alle …</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {(['lavoro', 'personale'] as const).map((area) => (
-            <div key={area}>
-              <h3 className="palette-area">{area === 'lavoro' ? 'Lavoro' : 'Vita privata'}</h3>
-              <div className="palette-grid">
-                {MODULES.filter((m) => m.area === area && ADDABLE.includes(m.kind)).map((m) => (
-                  <button key={m.kind} className="palette-item" onClick={() => addModule(m.kind)}>
-                    <m.Icon size={48} />
-                    <span className="palette-label">{MERGED[m.kind]?.label ?? m.label}</span>
-                    <span className="palette-hint">{MERGED[m.kind]?.hint ?? m.hint}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
-      ) : (
-        <button className="btn-add no-print" onClick={() => setAdding(true)}>
-          <GlyphPlus /> Aggiungi scheda
-        </button>
       )}
 
       {ordering && (

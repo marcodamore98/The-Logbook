@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { GlyphClip, GlyphClose } from '../icons';
+import { GlyphClip, GlyphTrash } from '../icons';
 import { uid } from '../ui';
 import { useStore } from '../../lib/store/StoreContext';
 import type { FileRef } from '../../lib/types';
@@ -76,7 +76,7 @@ export function FileSlot({ label, doneLabel, crown, file, onChange }: { label: s
               onChange(undefined);
             }}
           >
-            <GlyphClose />
+            <GlyphTrash />
           </button>
         </>
       ) : (
