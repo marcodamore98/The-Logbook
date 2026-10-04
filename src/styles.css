@@ -2118,3 +2118,17 @@ i[class^='dot-'] { background: var(--c) !important; }
 .drawer-backdrop.right { transition: background-color 0.24s ease; }
 .drawer-backdrop.right .summary-drawer { transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
 .drawer-backdrop.right.dragging, .drawer-backdrop.right.dragging .summary-drawer { transition: none; }
+
+/* ---------- Riepilogo del giorno with a mouse: button in the top bar when the fixed column is hidden, wide panel ---------- */
+.summary-toggle { display: none; }
+@media (hover: hover) and (pointer: fine) and (max-width: 1179px) {
+  .summary-toggle { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; white-space: nowrap; background: var(--surface); border: 1px solid var(--line); font-weight: 700; }
+  .topbar .reconnect ~ .summary-toggle { margin-left: 0.5rem; }
+}
+@media (hover: hover) and (pointer: fine) {
+  /* Wide, cards side by side, so the whole summary fits in the window without scrolling. */
+  .summary-drawer { width: min(1100px, 94vw); }
+  .summary-drawer .sidebar { display: block; columns: 3 270px; column-gap: 1rem; padding-bottom: 0.2rem; }
+  .summary-drawer .sidebar > * { break-inside: avoid; margin-bottom: 1rem; }
+  .summary-drawer .side-head { column-span: all; }
+}

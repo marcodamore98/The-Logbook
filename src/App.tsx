@@ -90,7 +90,7 @@ function BackToDay() {
   );
 }
 
-function Topbar({ onMenu }: { onMenu: () => void }) {
+function Topbar({ onMenu, onSummary }: { onMenu: () => void; onSummary: () => void }) {
   const title = useCurrentTitle();
   return (
     <header className="topbar">
@@ -101,6 +101,10 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
       </button>
       {title && <span className="topbar-title">{title}</span>}
       <GoogleStatus />
+      {/* Only with a mouse and a window too narrow for the fixed column: there is no edge to swipe from. */}
+      <button className="btn-ghost small summary-toggle" onClick={onSummary} aria-label="Apri il riepilogo del giorno">
+        <IconToday size={26} /> Riepilogo
+      </button>
     </header>
   );
 }
@@ -171,7 +175,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
       <RestTimerProvider>
         <UndoProvider>
         <div className="app">
-          <Topbar onMenu={menu.open} />
+          <Topbar onMenu={menu.open} onSummary={summary.open} />
           <div className="layout">
             <main>
               <ScrollMemory />
