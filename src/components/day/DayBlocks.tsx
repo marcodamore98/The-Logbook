@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { dayIntake, MEALS, totalsOf } from '../../lib/nutrition/foods';
 import { useStore } from '../../lib/store/StoreContext';
-import { workingSets, workoutVolume } from '../../lib/training/analytics';
-import type { DayEntry, RunModule, WorkoutModule } from '../../lib/types';
+import { bestsBefore, prsOf, workingSets, workoutVolume } from '../../lib/training/analytics';
+import { exerciseDef } from '../../lib/training/exercises';
+import { addDays, startOfWeek, today } from '../../lib/dates';
+import type { DayEntry, ISODate, RunModule, WorkoutModule } from '../../lib/types';
 import { fmtDuration, fmtKm, fmtPace } from '../../lib/running/geo';
 import { fmt } from '../charts';
 import { runLine } from '../modules/meta';
@@ -66,6 +68,16 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
   const runSummary = runs.map(runLine).join(' / ');
   const cardSummary = [summary, runSummary].filter(Boolean).join(' / ') || 'Niente di registrato';
 
+  const records = (w: WorkoutModule) => {
+    const out: string[] = [];
+    for (const ex of w.exercises) {
+      const b = bestsBefore(store.history, ex.exerciseId, w.id, day.date);
+      const best = ex.sets.filter((x) => prsOf(x, b).length).sort((a, c) => (c.kg ?? 0) - (a.kg ?? 0))[0];
+      if (best) out.push(`${exerciseDef(ex.exerciseId, store.settings.exercises).name} ${best.kg ? `${fmt(best.kg, 1)} kg × ${best.reps}` : `${best.reps} rip.`}`);
+    }
+    return out;
+  };
+
   return (
     <>
       <Card id="day.training" print="palestra" icon={<IconWorkout />} title="Allenamento" defaultOpen={true} summary={cardSummary}>
@@ -77,18 +89,28 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
         ) : (
           workouts.map((w) => {
             const i = info(w);
+            const prs = i.running ? [] : records(w);
             return (
               <button key={w.id} type="button" onClick={() => setPicked(w)} className={`workout-summary${i.running ? ' running' : ''}`}>
                 <strong className="ws-name">{i.name}</strong>
                 {i.running && <span className="ws-live">In corso</span>}
+                {prs.length > 0 && (
+                  <span className="pr-banner">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                      <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" />
+                      <rect x="5" y="20" width="14" height="2" rx="1" />
+                    </svg>
+                    {prs.length === 1 ? `Nuovo record · ${prs[0]}` : `${prs.length} nuovi record · ${prs.join(', ')}`}
+                  </span>
+                )}
                 <dl className="ws-stats">
                   <div>
                     <dt>Carico sollevato</dt>
-                    <dd>{fmt(i.volume)} kg</dd>
+                    <dd className="hi">{fmt(i.volume)} kg</dd>
                   </div>
                   <div>
                     <dt>Durata</dt>
-                    <dd>{i.minutes ? dur(i.minutes) : '–'}</dd>
+                    <dd>{i.minutes ? (i.minutes >= 60 ? `${Math.floor(i.minutes / 60)}h ${String(i.minutes % 60).padStart(2, '0')}m` : `${i.minutes} min`) : '–'}</dd>
                   </div>
                   <div>
                     <dt>Orario</dt>
@@ -111,7 +133,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
               <dl className="ws-stats">
                 <div>
                   <dt>Distanza</dt>
-                  <dd>{m.distanceM ? `${fmtKm(m.distanceM)} km` : '–'}</dd>
+                  <dd className="hi">{m.distanceM ? `${fmtKm(m.distanceM)} km` : '–'}</dd>
                 </div>
                 <div>
                   <dt>Durata</dt>
@@ -125,6 +147,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             </button>
           ))
         )}
+        <WeekTraining date={day.date} />
       </Card>
       {picked && (
         <div className="sheet-backdrop" onClick={() => setPicked(null)}>
@@ -233,5 +256,45 @@ export function NutritionBlock({ day }: { day: DayEntry }) {
         <span aria-hidden="true">›</span>
       </Link>
     </Card>
+  );
+}
+
+/** Training minutes per day of the week (gym + running); the day being viewed is highlighted. */
+function WeekTraining({ date }: { date: ISODate }) {
+  const store = useStore();
+  const monday = startOfWeek(date);
+  useEffect(() => {
+    store.loadRange(monday, addDays(monday, 6));
+  }, [monday]);
+  const now = today();
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(monday, i);
+    const minutes = store.day(d).modules.reduce((n, m) => {
+      if (m.kind === 'workout') return n + (m.durationMin ?? (m.startedAt && !m.finishedAt ? Math.round((Date.now() - m.startedAt) / 60000) : 0));
+      if (m.kind === 'run') return n + Math.round((m.durationSec ?? 0) / 60);
+      return n;
+    }, 0);
+    return { d, minutes };
+  });
+  const total = days.reduce((n, x) => n + x.minutes, 0);
+  if (!total) return null;
+  const max = Math.max(...days.map((x) => x.minutes));
+  return (
+    <div className="week-train" aria-label={`Allenamento della settimana: ${dur(total)}`}>
+      <div className="wt-head">
+        <span className="stat-label">{monday === startOfWeek(now) ? 'Questa settimana' : 'Settimana'}</span>
+        <strong>{dur(total)}</strong>
+      </div>
+      <div className="wt-bars">
+        {days.map((x, i) => (
+          <div key={x.d} className={`wt-day${x.d === date ? ' on' : ''}${x.d > now ? ' future' : ''}`} title={`${x.minutes} min`}>
+            <span className="wt-track">
+              <span className={`wt-bar${x.minutes ? '' : ' empty'}`} style={{ height: x.minutes ? `${Math.max(12, (x.minutes / max) * 100)}%` : undefined }} />
+            </span>
+            <span className="wt-label">{'LMMGVSD'[i]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -11,6 +11,8 @@ import {
   IconAppointment,
   IconNote,
   IconSleep,
+  IconSteps,
+  IconWater,
   IconShift,
   IconTodo,
 } from '../components/icons';
@@ -20,7 +22,8 @@ import { DiaryEntryView } from '../components/diary/DiaryEntry';
 import { useUndo } from '../components/Undo';
 import { useBlockDrag } from '../components/useBlockDrag';
 import { useSwipeNav } from '../components/useSwipeNav';
-import { Card, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
+import { Card, CardDecor, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
+import { fmt } from '../components/charts';
 import { blockOrder, DAY_BLOCKS, MODULE_BLOCK } from '../lib/dayLayout';
 import { CATEGORIES } from '../lib/vocab';
 import { codeShort, idsForNames, rosterFor, ROSTER_SELF, shiftFromCodes } from '../lib/roster';
@@ -31,6 +34,20 @@ import { useStore } from '../lib/store/StoreContext';
 import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
 
 /** Cards that can be added by hand; training, food and the diary have their own sections. */
+/** Small label above each card title, by block. */
+const BLOCK_KICKER: Record<string, string> = {
+  shift: 'Lavoro',
+  guardia: 'Lavoro',
+  work: 'Lavoro',
+  agenda: 'Agenda',
+  todos: 'Agenda',
+  training: 'Sport',
+  nutrition: 'Salute',
+  private: 'Tempo libero',
+  diary: 'Personale',
+};
+const KIND_KICKER: Partial<Record<ModuleKind, string>> = { study: 'Formazione', course: 'Formazione' };
+
 const ADDABLE: ModuleKind[] = ['surgery', 'study', 'travel'];
 /** Entries that stand for two kinds of card: you pick the exact one inside the card. */
 const MERGED: Partial<Record<ModuleKind, { label: string; hint: string }>> = {
@@ -143,6 +160,7 @@ export default function DayPage() {
       ? `Dal tabellone: ${myCodes.map(codeShort).join(' · ')}`
       : 'Nessun turno';
   const order = blockOrder(settings.dayLayout);
+  const dayShifts = [day.shift && `${shiftName} ${day.shift.start}–${day.shift.end}`, day.guardia && `Guardia ${day.guardia.start}–${day.guardia.end}`].filter((x): x is string => !!x);
 
   // Courses and trips that began on another day but cover this one.
   // Loading the whole archive is not urgent: do it once the page is idle.
@@ -164,7 +182,7 @@ export default function DayPage() {
         const n = Math.round((new Date(`${date}T12:00:00`).getTime() - new Date(`${m.startDate}T12:00:00`).getTime()) / 864e5) + 1;
         const total = Math.round((new Date(`${m.endDate}T12:00:00`).getTime() - new Date(`${m.startDate}T12:00:00`).getTime()) / 864e5) + 1;
         return (
-          <Card key={`span-${m.id}`} id={`span.${m.id}`} className={`module module-${m.kind}`} icon={<meta.Icon />} title={meta.label} summary={`${m.title || meta.label} · giorno ${n} di ${total}`} defaultOpen={false}>
+          <Card key={`span-${m.id}`} id={`span.${m.id}`} className={`module module-${m.kind}`} icon={<meta.Icon />} kicker={KIND_KICKER[m.kind]} title={meta.label} summary={`${m.title || meta.label} · giorno ${n} di ${total}`} defaultOpen={false}>
             <p>
               <strong>{m.title || meta.label}</strong> · giorno {n} di {total}
             </p>
@@ -189,6 +207,7 @@ export default function DayPage() {
             print={DAY_BLOCKS.find((b) => b.id === block)!.print}
             className={`module module-${m.kind}`}
             icon={<meta.Icon />}
+            kicker={KIND_KICKER[m.kind]}
             title={meta.label}
             summary={summarize(m)}
             open={open}
@@ -414,7 +433,12 @@ export default function DayPage() {
       case 'work':
       case 'private': {
         const cards = [...moduleCards(id), ...spanCards(id)];
-        return cards.length ? <div key={id} className="modules">{cards}</div> : null;
+        return cards.length ? (
+          <div key={id} className="modules">
+            {id === 'work' && <WorkTiles day={day} />}
+            {cards}
+          </div>
+        ) : null;
       }
       default:
         return null;
@@ -438,7 +462,7 @@ export default function DayPage() {
         className={`blk${me ? ' dragging' : ''}${drag && !me ? ' shifting' : ''}${settling ? ' settling' : ''}`}
         style={me ? { transform: `translate3d(0, ${drag!.dy}px, 0) scale(1.02)` } : shift ? { transform: `translate3d(0, ${shift}px, 0)` } : undefined}
       >
-        {node}
+        <CardDecor.Provider value={{ kicker: BLOCK_KICKER[id], handle: true }}>{node}</CardDecor.Provider>
       </div>,
     );
   }
@@ -454,7 +478,7 @@ export default function DayPage() {
         </button>
         <div className="page-title">
           <h1>{formatLong(date)}</h1>
-          <span className="page-sub">Settimana {isoWeek(date)}</span>
+          <span className="page-sub">{[...dayShifts, `Settimana ${isoWeek(date)}`].join(' · ')}</span>
         </div>
         <button className="icon-btn no-print" aria-label="Ordina le sezioni" title="Ordina le sezioni" onClick={() => setOrdering(true)}>
           <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -472,6 +496,8 @@ export default function DayPage() {
           <span aria-hidden="true">›</span>
         </Link>
       )}
+
+      <BodyPills day={day} />
 
       {rendered}
 
@@ -564,6 +590,54 @@ export default function DayPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Key numbers of the day's clinical work, above the surgery/clinical cards. */
+function WorkTiles({ day }: { day: DayEntry }) {
+  const surg = day.modules.filter((m) => m.kind === 'surgery');
+  const clin = day.modules.filter((m) => m.kind === 'clinical');
+  if (!surg.length && !clin.length) return null;
+  const minutes = surg.reduce((n, m) => n + (m.kind === 'surgery' ? m.durationMin ?? 0 : 0), 0);
+  const compl = surg.filter((m) => m.kind === 'surgery' && m.clavien && m.clavien !== 'none').length;
+  const tiles: [string, string, boolean?][] = [];
+  if (surg.length) tiles.push(['Interventi', String(surg.length), true]);
+  if (clin.length) tiles.push(['Prestazioni', String(clin.reduce((n, m) => n + (m.kind === 'clinical' ? m.count : 0), 0)), !surg.length]);
+  if (minutes) tiles.push(['Tempo operatorio', minutes >= 60 ? `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m` : `${minutes}m`]);
+  if (surg.length) tiles.push(['Complicanze', String(compl)]);
+  return (
+    <div className="stat-tiles">
+      {tiles.map(([label, value, hi]) => (
+        <div key={label} className="stat-tile">
+          <span className="stat-label">{label}</span>
+          <strong className={hi ? 'hi' : undefined}>{value}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Sleep, water and steps of the day; tapping one opens the Corpo panel to fill it in. */
+function BodyPills({ day }: { day: DayEntry }) {
+  const goals = useStore().settings.goals ?? {};
+  const b = day.body ?? {};
+  const open = () => window.dispatchEvent(new Event('logbook:open-body'));
+  const pills: { key: string; Icon: (p: { size?: number }) => React.ReactElement; label: string; value?: string; goal?: string }[] = [
+    { key: 'sleep', Icon: IconSleep, label: 'Sonno', value: b.sleepH !== undefined ? `${fmt(b.sleepH, 1)} h` : undefined },
+    { key: 'water', Icon: IconWater, label: 'Acqua', value: b.waterL !== undefined ? `${fmt(b.waterL, 2)} L` : undefined, goal: goals.waterL ? `${fmt(goals.waterL, 1)} L` : undefined },
+    { key: 'steps', Icon: IconSteps, label: 'Passi', value: b.steps !== undefined ? fmt(b.steps) : undefined, goal: goals.steps ? fmt(goals.steps) : undefined },
+  ];
+  return (
+    <div className="body-pills no-print">
+      {pills.map((p) => (
+        <button key={p.key} type="button" className={`body-pill pill-${p.key}`} onClick={open}>
+          <p.Icon size={22} />
+          <span className="bp-label">{p.label}</span>
+          <strong>{p.value ?? '–'}</strong>
+          {p.value && p.goal && <span className="bp-goal">/ {p.goal}</span>}
+        </button>
+      ))}
     </div>
   );
 }

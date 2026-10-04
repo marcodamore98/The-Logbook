@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Colleague, ShiftType } from '../lib/types';
 import { grouped, type VocabItem } from '../lib/vocab';
 
@@ -270,9 +270,14 @@ export function Chevron({ open }: { open: boolean }) {
 }
 
 /** Card with a header that collapses the body; `summary` is shown while closed. */
+/** Decoration for every card inside a block (the day page sets the section label and the drag hint). */
+export const CardDecor = createContext<{ kicker?: ReactNode; handle?: boolean }>({});
+const NO_DECOR = {};
+
 export function Card({
   id,
   icon,
+  kicker: kickerProp,
   title,
   summary,
   actions,
@@ -287,6 +292,8 @@ export function Card({
 }: {
   id: string;
   icon?: ReactNode;
+  /** Small uppercase label above the title. */
+  kicker?: ReactNode;
   title: ReactNode;
   summary?: ReactNode;
   actions?: ReactNode;
@@ -301,6 +308,8 @@ export function Card({
   /** false: always open, no arrow. */
   collapsible?: boolean;
 }) {
+  const decor = useContext(CardDecor);
+  const kicker = kickerProp ?? decor.kicker;
   const [stored, toggleStored] = useCollapsible(id, defaultOpen);
   const open = !collapsible || (controlledOpen ?? stored);
   const toggle = onToggle ?? toggleStored;
@@ -309,7 +318,8 @@ export function Card({
       <div className="card-head">
         {icon}
         {collapsible ? (
-          <button type="button" className="card-title-btn" onClick={toggle} aria-expanded={open}>
+          <button type="button" className={`card-title-btn${kicker ? ' has-kicker' : ''}`} onClick={toggle} aria-expanded={open}>
+            {kicker && <span className="card-kicker">{kicker}</span>}
             <h2>{title}</h2>
             {!open && summary && <span className="card-summary">{summary}</span>}
           </button>
@@ -317,6 +327,13 @@ export function Card({
           <h2>{title}</h2>
         )}
         {actions}
+        {decor.handle && (
+          <span className="drag-hint no-print" aria-hidden="true" title="Tieni premuto per spostare">
+            <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor">
+              <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+            </svg>
+          </span>
+        )}
         {collapsible && (
           <button type="button" className="icon-btn small chevron-btn" onClick={toggle} aria-label={open ? 'Riduci' : 'Espandi'} aria-expanded={open}>
             <Chevron open={open} />
@@ -325,7 +342,8 @@ export function Card({
       </div>
       {/* Body stays mounted (hidden) so printing can include closed cards. */}
       <div className="card-body" hidden={!open}>
-        {children}
+        {/* Cards nested inside (e.g. the roster in Turno) don't inherit the block's label. */}
+        <CardDecor.Provider value={NO_DECOR}>{children}</CardDecor.Provider>
       </div>
     </section>
   );

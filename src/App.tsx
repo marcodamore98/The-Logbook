@@ -157,6 +157,15 @@ function Shell({ userEmail }: { userEmail?: string }) {
     };
   }, []);
 
+  // Day-page shortcuts (sleep, water, steps) open the Corpo panel; on desktop it is always visible.
+  useEffect(() => {
+    const onOpen = () => {
+      if (!window.matchMedia('(min-width: 1180px)').matches) setBodyOpen(true);
+    };
+    window.addEventListener('logbook:open-body', onOpen);
+    return () => window.removeEventListener('logbook:open-body', onOpen);
+  }, []);
+
   // The page behind a drawer must not scroll.
   useEffect(() => {
     document.documentElement.classList.toggle('scroll-locked', menuOpen || bodyOpen);
