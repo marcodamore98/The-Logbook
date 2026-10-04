@@ -29,6 +29,7 @@ import { GlyphPlus, GlyphTrash } from '../icons';
 import { FileSlot } from '../files/FileSlot';
 import { metaOf } from './meta';
 import { ChipChoice, Field, NumberInput, TimeTile, uid, VocabSelect } from '../ui';
+import { DurationField } from '../WheelPicker';
 import type { VocabItem } from '../../lib/vocab';
 
 type Props<M> = { value: M; onChange: (m: M) => void };
@@ -50,8 +51,8 @@ function SurgeryEditor({ value: m, onChange }: Props<SurgeryModule>) {
       <Field label="Regime">
         <VocabSelect items={SETTINGS_URGENCY} value={m.setting} onChange={(setting) => set({ setting })} />
       </Field>
-      <Field label="Durata (min)">
-        <NumberInput value={m.durationMin} onChange={(durationMin) => set({ durationMin })} step={5} />
+      <Field label="Durata">
+        <DurationField unit="min" label="Durata dell’intervento" value={m.durationMin} onChange={(durationMin) => set({ durationMin: durationMin || undefined })} />
       </Field>
       <div className="field field-wide compl-box">
         <label className="switch-row">
@@ -117,8 +118,8 @@ function StudyEditor({ value: m, onChange }: Props<StudyModule>) {
       <Field label="Area">
         <VocabSelect items={STUDY_AREAS} value={m.area} onChange={(area) => set({ area })} />
       </Field>
-      <Field label="Durata (min)">
-        <NumberInput value={m.durationMin} step={15} onChange={(n) => set({ durationMin: n ?? 0 })} />
+      <Field label="Durata">
+        <DurationField unit="min" label="Durata dello studio" value={m.durationMin} onChange={(n) => set({ durationMin: n })} />
       </Field>
       <Field label="Appunti" wide>
         <textarea rows={3} value={m.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
@@ -321,7 +322,7 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
       <div className="field field-wide tile-grid">
         <TimeTile type="date" label="Dal" value={m.startDate} onChange={(v) => v && onChange({ ...m, startDate: v, endDate: m.endDate < v ? v : m.endDate })} />
         <TimeTile type="date" label="Al" value={m.endDate} min={m.startDate} onChange={(v) => v && onChange({ ...m, endDate: v < m.startDate ? m.startDate : v })} />
-        <TimeTile label="Ora di inizio" value={m.startTime ?? ''} onChange={(v) => onChange({ ...m, startTime: v || undefined, endTime: undefined })} />
+        <TimeTile clearable label="Ora di inizio" value={m.startTime ?? ''} onChange={(v) => onChange({ ...m, startTime: v || undefined, endTime: undefined })} />
       </div>
       <div className="field field-wide">
         <label className={`switch-row remind-box${m.startTime ? '' : ' disabled'}`}>

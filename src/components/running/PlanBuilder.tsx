@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GlyphPlus, GlyphTrash } from '../icons';
 import { DragGrip, NumField } from '../ui';
 import { useSortableList } from '../useBlockDrag';
+import { DurationField } from '../WheelPicker';
 import { KIND_LABEL, planSummary } from '../../lib/running/geo';
 import { repeats, step } from '../../lib/running/plans';
 import type { RunStep } from '../../lib/types';
@@ -10,8 +11,6 @@ const KINDS: RunStep['kind'][] = ['warmup', 'work', 'rest', 'cooldown'];
 
 /** value in the unit shown to the user: time → minutes:seconds as seconds, distance → metres. */
 function StepRow({ s, onChange, onRemove, sortProps }: { s: RunStep; onChange: (s: RunStep) => void; onRemove: () => void; sortProps: { className: string; style?: React.CSSProperties } }) {
-  const min = Math.floor(s.value / 60);
-  const sec = s.value % 60;
   return (
     <li {...sortProps} className={`plan-step step-${s.kind} ${sortProps.className}`}>
       <DragGrip />
@@ -27,10 +26,7 @@ function StepRow({ s, onChange, onRemove, sortProps }: { s: RunStep; onChange: (
         <option value="distance">a distanza</option>
       </select>
       {s.by === 'time' ? (
-        <span className="plan-value">
-          <NumField value={min} label="Minuti" onChange={(n) => onChange({ ...s, value: Math.round(n) * 60 + sec })} />′
-          <NumField value={sec} max={59} label="Secondi" onChange={(n) => onChange({ ...s, value: min * 60 + Math.round(n) })} />″
-        </span>
+        <DurationField label={`${KIND_LABEL[s.kind]}: durata`} className="compact" value={s.value} onChange={(v) => onChange({ ...s, value: Math.max(5, v) })} />
       ) : (
         <span className="plan-value">
           <NumField value={s.value} label="Metri" onChange={(n) => onChange({ ...s, value: Math.round(n) })} /> m

@@ -19,6 +19,7 @@ import {
 import { RosterCard } from '../components/RosterCard';
 import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
 import { DiaryEntryView } from '../components/diary/DiaryEntry';
+import { TimeField } from '../components/WheelPicker';
 import { ShoppingList } from '../components/day/ShoppingList';
 import { useUndo } from '../components/Undo';
 import { useBlockDrag, useSortableList } from '../components/useBlockDrag';
@@ -379,8 +380,8 @@ export default function DayPage() {
               {agenda.map((item) =>
                 'a' in item && item.a ? (
                   <li key={item.key} className="agenda-row">
-                    <input type="time" value={item.a.start} onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, start: e.target.value } : x)) }))} />
-                    <input type="time" value={item.a.end} onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, end: e.target.value } : x)) }))} />
+                    <TimeField label="Inizio" className="compact" value={item.a.start} onChange={(v) => v && update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, start: v } : x)) }))} />
+                    <TimeField label="Fine" className="compact" value={item.a.end} onChange={(v) => v && update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, end: v } : x)) }))} />
                     <input
                       className="grow"
                       value={item.a.title}
@@ -458,11 +459,12 @@ export default function DayPage() {
                   <input type="checkbox" checked={t.done} aria-label="Fatto" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, done: e.target.checked } : x)) }))} />
                   <input className="grow" value={t.text} placeholder="Cosa ricordare…" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, text: e.target.value } : x)) }))} />
                   {catSelect(t.category, (category) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, category } : x)) })))}
-                  <input
-                    type="time"
-                    value={t.time ?? ''}
-                    title="Con orario viene aggiunto a Google Calendar"
-                    onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: e.target.value || undefined, end: undefined } : x)) }))}
+                  <TimeField
+                    label="Orario (va su Google Calendar)"
+                    className="compact"
+                    clearable
+                    value={t.time}
+                    onChange={(v) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: v, end: undefined } : x)) }))}
                   />
                   <button className="icon-btn small no-print" aria-label="Elimina" onClick={() => update((d) => ({ ...d, todos: d.todos.filter((x) => x.id !== t.id) }))}>
                     <GlyphTrash />

@@ -6,6 +6,7 @@ import type { PlannedSet, Routine, RoutineExercise } from '../../lib/types';
 import { GlyphClose, GlyphPlus, GlyphTrash } from '../icons';
 import { useBlockDrag, useSortableList } from '../useBlockDrag';
 import { Field, NumberInput } from '../ui';
+import { DurationField } from '../WheelPicker';
 import { ExercisePicker } from './ExercisePicker';
 import { keepSupersets, linkNext, SetTypeBadge, unlink, warmupsFirst } from './WorkoutLogger';
 
@@ -107,7 +108,7 @@ function PlannedBlock({
                 )}
                 {usesTime(def.kind) && (
                   <td>
-                    <NumberInput value={s.seconds} step={5} onChange={(seconds) => setAt(k, { ...s, seconds })} />
+                    <DurationField label="Durata della serie" className="compact" value={s.seconds} onChange={(seconds) => setAt(k, { ...s, seconds })} />
                   </td>
                 )}
                 <td>

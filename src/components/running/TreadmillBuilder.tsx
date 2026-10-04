@@ -1,14 +1,13 @@
 import { GlyphPlus, GlyphTrash } from '../icons';
 import { DragGrip, NumField } from '../ui';
 import { useSortableList } from '../useBlockDrag';
+import { DurationField } from '../WheelPicker';
 import { fmtDuration, fmtKm } from '../../lib/running/geo';
 import { kmhOf, paceFromKmh, planMeters, tStep } from '../../lib/running/treadmill';
 import type { RunStep } from '../../lib/types';
 
 /** One series: speed (km/h), incline (%) and duration, as set on the treadmill. */
 function SeriesRow({ s, n, onChange, onRemove, sortProps }: { s: RunStep; n: number; onChange: (s: RunStep) => void; onRemove: () => void; sortProps: { className: string; style?: React.CSSProperties } }) {
-  const min = Math.floor(s.value / 60);
-  const sec = s.value % 60;
   const kmh = kmhOf(s);
   return (
     <li {...sortProps} className={`plan-step tm-step ${sortProps.className}`}>
@@ -37,12 +36,7 @@ function SeriesRow({ s, n, onChange, onRemove, sortProps }: { s: RunStep; n: num
         </label>
         <label>
           <span className="tm-cap">Durata</span>
-          <span className="tm-unit-field">
-            <NumField value={min} label="Durata, minuti" onChange={(v) => onChange({ ...s, value: Math.max(5, Math.round(v) * 60 + sec) })} />
-            <small>′</small>
-            <NumField value={sec} max={59} label="Durata, secondi" onChange={(v) => onChange({ ...s, value: Math.max(5, min * 60 + Math.round(v)) })} />
-            <small>″</small>
-          </span>
+          <DurationField label={`Serie ${n}: durata`} className="compact" value={s.value} onChange={(v) => onChange({ ...s, value: Math.max(5, v) })} />
         </label>
       </div>
     </li>
