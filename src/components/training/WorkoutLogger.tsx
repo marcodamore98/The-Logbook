@@ -189,7 +189,6 @@ function ExerciseBlock({
   date,
   letter,
   onChange,
-  onMove,
   onRemove,
   onReplace,
   onLink,
@@ -203,7 +202,6 @@ function ExerciseBlock({
   date: ISODate;
   letter?: string;
   onChange: (e: WorkoutExercise) => void;
-  onMove: (d: -1 | 1) => void;
   onRemove: () => void;
   onReplace: () => void;
   onLink: () => void;
@@ -243,16 +241,6 @@ function ExerciseBlock({
                 <li>
                   <button role="menuitem" onClick={() => { setMenu(false); onReplace(); }}>Sostituisci esercizio</button>
                 </li>
-                {index > 0 && (
-                  <li>
-                    <button role="menuitem" onClick={() => { onMove(-1); setMenu(false); }}>Sposta su</button>
-                  </li>
-                )}
-                {index < count - 1 && (
-                  <li>
-                    <button role="menuitem" onClick={() => { onMove(1); setMenu(false); }}>Sposta giù</button>
-                  </li>
-                )}
                 {ex.supersetId ? (
                   <li>
                     <button role="menuitem" onClick={() => { onUnlink(); setMenu(false); }}>Scollega superserie</button>
@@ -412,7 +400,6 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
           date={date}
           letter={ex.supersetId ? letters.get(ex.supersetId) : undefined}
           onChange={(e) => setExercises(w.exercises.map((x, k) => (k === i ? e : x)))}
-          onMove={(d) => setExercises(move(w.exercises, i, d))}
           onRemove={() => setExercises(unlink(w.exercises, i).filter((_, k) => k !== i))}
           onReplace={() => setReplacing(i)}
           onLink={() => setExercises(linkNext(w.exercises, i))}

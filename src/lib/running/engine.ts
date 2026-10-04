@@ -140,7 +140,7 @@ export function useRunSession(steps: RunStep[] | undefined, useGps: boolean) {
         }
         return;
       }
-      c.laps.push({ kind: s.kind, by: s.by, value: s.value, seconds: Math.round(s.by === 'time' ? s.value : e - c.stepStartE), meters: Math.round(c.dist - c.stepStartD), paceSec: s.paceSec, incline: s.incline });
+      c.laps.push({ kind: s.kind, by: s.by, value: s.value, seconds: Math.round(s.by === 'time' ? s.value : e - c.stepStartE), meters: Math.round(c.dist - c.stepStartD), kmh: s.kmh, incline: s.incline, paceSec: s.paceSec });
       c.idx++;
       c.stepStartE = s.by === 'time' ? c.stepStartE + s.value : e;
       c.stepStartD = c.dist;

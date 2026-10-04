@@ -10,7 +10,7 @@ import { fromISO, today } from '../lib/dates';
 import { useRunSession } from '../lib/running/engine';
 import { fmtDuration, fmtKm, fmtPace, fmtPaceSec, KIND_LABEL, stepLabel } from '../lib/running/geo';
 import { presetPlans } from '../lib/running/plans';
-import { doneMeters, fmtIncline, fmtKmh, treadmillPresets, treadmillSettings } from '../lib/running/treadmill';
+import { doneMeters, fmtIncline, fmtKmh, kmhOf, lapMeters, paceFromKmh, treadmillPresets, treadmillSettings } from '../lib/running/treadmill';
 import { useStore } from '../lib/store/StoreContext';
 import type { RunModule, RunPlan, RunStep } from '../lib/types';
 
@@ -28,7 +28,7 @@ export default function RunPage() {
   );
 
   const activeSteps = mode !== 'continuous' ? steps : undefined;
-  const gps = useGps && !tm; // no GPS indoors: the distance comes from pace × time
+  const gps = useGps && !tm; // no GPS indoors: the distance comes from speed × time
   const run = useRunSession(activeSteps, gps);
   const { state } = run;
   const liveRef = useRef<HTMLElement>(null);
@@ -89,7 +89,7 @@ export default function RunPage() {
   const stepPct = cur && state.stepLeft !== null ? Math.min(100, Math.max(0, (1 - state.stepLeft / stepTotal) * 100)) : 0;
   // Treadmill: distance estimated from each step's pace × time run so far.
   const tmMeters = tm ? doneMeters(state.laps, cur, state.stepLeft) : 0;
-  const laps = tm ? state.laps.map((l) => ({ ...l, meters: l.paceSec ? Math.round((l.seconds * 1000) / l.paceSec) : 0 })) : state.laps;
+  const laps = tm ? state.laps.map((l) => ({ ...l, meters: lapMeters(l) })) : state.laps;
   const stepText =
     cur && state.stepLeft !== null ? (cur.by === 'time' ? fmtDuration(state.stepLeft) : `${Math.ceil(state.stepLeft)} m`) : '';
 
@@ -157,7 +157,7 @@ export default function RunPage() {
         {mode !== 'continuous' && cur && state.phase !== 'idle' && state.phase !== 'done' && (
           <div className="run-step" aria-live="polite">
             <span className="run-step-top">
-              <span className="run-step-kind">{KIND_LABEL[cur.kind]}</span>
+              <span className="run-step-kind">{tm ? `Serie ${state.stepIdx + 1}` : KIND_LABEL[cur.kind]}</span>
               <span className="run-step-left">{stepText}</span>
             </span>
             <span className="run-step-bar">
@@ -166,8 +166,8 @@ export default function RunPage() {
             {tm && (
               <div className="tm-now">
                 <div>
-                  <strong>{fmtPaceSec(cur.paceSec)}</strong>
-                  <span>/km · {fmtKmh(cur.paceSec)} km/h</span>
+                  <strong>{fmtKmh(kmhOf(cur))}</strong>
+                  <span>km/h · {paceFromKmh(kmhOf(cur))} /km</span>
                 </div>
                 <div>
                   <strong>{fmtIncline(cur.incline)}%</strong>
@@ -176,8 +176,10 @@ export default function RunPage() {
               </div>
             )}
             <span className="muted small">
-              Fase {state.stepIdx + 1} di {steps.length}
-              {steps[state.stepIdx + 1] ? ` · poi ${stepLabel(steps[state.stepIdx + 1])}${tm ? ` · ${treadmillSettings(steps[state.stepIdx + 1])}` : ''}` : ' · ultima fase'}
+              {tm ? 'Serie' : 'Fase'} {state.stepIdx + 1} di {steps.length}
+              {steps[state.stepIdx + 1]
+                ? ` · poi ${tm ? `serie ${state.stepIdx + 2}: ${treadmillSettings(steps[state.stepIdx + 1])}` : stepLabel(steps[state.stepIdx + 1])}`
+                : tm ? ' · ultima serie' : ' · ultima fase'}
             </span>
           </div>
         )}
