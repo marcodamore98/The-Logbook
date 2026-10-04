@@ -4,11 +4,11 @@ Diario quotidiano (PWA) per una specializzanda in ginecologia e ostetricia. Inte
 
 ## Rami e pubblicazione
 
-- `claude/bold-cray-v91cjk` — app principale, pubblicata su `/<repo>/`.
-- `claude/prova-navigazione` — versione di prova, pubblicata su `/<repo>/prova/`. Le modifiche grandi si fanno prima qui.
-- `claude/copia-precedente` — copia dell'app principale **prima dell'ultimo aggiornamento**, pubblicata su `/<repo>/precedente/`.
+- `claude/bold-cray-v91cjk` — **l'app in uso**, pubblicata su `/<repo>/`. Tutte le modifiche vanno direttamente qui (l'utente non vuole versioni di prova).
+- `claude/copia-precedente` — copia dell'app **prima dell'ultimo aggiornamento**, pubblicata su `/<repo>/precedente/`: serve solo per tornare indietro su cose minori.
+- `claude/prova-navigazione` — non più usato; tienilo allineato all'app principale (o ignoralo).
 
-**Prima di ogni passaggio di modifiche nell'app principale** (merge della prova o modifiche importanti): sposta `claude/copia-precedente` sul commit attuale dell'app principale e fai push, *poi* aggiorna l'app principale. Così resta sempre online la versione precedente alle modifiche.
+**Prima di ogni aggiornamento dell'app**: sposta `claude/copia-precedente` sul commit attuale dell'app principale e fai push, *poi* fai push delle modifiche. Così resta sempre online la versione precedente.
 
 Restiamo una web app (PWA): niente APK/app native finché l'utente non lo chiede.
 
