@@ -89,7 +89,8 @@ const mealNow = (): MealId => {
   return h < 11 ? 'breakfast' : h < 15 ? 'lunch' : h < 18 ? 'snack' : 'dinner';
 };
 
-const REVEAL = 108;
+/** Swipe distance (px) past which a food is deleted on release. */
+const DELETE_AT = 120;
 
 /**
  * One food in the log. Swipe left to show "Elimina" (or all the way to delete at once),
@@ -145,7 +146,7 @@ function FoodRow({
           g.current = {
             x: t.clientX,
             y: t.clientY,
-            base: dx,
+            base: 0,
             lock: null,
             w: ev.currentTarget.offsetWidth,
           };
@@ -180,16 +181,18 @@ function FoodRow({
           g.current = null;
           setDrag(false);
           if (!c || c.lock !== 'x' || selecting) return;
-          if (dx < -c.w * 0.45) {
+          // Past the threshold the food is deleted on release (with "Annulla"), otherwise it springs back.
+          if (dx < -Math.min(DELETE_AT, c.w * 0.35)) {
             setDx(-c.w);
+            navigator.vibrate?.(10);
             window.setTimeout(onDelete, 160);
-          } else setDx(dx < -REVEAL / 2 ? -REVEAL : 0);
+          } else setDx(0);
         }}
       >
-        <button className="food-swipe-delete" style={{ width: Math.max(REVEAL, -dx) }} tabIndex={dx ? 0 : -1} onClick={onDelete}>
+        <span className={`food-swipe-delete${dx < -DELETE_AT ? ' armed' : ''}`} aria-hidden="true" style={{ width: Math.max(0, -dx) }}>
           <GlyphTrash />
           Elimina
-        </button>
+        </span>
         <button
           className={`food-entry${open ? ' on' : ''}`}
           style={{

@@ -513,7 +513,7 @@ export default function DayPage() {
 
   const hidden = settings.hiddenBlocks ?? [];
   const saveSettings = store.saveSettings;
-  const { drag, settling, onPointerDown } = useBlockDrag(order, (o) => saveOrder(o));
+  const { drag, settling, compact, onPointerDown } = useBlockDrag(order, (o) => saveOrder(o), { compact: true });
   const rendered: React.ReactNode[] = [];
   for (const id of order) {
     if (hidden.includes(id)) continue;
@@ -537,7 +537,7 @@ export default function DayPage() {
   const saveOrder = (o: string[]) => store.saveSettings({ ...settings, dayLayout: o });
 
   return (
-    <div ref={swipeRef} className={`page day-page${drag ? ' is-dragging' : ''}`} onPointerDown={onPointerDown}>
+    <div ref={swipeRef} className={`page day-page${drag ? ' is-dragging' : ''}${compact ? ' is-compacting' : ''}`} onPointerDown={onPointerDown}>
       <header className="page-head">
         <button className="icon-btn no-print" aria-label="Giorno precedente" onClick={() => nav(`/giorno/${addDays(date, -1)}`)}>
           <GlyphPrev />

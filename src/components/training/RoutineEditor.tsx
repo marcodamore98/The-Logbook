@@ -33,7 +33,17 @@ function PlannedBlock({
 }) {
   const { settings } = useStore();
   const def = exerciseDef(ex.exerciseId, settings.exercises);
-  const setAt = (k: number, s: PlannedSet) => onChange({ ...ex, sets: warmupsFirst(ex.sets.map((x, i) => (i === k ? s : x))) });
+  /** Edit one planned set; weight / reps / time of a working set carry over to the later working sets. */
+  const setAt = (k: number, s: PlannedSet) => {
+    const old = ex.sets[k];
+    let sets = ex.sets.map((x, i) => (i === k ? s : x));
+    if (s.type !== 'warmup') {
+      const patch: Partial<PlannedSet> = {};
+      for (const f of ['kg', 'reps', 'repsMax', 'seconds'] as const) if (s[f] !== old[f]) Object.assign(patch, { [f]: s[f] });
+      if (Object.keys(patch).length) sets = sets.map((x, i) => (i > k && x.type !== 'warmup' ? { ...x, ...patch } : x));
+    }
+    onChange({ ...ex, sets: warmupsFirst(sets) });
+  };
   // Hold a set (its badge cell) and drag it up or down.
   const sort = useSortableList(ex.sets, (sets) => onChange({ ...ex, sets: warmupsFirst(sets) }), { attr: `rset${index}`, handle: 'tr' });
   let n = 0;
@@ -142,10 +152,10 @@ export function RoutineEditor({ value: r, onChange }: { value: Routine; onChange
   const setExercises = (exercises: RoutineExercise[]) => set({ exercises });
   // Hold an exercise's header and drag it to reorder.
   const order = r.exercises.map((_, i) => String(i));
-  const { drag, settling, onPointerDown } = useBlockDrag(order, (o) => setExercises(keepSupersets(o.map((k) => r.exercises[Number(k)]))), { attr: 'ex', handle: '.exercise-head' });
+  const { drag, settling, compact, onPointerDown } = useBlockDrag(order, (o) => setExercises(keepSupersets(o.map((k) => r.exercises[Number(k)]))), { attr: 'ex', handle: '.exercise-head', compact: true });
   const letters = supersetLetters(r.exercises);
   return (
-    <div className={`routine-editor${drag ? ' is-dragging' : ''}`} onPointerDown={onPointerDown}>
+    <div className={`routine-editor${drag ? ' is-dragging' : ''}${compact ? ' is-compacting' : ''}`} onPointerDown={onPointerDown}>
       <div className="grid">
         <Field label="Nome scheda">
           <input value={r.name} onChange={(e) => set({ name: e.target.value })} placeholder="es. Push A" />

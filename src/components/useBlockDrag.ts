@@ -22,11 +22,14 @@ export interface DragState {
  * always shows where the block will land. A short touch still taps and a normal swipe
  * still scrolls the page.
  */
-export function useBlockDrag(order: string[], onReorder: (order: string[]) => void, opts: { attr?: string; handle?: string } = {}) {
-  // `attr`: the data attribute holding each item's id ("block" → data-block); `handle`: where a long press starts a drag.
+export function useBlockDrag(order: string[], onReorder: (order: string[]) => void, opts: { attr?: string; handle?: string; compact?: boolean } = {}) {
+  // `attr`: the data attribute holding each item's id ("block" → data-block); `handle`: where a long press starts a drag;
+  // `compact`: while dragging, big blocks shrink to one-line rows (the page styles them from the `compact` flag).
   const attr = opts.attr ?? 'block';
   const handleSel = opts.handle ?? '.card-head';
+  const compactMode = !!opts.compact;
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [compact, setCompact] = useState(false);
   const [settling, setSettling] = useState(false);
   const live = useRef({ order, onReorder });
   live.current = { order, onReorder };
@@ -45,6 +48,7 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
       me: number; // index of the dragged block in slots
       gap: number;
       j: number;
+      pending?: boolean;
     } | null = null;
 
     const measure = () => {
@@ -97,6 +101,14 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onCancel);
       window.removeEventListener('touchmove', blockScroll);
+      if (compactMode) {
+        setCompact(false);
+        // Back to full size: keep the block that was moved in view.
+        if (cur.active)
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => document.querySelector(`[data-${attr}="${cur.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })),
+          );
+      }
       if (cur.active) {
         // Swallow the click that follows the release so the card doesn't toggle.
         const eat = (e: Event) => e.stopPropagation();
@@ -124,7 +136,7 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
     function onMove(e: PointerEvent) {
       if (!s) return;
       s.y = e.clientY;
-      if (!s.active && (Math.abs(e.clientX - s.startX) > SLOP || Math.abs(e.clientY - s.startY) > SLOP)) finish(false); // it's a scroll
+      if (!s.active && !s.pending && (Math.abs(e.clientX - s.startX) > SLOP || Math.abs(e.clientY - s.startY) > SLOP)) finish(false); // it's a scroll
     }
     const onUp = () => finish(true);
     const onCancel = () => finish(false);
@@ -150,6 +162,35 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
         j: 0,
         timer: window.setTimeout(() => {
           if (!s) return;
+          if (compactMode) {
+            // Shrink every block to a row first, then put the pressed row under the finger and start.
+            s.pending = true;
+            window.addEventListener('touchmove', blockScroll, { passive: false });
+            navigator.vibrate?.(15);
+            setCompact(true);
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => {
+                if (!s) return;
+                const el = document.querySelector<HTMLElement>(`[data-${attr}="${s.id}"]`);
+                if (el) {
+                  const r = el.getBoundingClientRect();
+                  window.scrollBy(0, r.top + r.height / 2 - s.y);
+                }
+                s.pending = false;
+                s.startY = s.y;
+                s.startScroll = window.scrollY;
+                begin();
+              }),
+            );
+            return;
+          }
+          navigator.vibrate?.(15);
+          begin();
+        }, HOLD_MS),
+      };
+      function begin() {
+        if (!s) return;
+        {
           const m = measure();
           s.slots = m.slots;
           s.gap = m.gap;
@@ -158,11 +199,10 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
           s.j = s.me;
           s.active = true;
           window.addEventListener('touchmove', blockScroll, { passive: false });
-          navigator.vibrate?.(15);
           window.getSelection()?.removeAllRanges();
           s.raf = requestAnimationFrame(tick);
-        }, HOLD_MS),
-      };
+        }
+      }
       window.addEventListener('pointermove', onMove, { passive: true });
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onCancel);
@@ -173,7 +213,7 @@ export function useBlockDrag(order: string[], onReorder: (order: string[]) => vo
 
   useEffect(() => () => ctl.finish(false), [ctl]);
 
-  return { drag, settling, onPointerDown: ctl.onPointerDown };
+  return { drag, settling, compact, onPointerDown: ctl.onPointerDown };
 }
 
 /**

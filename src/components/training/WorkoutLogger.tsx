@@ -119,35 +119,48 @@ function SetRow({
   const [dx, setDx] = useState(0);
   // Rows are keyed by position: after a deletion the next set takes this slot, closed.
   useEffect(() => setDx(0), [s]);
-  const touch = useRef<{ x: number; y: number; base: number; lock: boolean | null } | null>(null);
-  const REVEAL = 84;
+  // Swipe left: the red "Elimina" grows under the finger; past about a third of the row
+  // the set is deleted on release (with "Annulla"), otherwise the row springs back.
+  const touch = useRef<{ x: number; y: number; w: number; lock: boolean | null } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const armed = (w: number) => dx < -Math.min(140, w * 0.35);
   const onTouchStart = (e: React.TouchEvent) => {
     if ((e.target as HTMLElement).closest('input')) return;
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, base: dx, lock: null };
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, w: e.currentTarget.clientWidth, lock: null };
   };
   const onTouchMove = (e: React.TouchEvent) => {
     const t = touch.current;
     if (!t) return;
     const mx = e.touches[0].clientX - t.x;
     const my = e.touches[0].clientY - t.y;
-    if (t.lock === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) t.lock = Math.abs(mx) > Math.abs(my);
-    if (t.lock) setDx(Math.max(-REVEAL, Math.min(0, t.base + mx)));
+    if (t.lock === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) {
+      t.lock = Math.abs(mx) > Math.abs(my);
+      if (t.lock) setDragging(true);
+    }
+    if (t.lock) setDx(Math.min(0, mx));
   };
   const onTouchEnd = () => {
     const t = touch.current;
     touch.current = null;
-    if (t?.lock) setDx((v) => (v < -REVEAL / 2 ? -REVEAL : 0));
+    setDragging(false);
+    if (!t?.lock) return;
+    if (armed(t.w)) {
+      setDx(-t.w);
+      navigator.vibrate?.(10);
+      window.setTimeout(onRemove, 170);
+    } else setDx(0);
   };
   const cols = [usesWeight(def.kind), usesDistance(def.kind), usesReps(def.kind), usesTime(def.kind)].filter(Boolean).length;
 
   return (
-    <div className={`set-wrap${dx ? ' open' : ''}`}>
-      <button type="button" className="set-delete" tabIndex={dx ? 0 : -1} onClick={onRemove}>
+    <div ref={wrap} className={`set-wrap${dx ? ' open' : ''}`}>
+      <span className={`set-delete${armed(wrap.current?.clientWidth ?? 360) ? ' armed' : ''}`} aria-hidden="true" style={{ width: Math.max(0, -dx) }}>
         Elimina
-      </button>
+      </span>
       <div
         className={`set-row${s.done ? ' done' : ''} set-row-${type}`}
-        style={{ transform: `translate3d(${dx}px,0,0)`, ['--cols' as string]: cols }}
+        style={{ transform: `translate3d(${dx}px,0,0)`, transition: dragging ? 'none' : 'transform 0.17s ease', ['--cols' as string]: cols }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -215,7 +228,18 @@ function ExerciseBlock({
   const def = exerciseDef(ex.exerciseId, settings.exercises);
   const prev = previousSession(history, ex.exerciseId, workout.id, date);
   const bests = bestsBefore(history, ex.exerciseId, workout.id, date);
-  const setAt = (k: number, s: WorkoutSet) => onChange({ ...ex, sets: warmupsFirst(ex.sets.map((x, i) => (i === k ? s : x))) });
+  /** Edit one set. A weight / reps / time typed in a working set is copied to the later
+   *  working sets not ticked yet, as a guess that they will be the same. */
+  const setAt = (k: number, s: WorkoutSet) => {
+    const old = ex.sets[k];
+    let sets = ex.sets.map((x, i) => (i === k ? s : x));
+    if (setTypeOf(s) !== 'warmup') {
+      const patch: Partial<WorkoutSet> = {};
+      for (const f of ['kg', 'reps', 'seconds', 'km'] as const) if (s[f] !== old[f]) Object.assign(patch, { [f]: s[f] });
+      if (Object.keys(patch).length) sets = sets.map((x, i) => (i > k && !x.done && setTypeOf(x) !== 'warmup' ? { ...x, ...patch } : x));
+    }
+    onChange({ ...ex, sets: warmupsFirst(sets) });
+  };
   const [menu, setMenu] = useState(false);
   const [info, setInfo] = useState(false);
   // Hold a set (its number or the "previous" column) and drag it up or down.
@@ -356,7 +380,7 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
   const setExercises = (exercises: WorkoutExercise[]) => set({ exercises });
   // Hold an exercise's header and drag it, like the cards of the day page.
   const order = w.exercises.map((_, i) => String(i));
-  const { drag, settling, onPointerDown } = useBlockDrag(order, (o) => setExercises(keepSupersets(o.map((k) => w.exercises[Number(k)]))), { attr: 'ex', handle: '.exercise-head' });
+  const { drag, settling, compact, onPointerDown } = useBlockDrag(order, (o) => setExercises(keepSupersets(o.map((k) => w.exercises[Number(k)]))), { attr: 'ex', handle: '.exercise-head', compact: true });
   /** Sets for an exercise just added or swapped in: last session's sets when there is one. */
   const freshSets = (exerciseId: string, fallback?: WorkoutSet[]): WorkoutSet[] => {
     const prev = previousSession(history, exerciseId, w.id, date);
@@ -367,7 +391,7 @@ export function WorkoutLogger({ value: w, onChange, date, onAbandon }: { value: 
   const sets = workingSets(w);
 
   return (
-    <div className={`workout${drag ? ' is-dragging' : ''}`} onPointerDown={onPointerDown}>
+    <div className={`workout${drag ? ' is-dragging' : ''}${compact ? ' is-compacting' : ''}`} onPointerDown={onPointerDown}>
       <div className="workout-bar hevy-bar">
         <div className="stat">
           <span className="stat-cap">Durata</span>

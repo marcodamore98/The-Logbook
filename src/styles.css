@@ -2221,3 +2221,16 @@ tr.sortable.sort-lifted { display: table-row; }
 .set-row .wheel-field { width: 100%; min-width: 0; padding: 0 0.3rem; }
 @media (max-width: 520px) { .todo .wheel-field { margin-left: 26px; } }
 .finish-min.wheel-field { font-size: 1.4rem; background: transparent; border: none; padding: 0; color: inherit; }
+
+/* ---------- While dragging a big block, every block becomes a one-line row ---------- */
+.is-compacting .blk .card > :not(.card-head), .is-compacting .blk .card .card-summary, .is-compacting .blk .card .card-kicker, .is-compacting .blk .card-head > button:not(.card-title-btn), .is-compacting .blk .card-head > .menu-wrap { display: none !important; }
+.is-compacting .blk .card { padding-block: 0.55rem; min-height: 0; }
+.is-compacting .blk .modules > :not(.card), .is-compacting .blk .work-tiles { display: none !important; }
+.is-compacting .ex-blk .exercise > :not(.exercise-head), .is-compacting .ex-blk .exercise-head .menu-wrap { display: none !important; }
+.is-compacting .ex-blk .exercise { padding-block: 0.5rem; }
+.is-compacting .blk, .is-compacting .ex-blk { margin-bottom: 0; }
+
+/* ---------- Swipe left to delete: no tap needed, past the threshold it goes ---------- */
+.set-wrap .set-delete { display: flex; align-items: center; justify-content: flex-end; padding-right: 1rem; overflow: hidden; white-space: nowrap; border-radius: inherit; transition: background-color 0.15s; }
+.set-delete.armed, .food-swipe-delete.armed { background: #e5392f; }
+.food-swipe-delete.armed { font-weight: 800; }
