@@ -39,6 +39,12 @@ export interface Todo {
   gcalEventId?: string;
 }
 
+export interface ShopItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface Appointment {
   id: string;
   title: string;
@@ -423,6 +429,7 @@ export interface Settings {
   mealPlans?: MealPlan[];
   foods?: Food[]; // alimenti personali e salvati da Open Food Facts
   favoriteFoods?: string[];
+  shopping?: ShopItem[]; // lista della spesa: unica, la stessa in tutti i giorni
   dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno
   runPlans?: RunPlan[]; // sessioni a intervalli salvate
   hiddenBlocks?: string[]; // blocchi eliminati dalla pagina del giorno (es. il tabellone)

@@ -2132,3 +2132,18 @@ i[class^='dot-'] { background: var(--c) !important; }
   .summary-drawer .sidebar > * { break-inside: avoid; margin-bottom: 1rem; }
   .summary-drawer .side-head { column-span: all; }
 }
+
+/* ---------- "Da ricordare": Promemoria | Spesa switch and the shopping list ---------- */
+.todo-switch { margin-bottom: 0.7rem; }
+.shop { display: flex; flex-direction: column; gap: 0.5rem; }
+.shop-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.shop-item { display: flex; align-items: center; gap: 0.6rem; min-height: 2.75rem; border-bottom: 1px solid var(--line); }
+.shop-item:last-child { border-bottom: none; }
+.shop-item input.grow { border: none; background: transparent; padding: 0.35rem 0; font: inherit; font-size: 1rem; color: var(--ink); box-shadow: none; }
+.shop-item input.grow:focus { outline: none; }
+.shop-item input[type='checkbox'] { width: 22px; height: 22px; flex: none; accent-color: var(--lime); }
+.shop-item.done input.grow { text-decoration: line-through; color: var(--muted); }
+.shop-plus { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 6px; border: 1.5px dashed var(--line); color: var(--muted); font-weight: 700; line-height: 1; }
+.shop-new input.grow::placeholder { color: var(--muted); }
+.shop-clear { align-self: flex-start; background: none; border: none; padding: 0.2rem 0; font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+@media print { .todo-switch, .shop-new, .shop-clear { display: none !important; } }

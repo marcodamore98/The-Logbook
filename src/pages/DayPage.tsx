@@ -19,6 +19,7 @@ import {
 import { RosterCard } from '../components/RosterCard';
 import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
 import { DiaryEntryView } from '../components/diary/DiaryEntry';
+import { ShoppingList } from '../components/day/ShoppingList';
 import { useUndo } from '../components/Undo';
 import { useBlockDrag } from '../components/useBlockDrag';
 import { useSwipeNav } from '../components/useSwipeNav';
@@ -164,6 +165,24 @@ export default function DayPage() {
     </select>
   );
   const openTodos = day.todos.filter((t) => !t.done).length;
+  const toBuy = (settings.shopping ?? []).filter((i) => !i.done);
+  // "Da ricordare" shows either the day's reminders or the shopping list; the choice is remembered.
+  const [todoTab, setTodoTab] = useState<'todos' | 'shop'>(() => {
+    try {
+      return localStorage.getItem('logbook:todo-tab') === 'shop' ? 'shop' : 'todos';
+    } catch {
+      return 'todos';
+    }
+  });
+  const pickTodoTab = (t: 'todos' | 'shop') => {
+    setTodoTab(t);
+    try {
+      localStorage.setItem('logbook:todo-tab', t);
+    } catch {
+      /* private mode */
+    }
+  };
+  const [shopAdd, setShopAdd] = useState(0);
   const shiftName = settings.shiftTypes.find((t) => t.id === day.shift?.shiftTypeId)?.name ?? 'Turno';
   const who = day.shift ? day.shift.colleagueIds.map((c) => settings.colleagues.find((x) => x.id === c)?.name).filter(Boolean).slice(0, 3).join(', ') : '';
   const shiftSummary = day.shift
@@ -396,13 +415,37 @@ export default function DayPage() {
             print="agenda"
             icon={<IconTodo />}
             title="Da ricordare"
-            summary={day.todos.length ? `${openTodos} da fare su ${day.todos.length}${openTodos ? ` · ${day.todos.filter((t) => !t.done).slice(0, 2).map((t) => t.text).join(', ')}` : ''}` : 'Niente'}
+            summary={
+              todoTab === 'shop'
+                ? toBuy.length
+                  ? `Spesa · ${toBuy.length} da comprare · ${toBuy.slice(0, 3).map((i) => i.text).join(', ')}`
+                  : 'Spesa · lista vuota'
+                : day.todos.length
+                  ? `${openTodos} da fare su ${day.todos.length}${openTodos ? ` · ${day.todos.filter((t) => !t.done).slice(0, 2).map((t) => t.text).join(', ')}` : ''}`
+                  : 'Niente'
+            }
             actions={
-              <button className="icon-btn no-print" aria-label="Aggiungi promemoria" onClick={() => update((d) => ({ ...d, todos: [...d.todos, { id: uid(), text: '', done: false }] }))}>
+              <button
+                className="icon-btn no-print"
+                aria-label={todoTab === 'shop' ? 'Aggiungi alla spesa' : 'Aggiungi promemoria'}
+                onClick={() => (todoTab === 'shop' ? setShopAdd((n) => n + 1) : update((d) => ({ ...d, todos: [...d.todos, { id: uid(), text: '', done: false }] })))}
+              >
                 <GlyphPlus />
               </button>
             }
           >
+            <div className="segmented kind-switch todo-switch no-print" role="tablist" aria-label="Tipo di elenco">
+              <button role="tab" aria-selected={todoTab === 'todos'} className={todoTab === 'todos' ? 'on' : ''} onClick={() => pickTodoTab('todos')}>
+                Promemoria
+              </button>
+              <button role="tab" aria-selected={todoTab === 'shop'} className={todoTab === 'shop' ? 'on' : ''} onClick={() => pickTodoTab('shop')}>
+                Spesa{toBuy.length ? ` · ${toBuy.length}` : ''}
+              </button>
+            </div>
+            {todoTab === 'shop' ? (
+              <ShoppingList addSignal={shopAdd} />
+            ) : (
+            <>
             {day.todos.length === 0 && <Empty>Niente da ricordare.</Empty>}
             <ul className="todos">
               {day.todos.map((t) => (
@@ -422,6 +465,8 @@ export default function DayPage() {
                 </li>
               ))}
             </ul>
+            </>
+            )}
           </Card>
         );
       case 'training':
