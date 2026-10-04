@@ -173,7 +173,7 @@ export interface EventInput {
   date: ISODate;
   start?: string; // HH:MM; omitted = all-day
   end?: string;
-  endDate?: ISODate; // for overnight events
+  endDate?: ISODate; // timed: for overnight events; all-day: last day of a multi-day event
   kind: string;
   colorId?: string;
   /** Popup reminders, minutes before the start. */
@@ -190,7 +190,7 @@ function toBody(e: EventInput) {
     start: timed ? { dateTime: localDateTime(e.date, e.start!), timeZone: TIME_ZONE } : { date: e.date },
     end: timed
       ? { dateTime: localDateTime(e.endDate ?? e.date, e.end!), timeZone: TIME_ZONE }
-      : { date: addDays(e.date, 1) },
+      : { date: addDays(e.endDate ?? e.date, 1) },
     extendedProperties: { private: { logbook: '1', lbKind: e.kind, lbDate: e.date } },
     ...(e.reminders ? { reminders: { useDefault: !e.reminders.length, overrides: e.reminders.map((minutes) => ({ method: 'popup', minutes })) } } : {}),
   };
@@ -208,6 +208,17 @@ export async function upsertEvent(calendarId: string, id: string | undefined, e:
   }
   const r = await api<GEvent>(`/calendars/${enc(calendarId)}/events`, { method: 'POST', body });
   return r.id;
+}
+
+/** One event by id, also when deleted (status "cancelled"); null when Google no longer knows it. */
+export async function getEvent(calendarId: string, id: string): Promise<GEvent | null> {
+  try {
+    const e = await api<GEvent>(`/calendars/${enc(calendarId)}/events/${enc(id)}`);
+    return { ...e, calendarId };
+  } catch (err) {
+    if (String(err).includes(' 404') || String(err).includes(' 410')) return null;
+    throw err;
+  }
 }
 
 export async function deleteEvent(calendarId: string, id: string): Promise<void> {

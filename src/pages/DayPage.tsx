@@ -464,7 +464,7 @@ export default function DayPage() {
                     className="compact"
                     clearable
                     value={t.time}
-                    onChange={(v) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: v } : x)) }))}
+                    onChange={(v) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: v, end: undefined } : x)) }))}
                   />
                   <button className="icon-btn small no-print" aria-label="Elimina" onClick={() => update((d) => ({ ...d, todos: d.todos.filter((x) => x.id !== t.id) }))}>
                     <GlyphTrash />

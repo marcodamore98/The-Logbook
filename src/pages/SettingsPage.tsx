@@ -127,7 +127,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           <p className="muted">Manca VITE_GOOGLE_CLIENT_ID: segui la sezione “Google Calendar” del README.</p>
         ) : !gcal.connected ? (
           <>
-            <p>Collega il tuo account per vedere gli eventi di Google nel logbook e salvare turni, impegni e promemoria con orario sul calendario.</p>
+            <p>Collega il tuo account: turni, guardie, impegni, promemoria con orario, corsi, congressi, viaggi e uscite vanno sul calendario, e le modifiche fatte su Google (orari, durate, date, eliminazioni, nuovi eventi) tornano qui, senza doppioni.</p>
             <button className="btn" onClick={store.connectGoogle}>
               Collega Google Calendar
             </button>

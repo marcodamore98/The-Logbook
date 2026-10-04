@@ -322,7 +322,7 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
       <div className="field field-wide tile-grid">
         <TimeTile type="date" label="Dal" value={m.startDate} onChange={(v) => v && onChange({ ...m, startDate: v, endDate: m.endDate < v ? v : m.endDate })} />
         <TimeTile type="date" label="Al" value={m.endDate} min={m.startDate} onChange={(v) => v && onChange({ ...m, endDate: v < m.startDate ? m.startDate : v })} />
-        <TimeTile clearable label="Ora di inizio" value={m.startTime ?? ''} onChange={(v) => onChange({ ...m, startTime: v || undefined })} />
+        <TimeTile clearable label="Ora di inizio" value={m.startTime ?? ''} onChange={(v) => onChange({ ...m, startTime: v || undefined, endTime: undefined })} />
       </div>
       <div className="field field-wide">
         <label className={`switch-row remind-box${m.startTime ? '' : ' disabled'}`}>

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { rangeDays } from '../dates';
-import { authorize, disconnect, gcalConfigured, hasToken, listEvents, eventLocal, type GEvent } from '../google/calendar';
-import { linkedIds, pushDay, reconcile, trashRemoved } from '../google/sync';
+import { authorize, disconnect, gcalConfigured, getEvent, hasToken, listEvents, eventLocal, type GEvent } from '../google/calendar';
+import { linkedIds, pullFromGoogle, pushDay, trashRemoved } from '../google/sync';
 import { emptyDay, type DayEntry, type ISODate, type Settings } from '../types';
 import type { ImportedWorkout } from '../hevy';
 import { buildHistory, type History } from '../training/analytics';
@@ -196,19 +196,25 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
           for (const d of rangeDays(from, to)) out[d] = byDate[d] ?? [];
           return out;
         });
-        for (const d of loaded) {
-          const r = reconcile(d, byDate[d.date] ?? []);
-          if (r) {
-            pushedBase.current[d.date] = r;
-            writeDay(r);
-          }
+        // Edits, moves, deletions and new events made on Google come back into these days.
+        const before = rangeDays(from, to).map((d) => daysRef.current[d] ?? emptyDay(d));
+        const pulled = await pullFromGoogle(before, all, s, getEvent);
+        for (const r of pulled) {
+          const was = before.find((d) => d.date === r.date);
+          // Edited here meanwhile: keep the local edit, the next sync brings Google's version again.
+          if ((daysRef.current[r.date] ?? was) !== was) continue;
+          const next = { ...r, updatedAt: Date.now() };
+          pushedBase.current[r.date] = next;
+          writeDay(next);
+          // Items unlinked because their event is unknown to Google get a fresh event.
+          void push(r.date);
         }
       } catch (e) {
         setError(String(e instanceof Error ? e.message : e));
         setConnected(hasToken());
       }
     },
-    [repo, writeDay],
+    [repo, writeDay, push],
   );
 
   const connectGoogle = useCallback(async () => {
@@ -232,10 +238,11 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
       daysRef.current = { ...daysRef.current, [d.date]: daysRef.current[d.date] ?? d };
       const needs =
         (d.gcalTrash?.length ?? 0) > 0 ||
-        (d.shift && !d.shift.gcalEventId) ||
-        (d.guardia && !d.guardia.gcalEventId) ||
+        (d.shift && !d.shift.gcalEventId && !d.shift.gcalSkip) ||
+        (d.guardia && !d.guardia.gcalEventId && !d.guardia.gcalSkip) ||
         d.appointments.some((a) => !a.gcalEventId) ||
-        d.todos.some((t) => t.time && !t.gcalEventId);
+        d.todos.some((t) => t.time && !t.gcalEventId) ||
+        d.modules.some((m) => (m.kind === 'course' || m.kind === 'travel' || m.kind === 'outing') && !m.gcalEventId);
       if (needs) {
         await push(d.date);
         n++;
