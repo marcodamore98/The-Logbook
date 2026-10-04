@@ -72,7 +72,7 @@ Cards in this order:
 4. LAVORO "Attività chirurgica" cards (collapsed, summary "Isterectomia laparoscopica · Primo operatore").
 5. AGENDA "Impegni" ("14:30 Journal club") and AGENDA "Da ricordare" ("2 da fare · Firmare lettere") side by side, compact, each with a round "+".
 6. SPORT "Allenamento": a summary block "Push" with an amber banner "👑 Nuovo record · Panca piana 82,5 kg × 6" and three tiles CARICO SOLLEVATO 975 kg (lime) · DURATA 1h 02m · ORARIO 07:00–08:02; a run block with tiles DISTANZA 5,20 km · DURATA 21:40 · PASSO 4:10/km; a "QUESTA SETTIMANA · 2 h 53 min" mini bar chart L–D with the current day ringed in lime. If nothing is logged: two slim lime pills side by side "Inizia allenamento ›" | "Inizia corsa ›".
-7. SALUTE "Alimentazione" (always open): "1.850 / 2.300 kcal" at the right of the title, a lime progress bar, "Proteine 120 / 175 g" with a thin lavender bar, lime banner "Apri il diario alimentare ›".
+7. SALUTE "Alimentazione" — a normal collapsible card with drag handle and round chevron like the others; collapsed summary "1.850 / 2.300 kcal · proteine 120 / 175 g"; open: "Calorie 1.850 / 2.300 kcal" with a lime progress bar, "Proteine 120 / 175 g" with a thin lavender bar, lime banner "Apri il diario alimentare ›".
 8. FORMAZIONE "Corsi e congressi" (collapsed) showing a box: "● Congresso SIGO" with a date pill "4 OTT – 7 OTT" and chips "📎 Programma", "👑 Attestato".
 9. PERSONALE "Diario": italic muted "Nessuna pagina scritta per questo giorno." and a ghost "✎ Scrivi" pill on the same row.
 At the bottom a dashed full-width pill "+ Aggiungi scheda" (lime text in dark mode).

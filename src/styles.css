@@ -2039,3 +2039,4 @@ i[class^='dot-'] { background: var(--c) !important; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .back-day { color: var(--lime); } }
 .start-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; } .start-pair .lime-banner { padding-left: 0.85rem; }
 .start-pair .lime-banner { font-size: 0.82rem; white-space: nowrap; padding-right: 0.6rem; gap: 0.25rem; } .start-pair .lime-banner span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.nut-kcal { margin-top: 0; }

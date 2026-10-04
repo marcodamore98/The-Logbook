@@ -232,15 +232,18 @@ export function NutritionBlock({ day }: { day: DayEntry }) {
       print="alimentazione"
       icon={<IconFood />}
       title="Alimentazione"
-      collapsible={false}
-      actions={
-        <span className={`nut-head${logged ? '' : ' muted'}`}>
-          {logged ? `${fmt(kcal)}${goals.kcalIn ? ` / ${fmt(goals.kcalIn)}` : ''} kcal` : 'Niente registrato'}
-        </span>
-      }
+      defaultOpen={true}
+      summary={logged ? `${fmt(kcal)}${goals.kcalIn ? ` / ${fmt(goals.kcalIn)}` : ''} kcal · proteine ${fmt(protein)}${goals.proteinG ? ` / ${fmt(goals.proteinG)}` : ''} g` : 'Niente registrato'}
     >
       {logged && (
         <div className="nut-bars">
+          <span className="nut-protein nut-kcal">
+            <span>Calorie</span>
+            <strong>
+              {fmt(kcal)}
+              {goals.kcalIn ? ` / ${fmt(goals.kcalIn)}` : ''} kcal
+            </strong>
+          </span>
           {bar(kcal, goals.kcalIn)}
           <span className="nut-protein">
             <span>Proteine</span>
