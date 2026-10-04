@@ -69,9 +69,15 @@ export function ExerciseDetail({ id, onClose }: { id: string; onClose: () => voi
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet ex-detail" role="dialog" aria-label={def.name} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head">
+        <div className="sheet-head ex-head">
           <ExAvatar muscle={def.muscle} />
-          <h2 className="grow">{def.name}</h2>
+          <div className="grow ex-titles">
+            <span className="card-kicker">Dettaglio esercizio</span>
+            <h2>{def.name}</h2>
+            <span className="muted small">
+              {def.muscle} · {def.equipment}
+            </span>
+          </div>
           <button className="icon-btn" aria-label="Chiudi" onClick={onClose}>
             <GlyphClose />
           </button>
@@ -86,15 +92,25 @@ export function ExerciseDetail({ id, onClose }: { id: string; onClose: () => voi
 
         {tab === 'summary' ? (
           <div className="ex-detail-body">
-            <p className="muted">
-              Primario: {def.muscle}
-              {def.secondary?.length ? <><br />Secondario: {def.secondary.join(', ')}</> : null}
-              <br />Attrezzatura: {def.equipment}
-            </p>
+            {def.secondary?.length ? <p className="muted small ex-secondary">Anche: {def.secondary.join(', ')}</p> : null}
             {sessions.length === 0 ? (
               <Empty>Non ancora eseguito.</Empty>
             ) : (
               <>
+                <div className="ex-big">
+                  {records
+                    .filter((r) => r.id === 'kg' || r.id === 'e1rm')
+                    .map((r) => (
+                      <div key={r.id} className={`stat-tile ex-big-${r.id}`}>
+                        <span className="stat-label">{r.id === 'kg' ? 'Peso massimo' : '1RM stimato'}</span>
+                        <strong>
+                          {fmt(r.v, 1)}
+                          <small> kg</small>
+                        </strong>
+                        <span className="muted small">{r.id === 'kg' && r.set ? `${r.set.reps} rip.` : r.id === 'e1rm' ? 'formula di Epley' : ''}</span>
+                      </div>
+                    ))}
+                </div>
                 <div className="ex-detail-top">
                   <strong className="ex-detail-value">
                     {fmt(points.at(-1)?.value ?? 0, 1)}
@@ -116,9 +132,22 @@ export function ExerciseDetail({ id, onClose }: { id: string; onClose: () => voi
                     </button>
                   ))}
                 </div>
-                <h3 className="sub">★ Record personali</h3>
+                <h3 className="sub">Ultime serie registrate</h3>
+                <div className="last-sets">
+                  {(sessions[0]?.sets ?? []).filter(isWorkingSet).map((x, k) => {
+                    const best = records.find((r) => r.id === 'kg');
+                    const pr = !!best && sessions[0].date === best.date && (x.kg ?? 0) === best.v;
+                    return (
+                      <span key={k} className={`set-pill${pr ? ' is-pr' : ''}`}>
+                        {setText(x)}
+                        {pr && <b>PR</b>}
+                      </span>
+                    );
+                  })}
+                </div>
+                <h3 className="sub">Altri record</h3>
                 <ul className="records">
-                  {records.map((r) => (
+                  {records.filter((r) => r.id !== 'kg' && r.id !== 'e1rm').map((r) => (
                     <li key={r.id}>
                       <span>{r.label}</span>
                       <strong>

@@ -41,6 +41,15 @@ function Routines() {
     nav(`/palestra/allenamento/${date}/${w.id}`);
   }
 
+  // Last time each routine was done (by id, or by name for older workouts).
+  const lastDone = (r: Routine) => {
+    for (const d of [...store.allDays].sort((a, b) => b.date.localeCompare(a.date))) {
+      const w = d.modules.find((m): m is WorkoutModule => m.kind === 'workout' && !!m.finishedAt && (m.routineId === r.id || (!m.routineId && m.title === r.name)));
+      if (w) return { date: d.date, min: w.durationMin };
+    }
+    return null;
+  };
+
   // Empty routines left behind by "Nuova routine" are of no use: remove them.
   useEffect(() => {
     if (editing) return;
@@ -129,10 +138,20 @@ function Routines() {
         </Empty>
       )}
           <div className="routine-grid">
-            {routines.map((r) => (
+            {routines.map((r, k) => {
+              const defs = r.exercises.map((ex) => exerciseDef(ex.exerciseId, store.settings.exercises));
+              const muscles = [...new Set(defs.map((d) => d.muscle))].slice(0, 3);
+              const last = lastDone(r);
+              return (
               <article key={r.id} className="card routine-card">
                 <div className="routine-top">
-                  <h3 className="routine-name">{r.name}</h3>
+                  <span className={`routine-dot dot-${k % 5}`} aria-hidden="true">
+                    <IconWorkout size={22} />
+                  </span>
+                  <div className="routine-titles">
+                    <h3 className="routine-name">{r.name}</h3>
+                    {muscles.length > 0 && <span className="routine-muscles">{muscles.join(' · ')}</span>}
+                  </div>
                   <details className="menu-details more">
                     <summary className="icon-btn small" aria-label="Altre azioni">⋯</summary>
                     <div className="menu">
@@ -143,16 +162,19 @@ function Routines() {
                   </details>
                 </div>
                 <p className="routine-preview">
-                  {r.exercises.length
-                    ? r.exercises.map((ex) => exerciseDef(ex.exerciseId, store.settings.exercises).name).join(', ')
-                    : 'Nessun esercizio'}
+                  {defs.length ? defs.slice(0, 3).map((d) => d.name).join(' · ') + (defs.length > 3 ? ` · +${defs.length - 3}` : '') : 'Nessun esercizio'}
                 </p>
-                <button className="btn routine-start" disabled={!r.exercises.length} onClick={() => start(r)}>
-                  Avvia la routine
-                </button>
+                <div className="routine-foot">
+                  <span className="routine-last">{last ? `${agoLabel(last.date)}${last.min ? ` · ${last.min} min` : ''}` : 'Mai fatta'}</span>
+                  <button className="routine-go" disabled={!r.exercises.length} onClick={() => start(r)}>
+                    Inizia
+                  </button>
+                </div>
               </article>
-            ))}
+              );
+            })}
           </div>
+      <WeekOverview />
       <p className="muted small import-note">
         Hai già delle routine? <button className="link-btn" onClick={() => hevyFile.current?.click()}>Importa da Hevy</button> ·{' '}
         <Link className="link-btn" to="/impostazioni#personal-trainer">dal personal trainer</Link>
@@ -383,7 +405,7 @@ export default function GymPage() {
   }, [store]);
   const tabs = useMemo(
     () => [
-      ['routines', 'Schede'],
+      ['routines', 'Routine'],
       ['history', 'Storico'],
       ['exercises', 'Esercizi'],
       ['progress', 'Progressi'],
@@ -405,8 +427,9 @@ export default function GymPage() {
         <div className="page-title">
           <h1>Palestra</h1>
         </div>
+        <Streak />
       </header>
-      <div className="segmented" role="tablist">
+      <div className="segmented kind-switch gym-tabs" role="tablist">
         {tabs.map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
             {label}
@@ -418,5 +441,100 @@ export default function GymPage() {
       {tab === 'exercises' && <Exercises />}
       {tab === 'progress' && <Progress />}
     </div>
+  );
+}
+
+const agoLabel = (date: string) => {
+  const n = Math.round((fromISO(today()).getTime() - fromISO(date).getTime()) / 864e5);
+  return n <= 0 ? 'Oggi' : n === 1 ? 'Ieri' : `${n} giorni fa`;
+};
+
+/** Consecutive weeks with at least one workout or run (this week counts once it has one). */
+function Streak() {
+  const { allDays } = useStore();
+  const weeks = new Set(allDays.filter((d) => d.modules.some((m) => (m.kind === 'workout' && (m.finishedAt || m.exercises.length)) || m.kind === 'run')).map((d) => startOfWeek(d.date)));
+  let w = startOfWeek(today());
+  if (!weeks.has(w)) w = addDays(w, -7);
+  let n = 0;
+  while (weeks.has(w)) {
+    n++;
+    w = addDays(w, -7);
+  }
+  if (n < 1) return null;
+  return (
+    <span className="streak-badge" title="Settimane consecutive con almeno un allenamento">
+      <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="currentColor">
+        <path d="M12 2c1 3.5-1.5 5-1.5 7.5 0 1.2.8 2 1.8 2 1.4 0 2.2-1.3 1.7-3.3 2.9 1.8 4.5 4.6 4.5 7.3A6.5 6.5 0 0 1 12 22a6.5 6.5 0 0 1-6.5-6.5C5.5 10 12 7 12 2z" />
+      </svg>
+      {n} {n === 1 ? 'settimana' : 'sett. di fila'}
+    </span>
+  );
+}
+
+/** Last 7 days at a glance: workouts, volume against the 7 before, sets per muscle. */
+function WeekOverview() {
+  const store = useStore();
+  const t = today();
+  const range = (from: number, to: number) => store.allDays.filter((d) => d.date > addDays(t, -from) && d.date <= addDays(t, -to));
+  const cur = range(7, 0);
+  const prev = range(14, 7);
+  const gym = (days: typeof cur) => days.flatMap((d) => d.modules.filter((m): m is WorkoutModule => m.kind === 'workout'));
+  const vol = (days: typeof cur) => gym(days).reduce((n, w) => n + workoutVolume(w), 0);
+  const v = vol(cur);
+  const pv = vol(prev);
+  const muscles = [...setsPerMuscle(cur, store.settings.exercises ?? []).entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const top = muscles[0]?.[1] ?? 0;
+  const perDay = Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(t, i - 6);
+    return { d, v: gym(store.allDays.filter((x) => x.date === d)).reduce((n, w) => n + workoutVolume(w), 0) };
+  });
+  const maxDay = Math.max(1, ...perDay.map((x) => x.v));
+  if (!gym(cur).length && !pv) return null;
+  return (
+    <section className="week-overview">
+      <h2 className="wo-title">Panoramica 7 giorni</h2>
+      <div className="wo-tiles">
+        <div className="stat-tile">
+          <span className="stat-label">Allenamenti</span>
+          <strong className="hi">{gym(cur).length}</strong>
+        </div>
+        <div className="stat-tile">
+          <span className="stat-label">Volume totale</span>
+          <strong className="lav">{fmt(Math.round(v))} kg</strong>
+          {pv > 0 && <span className="wo-delta">{v >= pv ? '+' : ''}{fmt(((v - pv) / pv) * 100, 1)}% vs 7 giorni prima</span>}
+        </div>
+      </div>
+      <div className="card wo-card">
+        <h3 className="wo-sub">Volume per giorno</h3>
+        <div className="wt-bars wo-bars">
+          {perDay.map((x) => (
+            <div key={x.d} className={`wt-day${x.d === t ? ' on' : ''}`} title={`${fmt(Math.round(x.v))} kg`}>
+              <span className="wt-track">
+                <span className={`wt-bar${x.v ? '' : ' empty'}`} style={{ height: x.v ? `${Math.max(12, (x.v / maxDay) * 100)}%` : undefined }} />
+              </span>
+              <span className="wt-label">{'DLMMGVS'[fromISO(x.d).getDay()]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {muscles.length > 0 && (
+        <div className="card wo-card">
+          <h3 className="wo-sub">Serie per muscolo · 7 giorni</h3>
+          <ul className="muscle-bars">
+            {muscles.map(([m, n], k) => (
+              <li key={m}>
+                <span className="mb-row">
+                  <span>{m}</span>
+                  <strong className={`mb-c${k}`}>{fmt(n, 1)} serie</strong>
+                </span>
+                <span className="mb-track">
+                  <span className={`mb-fill mb-c${k}`} style={{ width: `${(n / top) * 100}%` }} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }
