@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { addDays, formatLong, fromISO, shiftMinutes, today } from '../lib/dates';
 import { useStore } from '../lib/store/StoreContext';
@@ -86,7 +86,7 @@ function Meter({ value, goal, unit }: { value?: number; goal?: number; unit: str
   );
 }
 
-export function BodySidebar({ onClose }: { onClose?: () => void }) {
+function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
   const store = useStore();
   const { settings } = store;
   const loc = useLocation();
@@ -352,3 +352,6 @@ function KcalRing({ eaten, goal, burned }: { eaten: number; goal?: number; burne
     </div>
   );
 }
+
+/** Memoised: it must not re-render on every frame while its drawer is being dragged. */
+export const BodySidebar = memo(BodySidebarPanel);
