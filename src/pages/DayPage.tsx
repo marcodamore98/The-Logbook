@@ -502,6 +502,11 @@ export default function DayPage() {
             <path d="M8 4v16M4.5 7.5L8 4l3.5 3.5M16 20V4M12.5 16.5L16 20l3.5-3.5" />
           </svg>
         </button>
+        <div className="day-jump no-print" role="group" aria-label="Vai al giorno">
+          <button onClick={() => nav(`/giorno/${addDays(today(), -1)}`)} className={date === addDays(today(), -1) ? 'on' : ''}>Ieri</button>
+          <button onClick={() => nav(`/giorno/${today()}`)} className={date === today() ? 'on' : ''}>Oggi</button>
+          <button onClick={() => nav(`/giorno/${addDays(today(), 1)}`)} className={date === addDays(today(), 1) ? 'on' : ''}>Domani</button>
+        </div>
         <PrintButton title={`The Logbook · ${formatLong(date)}`} sections={DAY_PRINT} />
         <button className="icon-btn no-print" aria-label="Giorno successivo" onClick={() => nav(`/giorno/${addDays(date, 1)}`)}>
           <GlyphNext />

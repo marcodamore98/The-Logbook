@@ -1853,3 +1853,30 @@ li.best-lap .rs-idx { background: color-mix(in srgb, var(--amber) 22%, transpare
 :root[data-theme='dark'] .stats-page .barlist-bar { background: var(--lime); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .stats-page .barlist-bar { background: var(--lime); } }
 @media print { .bento-tile.big { background: none; color: #000; } }
+
+/* ---- Stitch restyle, round 9: desktop day page and Corpo panel ---- */
+.day-jump { display: none; }
+@media (min-width: 900px) {
+  .day-page .page-head { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; grid-template-areas: 'prev title jump reorder print next' '. sub sub sub sub sub'; }
+  .day-jump { grid-area: jump; display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+  .day-jump button { border: none; background: none; border-radius: 9px; padding: 0.3rem 0.75rem; font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+  .day-jump button.on { background: var(--surface-2); color: var(--ink); font-weight: 800; }
+  :root[data-theme='dark'] .day-jump button.on { color: var(--lime); }
+  /* Impegni and Da ricordare always side by side on wide screens */
+  .day-page:not(.is-dragging) > .blk:is([data-block='agenda'], [data-block='todos']) { flex: 1 1 calc(50% - 0.375rem); }
+}
+@media (min-width: 900px) and (prefers-color-scheme: dark) { :root:not([data-theme='light']) .day-jump button.on { color: var(--lime); } }
+
+.sidebar .side-card { padding: 0.9rem; border-radius: 20px; background: #252527; border: 1px solid #38383c; }
+.kcal-ring { display: flex; align-items: center; gap: 0.9rem; }
+.kr-track { fill: none; stroke: #38383c; stroke-width: 3.5; }
+.kr-fill { fill: none; stroke: var(--lime); stroke-width: 3.5; stroke-linecap: round; }
+.kr-fill.over { stroke: var(--coral); }
+.kr-text { display: flex; flex-direction: column; }
+.kr-text strong { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.kr-cap { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lime); margin: 0.15rem 0; }
+.side-water { display: flex; align-items: center; gap: 0.6rem; }
+.sw-glasses { flex: 1; display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.sw-glasses i { height: 20px; border-radius: 4px; border: 1px solid #404044; background: #2b2b2e; }
+.sw-glasses i.full { background: color-mix(in srgb, var(--water) 35%, transparent); border-color: var(--water); }
+.side-water button { flex: none; border: 1px solid #404044; background: #2b2b2e; color: var(--water); border-radius: 999px; padding: 0.3rem 0.7rem; font: inherit; font-weight: 700; font-size: 0.78rem; }

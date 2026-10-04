@@ -212,14 +212,25 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
         )}
       </section>
 
-      <section className="side-section">
+      <section className="side-section side-card">
         <h3 className="sub">Corpo</h3>
         <div className="side-grid">{FIELDS.map(input)}</div>
+        <div className="side-water">
+          <span className="sw-glasses" aria-hidden="true">
+            {Array.from({ length: 8 }, (_, i) => (
+              <i key={i} className={i < Math.round((body.waterL ?? 0) / 0.25) ? 'full' : ''} />
+            ))}
+          </span>
+          <button type="button" onClick={() => setBody({ waterL: Math.round(((body.waterL ?? 0) + 0.25) * 100) / 100 })}>
+            + 250 ml
+          </button>
+        </div>
         {calcOpen && <BodyFatCalc last={lastMeasures} onUse={setBody} onClose={() => setCalcOpen(false)} />}
       </section>
 
-      <section className="side-section">
-        <h3 className="sub">Calorie</h3>
+      <section className="side-section side-card">
+        <h3 className="sub">Bilancio energetico</h3>
+        <KcalRing eaten={intake.kcal ?? 0} goal={goals.kcalIn} burned={body.kcalOut} />
         {intake.fromLog ? (
           <>
             <div className="side-grid">
@@ -254,7 +265,7 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
         )}
       </section>
 
-      <section className="side-section">
+      <section className="side-section side-card">
         <h3 className="sub">Peso · 30 giorni</h3>
         <WeightSpark points={weights} />
         <dl className="side-stats">
@@ -312,5 +323,29 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
         )}
       </section>
     </aside>
+  );
+}
+
+/** Calories left today as a small lime ring next to the big number. */
+function KcalRing({ eaten, goal, burned }: { eaten: number; goal?: number; burned?: number }) {
+  if (!goal) return null;
+  const target = goal + (burned ?? 0);
+  const left = target - eaten;
+  const pct = Math.min(1, eaten / target);
+  const C = 2 * Math.PI * 15.9;
+  return (
+    <div className="kcal-ring">
+      <svg viewBox="0 0 36 36" width="76" height="76" aria-hidden="true">
+        <circle cx="18" cy="18" r="15.9" className="kr-track" />
+        <circle cx="18" cy="18" r="15.9" className={`kr-fill${left < 0 ? ' over' : ''}`} strokeDasharray={`${pct * C} ${C}`} transform="rotate(-90 18 18)" />
+      </svg>
+      <span className="kr-text">
+        <strong>{fmt(Math.abs(left))}</strong>
+        <span className="kr-cap">{left >= 0 ? 'kcal rimanenti' : 'kcal oltre'}</span>
+        <span className="muted small">
+          {fmt(eaten)} mangiate / {fmt(target)}
+        </span>
+      </span>
+    </div>
   );
 }
