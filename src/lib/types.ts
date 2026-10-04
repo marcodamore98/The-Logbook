@@ -291,7 +291,7 @@ export interface Food {
   portionName?: string; // es. "1 vasetto"
   category?: string; // vocab FOOD_CATEGORIES
   barcode?: string;
-  source: 'builtin' | 'custom' | 'off';
+  source: 'builtin' | 'custom' | 'off' | 'library';
 }
 
 export interface FoodEntry {

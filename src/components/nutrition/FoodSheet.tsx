@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import { allFoods, entryFor, FOOD_CATEGORIES, MEALS } from '../../lib/nutrition/foods';
+import { useLibrary } from '../../lib/nutrition/library';
 import { barcodeDetector, productByBarcode, searchOff } from '../../lib/nutrition/off';
 import type { Food, FoodEntry, MealId } from '../../lib/types';
 import { GlyphClose, GlyphPlus } from '../icons';
@@ -27,6 +28,16 @@ const TAB_ICON: Record<Tab, string> = {
 };
 const TONES = ['lime', 'lav', 'sage', 'sky', 'terra'];
 
+/** Lower case without accents, so "ragu" finds "ragù". */
+const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/** Best first: name starts with the query, then a word of the name does, then anything else. */
+function rankOf(name: string, text: string, words: string[]) {
+  if (name.startsWith(words.join(' '))) return 0;
+  if (words.every((w) => name.split(/[\s,'(/-]+/).some((x) => x.startsWith(w)))) return 1;
+  return text.startsWith(words[0]) ? 2 : 3;
+}
+
 function FoodRow({ food, onPick, fav, onFav, picked }: { food: Food; onPick: () => void; fav: boolean; onFav: () => void; picked?: boolean }) {
   return (
     <li className={`food-row${picked ? ' picked' : ''}`}>
@@ -39,7 +50,7 @@ function FoodRow({ food, onPick, fav, onFav, picked }: { food: Food; onPick: () 
           {food.brand && <span className="muted"> · {food.brand}</span>}
         </span>
         <span className="ex-meta">
-          <b>{food.kcal} kcal</b> / 100 g · P {food.protein} · C {food.carbs} · G {food.fat}{food.source === 'off' ? ' · Open Food Facts' : ''}
+          <b>{food.kcal} kcal</b> / 100 g · P {food.protein} · C {food.carbs} · G {food.fat}{food.source === 'off' ? ' · Open Food Facts' : food.source === 'library' ? ' · stima' : ''}
         </span>
       </button>
       <button className={`fav${fav ? ' on' : ''}`} aria-label={fav ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'} aria-pressed={fav} onClick={onFav}>
@@ -53,12 +64,13 @@ function FoodRow({ food, onPick, fav, onFav, picked }: { food: Food; onPick: () 
 function Quantity({ food, meal, onMeal, onAdd, onBack, inline }: { food: Food; meal: MealId; onMeal: (m: MealId) => void; onAdd: (e: FoodEntry) => void; onBack: () => void; inline?: boolean }) {
   const [grams, setGrams] = useState<number | undefined>(food.portionG ?? 100);
   const e = entryFor(food, grams ?? 0, uid());
+  const unit = (food.portionName ?? 'porzione').replace(/^1\s+/, '');
   const portions: [string, number][] = [
     ...(food.portionG
       ? ([
-          [`½ ${food.portionName ?? 'porzione'}`, Math.round(food.portionG / 2)],
+          [`½ ${unit}`, Math.round(food.portionG / 2)],
           [`${food.portionName ?? '1 porzione'} (${food.portionG} g)`, food.portionG],
-          [`2 × ${food.portionName ?? 'porzione'}`, food.portionG * 2],
+          [`2 × ${unit}`, food.portionG * 2],
         ] as [string, number][])
       : []),
     ['100 g', 100],
@@ -145,11 +157,18 @@ export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId;
     store.ensureAllLoaded();
   }, [store]);
 
-  const foods = useMemo(() => allFoods(custom), [custom]);
+  const library = useLibrary();
+  const foods = useMemo(() => [...allFoods(custom), ...library], [custom, library]);
   const local = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t) return foods.slice(0, 40);
-    return foods.filter((f) => `${f.name} ${f.brand ?? ''}`.toLowerCase().includes(t)).slice(0, 60);
+    const words = norm(q).split(/\s+/).filter(Boolean);
+    if (!words.length) return foods.slice(0, 40);
+    return foods
+      .map((f) => ({ f, text: norm(`${f.name} ${f.brand ?? ''} ${f.category ?? ''}`) }))
+      .filter(({ text }) => words.every((w) => text.includes(w)))
+      .map(({ f, text }) => ({ f, rank: rankOf(norm(f.name), text, words) }))
+      .sort((a, b) => a.rank - b.rank || a.f.name.length - b.f.name.length)
+      .slice(0, 60)
+      .map(({ f }) => f);
   }, [q, foods]);
 
   const recent = useMemo(() => {
@@ -289,7 +308,7 @@ export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId;
                     <input
                       type="search"
                       autoFocus
-                      placeholder="Cerca alimento o marca…"
+                      placeholder="Cerca alimento, piatto o marca…"
                       value={q}
                       onChange={(e) => {
                         setQ(e.target.value);
