@@ -28,6 +28,7 @@ export interface ShiftAssignment {
   place?: string; // reparto / sede
   note?: string;
   gcalEventId?: string;
+  gcalSkip?: boolean; // evento eliminato su Google: non ricrearlo
 }
 
 export interface Todo {
@@ -36,6 +37,7 @@ export interface Todo {
   done: boolean;
   category?: string; // vocab.CATEGORIES
   time?: HHMM; // with a time it becomes a Google Calendar event
+  end?: HHMM; // fine dell'evento su Google (predefinita: 30 minuti dopo)
   gcalEventId?: string;
 }
 
@@ -160,6 +162,7 @@ export interface CourseModule {
   type?: 'course' | 'congress' | 'webinar';
   title: string;
   startTime?: string; // HH:MM
+  endTime?: string; // HH:MM, fine dell'evento su Google (predefinita: un'ora dopo)
   /** Reminder 30 and 5 minutes before the start (Google Calendar + in-app). */
   remind?: boolean;
   gcalEventId?: string;
@@ -180,6 +183,7 @@ export interface TravelModule {
   destination?: string;
   startDate: ISODate;
   endDate: ISODate;
+  gcalEventId?: string;
 }
 
 export interface PhotoModule {
@@ -383,6 +387,7 @@ export interface OutingModule {
   place?: string;
   people?: string;
   notes?: string;
+  gcalEventId?: string;
 }
 
 export type Module =

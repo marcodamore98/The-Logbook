@@ -457,7 +457,7 @@ export default function DayPage() {
                     type="time"
                     value={t.time ?? ''}
                     title="Con orario viene aggiunto a Google Calendar"
-                    onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: e.target.value || undefined } : x)) }))}
+                    onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: e.target.value || undefined, end: undefined } : x)) }))}
                   />
                   <button className="icon-btn small no-print" aria-label="Elimina" onClick={() => update((d) => ({ ...d, todos: d.todos.filter((x) => x.id !== t.id) }))}>
                     <GlyphTrash />
