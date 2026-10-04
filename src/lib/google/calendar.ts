@@ -26,6 +26,8 @@ export interface GEvent {
   extendedProperties?: { private?: Record<string, string> };
   colorId?: string;
   htmlLink?: string;
+  /** Google Meet link, when the event has one. */
+  hangoutLink?: string;
 }
 
 export interface GCalendar {

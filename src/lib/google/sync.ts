@@ -2,7 +2,8 @@
 // viaggi e uscite diventano eventi del calendario scelto.
 // Google Calendar → Logbook (pullFromGoogle): orari, durate, date e titoli modificati su
 // Google tornano negli elementi collegati; gli eventi eliminati su Google spariscono anche
-// qui; gli eventi con orario creati su Google diventano Impegni collegati. Ogni elemento
+// qui; gli eventi con orario creati su Google diventano Impegni collegati, tranne quelli
+// che iniziano con "Webinar:", "Corso:" o "Congresso:", che diventano schede Corsi e congressi. Ogni elemento
 // tiene l'id del suo evento, così non ci sono doppioni in nessuna delle due direzioni.
 
 import { addDays, minutesOf } from '../dates';
@@ -63,10 +64,48 @@ function courseInput(m: CourseModule): EventInput {
   const summary = `${COURSE_LABEL[m.type ?? 'course']}: ${m.title || 'senza titolo'}`;
   if (!m.startTime) {
     // No time: an all-day event over the whole course / congress.
-    return { kind: 'course', date: m.startDate, endDate: m.endDate > m.startDate ? m.endDate : undefined, summary, location: m.place || undefined };
+    return { kind: 'course', date: m.startDate, endDate: m.endDate > m.startDate ? m.endDate : undefined, summary, location: courseWhere(m) };
   }
   const end = m.endTime && minutesOf(m.endTime) > minutesOf(m.startTime) ? m.endTime : plusMinutes(m.startTime, 60);
-  return { kind: 'course', date: m.startDate, summary, start: m.startTime, end, reminders: m.remind ? [30, 5] : [], location: m.place || undefined };
+  return { kind: 'course', date: m.startDate, summary, start: m.startTime, end, reminders: m.remind ? [30, 5] : [], location: courseWhere(m) };
+}
+
+/** Webinars are "held" at their link; courses and congresses at their place. */
+const courseWhere = (m: CourseModule) => (m.type === 'webinar' ? m.link : m.place) || undefined;
+
+const COURSE_PREFIX = /^\s*(webinar|corso|congresso)\s*:\s*/i;
+const URL_RE = /https?:\/\/[^\s<>"')]+/i;
+
+/** The join link of an event: Meet link, or the first web address in its description or place. */
+function eventLink(e: GEvent): string | undefined {
+  if (e.hangoutLink) return e.hangoutLink;
+  const text = `${e.description ?? ''} ${e.location ?? ''}`; // descriptions may be HTML: the address sits in href="…"
+  return URL_RE.exec(text)?.[0].replace(/&amp;/g, '&');
+}
+
+/** A "Webinar: …", "Corso: …" or "Congresso: …" event as a course card of its first day. */
+function courseFromEvent(e: GEvent): CourseModule | undefined {
+  const m = COURSE_PREFIX.exec(e.summary ?? '');
+  if (!m) return undefined;
+  const type = ({ webinar: 'webinar', corso: 'course', congresso: 'congress' } as const)[m[1].toLowerCase() as 'webinar' | 'corso' | 'congresso'];
+  const a = eventLocal(e.start);
+  const b = eventLocal(e.end);
+  const lastDay = a.time ? a.date : addDays(b.date, -1) < a.date ? a.date : addDays(b.date, -1);
+  const link = eventLink(e);
+  const place = e.location && !URL_RE.test(e.location) ? e.location : undefined;
+  return {
+    kind: 'course',
+    id: uid(),
+    type,
+    title: (e.summary ?? '').replace(COURSE_PREFIX, '').trim(),
+    startDate: a.date,
+    endDate: type === 'webinar' ? a.date : lastDay,
+    startTime: a.time,
+    endTime: a.time ? b.time : undefined,
+    place,
+    link,
+    gcalEventId: e.id,
+  };
 }
 
 function travelInput(m: TravelModule): EventInput {
@@ -303,13 +342,15 @@ export async function pullFromGoogle(days: DayEntry[], events: GEvent[], setting
       // All-day events end the day after their last day.
       const lastDay = a.time ? a.date : addDays(b.date, -1) < a.date ? a.date : addDays(b.date, -1);
       if (m.kind === 'course') {
+        const link = eventLink(e);
         set(date, m, {
-          title: stripLabel(e.summary, /^(Corso|Congresso|Webinar):\s*/) || m.title,
-          place: e.location || undefined,
+          title: stripLabel(e.summary, COURSE_PREFIX) || m.title,
+          place: e.location && !(link && e.location.includes(link)) ? e.location : undefined,
           startDate: a.date,
-          endDate: a.time ? (m.endDate < a.date ? a.date : m.endDate) : lastDay,
+          endDate: m.type === 'webinar' ? a.date : a.time ? (m.endDate < a.date ? a.date : m.endDate) : lastDay,
           startTime: a.time,
           endTime: a.time ? b.time : undefined,
+          ...(link ? { link } : {}),
         });
       } else if (m.kind === 'travel') {
         set(date, m, { title: stripLabel(e.summary, /^Viaggio:\s*/) || m.title, destination: e.location || undefined, startDate: a.date, endDate: lastDay });
@@ -319,8 +360,35 @@ export async function pullFromGoogle(days: DayEntry[], events: GEvent[], setting
     }
   }
 
-  // Timed events created on Google in the sync calendar become appointments of their day.
   const linked = linkedIds([...out.values()]);
+
+  // "Webinar: …", "Corso: …", "Congresso: …" written on Google become course cards on their
+  // first day (also all-day and multi-day events). Appointments made from such events before
+  // become course cards too.
+  for (const day of out.values()) {
+    for (const ap of [...day.appointments]) {
+      if (!ap.gcalEventId || !COURSE_PREFIX.test(ap.title)) continue;
+      const e = byId.get(ap.gcalEventId);
+      const c = e && courseFromEvent(e);
+      if (!c) continue;
+      day.appointments = day.appointments.filter((x) => x !== ap);
+      changed.add(day.date);
+      const target = out.get(c.startDate) ?? day;
+      target.modules.push(c);
+      changed.add(target.date);
+    }
+  }
+  for (const e of events) {
+    if (e.calendarId !== cal || linked.has(e.id) || e.extendedProperties?.private?.logbook === '1') continue;
+    const c = courseFromEvent(e);
+    const target = c && out.get(c.startDate);
+    if (!c || !target) continue;
+    target.modules.push(c);
+    linked.add(e.id);
+    changed.add(target.date);
+  }
+
+  // Timed events created on Google in the sync calendar become appointments of their day.
   for (const e of events) {
     if (e.calendarId !== cal || linked.has(e.id) || e.extendedProperties?.private?.logbook === '1' || !e.start.dateTime || !e.end.dateTime) continue;
     const a = eventLocal(e.start);

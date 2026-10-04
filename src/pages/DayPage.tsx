@@ -26,7 +26,8 @@ import { useBlockDrag, useSortableList } from '../components/useBlockDrag';
 import { useSwipeNav } from '../components/useSwipeNav';
 import { Card, CardDecor, ColleaguePicker, DragGrip, Empty, ShiftTypeSelect, TimeTile, uid } from '../components/ui';
 import { PrintButton } from '../components/PrintDialog';
-import { openFile } from '../components/files/FileSlot';
+import { openFile, programOf } from '../components/files/FileSlot';
+import { mapsUrl, webUrl } from '../lib/links';
 import { rangeLabel } from '../components/modules/meta';
 import { GlyphClip } from '../components/icons';
 import { fmt } from '../components/charts';
@@ -37,7 +38,7 @@ import { addDays, formatLong, isoWeek, today } from '../lib/dates';
 import { diaryOf, withDiary } from '../lib/diary';
 import { eventLocal } from '../lib/google/calendar';
 import { useStore } from '../lib/store/StoreContext';
-import type { DayEntry, Module, ModuleKind, ShiftAssignment } from '../lib/types';
+import type { DayEntry, FileRef, Module, ModuleKind, ShiftAssignment } from '../lib/types';
 import { clinicalTotals, surgeryTotals } from '../lib/worklog';
 
 /** Cards that can be added by hand; training, food and the diary have their own sections. */
@@ -145,7 +146,7 @@ export default function DayPage() {
       if (undone) return;
       if (m.kind === 'photos') m.items.forEach((p) => store.repo.deletePhoto(p.path));
       if (m.kind === 'course') {
-        store.repo.deleteFile(m.program?.path);
+        programOf(m).forEach((f) => store.repo.deleteFile(f.path));
         store.repo.deleteFile(m.certificate?.path);
       }
     }, 6500);
@@ -734,7 +735,10 @@ function BodyPills({ day }: { day: DayEntry }) {
 /** Course or trip while its card is closed: title, dates and the attached PDFs. */
 function SpanPeek({ m }: { m: Extract<Module, { kind: 'course' | 'travel' }> }) {
   const { repo } = useStore();
-  const files = m.kind === 'course' ? ([['Programma', m.program, false], ['Attestato', m.certificate, true]] as const) : [];
+  const files: [string, FileRef | undefined, boolean][] =
+    m.kind === 'course' ? [...programOf(m).map((f, i, all): [string, FileRef, boolean] => [all.length > 1 ? `Programma ${i + 1}` : 'Programma', f, false]), ['Attestato', m.certificate, true]] : [];
+  const link = m.kind === 'course' && m.type === 'webinar' ? m.link?.trim() : undefined;
+  const place = m.kind === 'course' && m.type !== 'webinar' ? m.place?.trim() : undefined;
   return (
     <div className="span-peek">
       <div className="sp-head">
@@ -742,8 +746,18 @@ function SpanPeek({ m }: { m: Extract<Module, { kind: 'course' | 'travel' }> }) 
         <strong>{m.title || (m.kind === 'course' ? 'Corso / congresso' : 'Viaggio')}</strong>
         <span className="sp-dates">{rangeLabel(m.startDate, m.endDate)}</span>
       </div>
-      {files.some(([, f]) => f) && (
+      {(files.some(([, f]) => f) || link || place) && (
         <div className="sp-files no-print">
+          {place && (
+            <a className="file-chip link-chip" href={mapsUrl(place)} target="_blank" rel="noopener noreferrer">
+              📍 {place}
+            </a>
+          )}
+          {link && (
+            <a className="file-chip link-chip" href={webUrl(link)} target="_blank" rel="noopener noreferrer">
+              Collegati al webinar ›
+            </a>
+          )}
           {files.map(([label, f, crown]) =>
             f ? (
               <button key={label} type="button" className="file-chip" onClick={() => openFile(repo, f)}>

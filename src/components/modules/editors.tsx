@@ -18,7 +18,11 @@ import {
   STUDY_TYPES,
 } from '../../lib/vocab';
 import { GlyphPlus, GlyphTrash } from '../icons';
-import { FileSlot } from '../files/FileSlot';
+import { FileSlot, ProgramFiles, programOf } from '../files/FileSlot';
+import { compress } from '../../lib/image';
+import { mapsUrl, webUrl } from '../../lib/links';
+
+export { compress };
 import { metaOf } from './meta';
 import { ClinicalEditor, SurgeryEditor } from './WorkLogEditors';
 import { useUndo } from '../Undo';
@@ -80,25 +84,6 @@ function OutingEditor({ value: m, onChange }: Props<OutingModule>) {
 }
 
 /** Resizes and re-encodes to JPEG, shrinking until it fits comfortably in a Firestore document. */
-export async function compress(file: File): Promise<Blob> {
-  const bmp = await createImageBitmap(file);
-  let max = 1400;
-  let quality = 0.8;
-  for (;;) {
-    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bmp.width * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob>((res, rej) =>
-      canvas.toBlob((b) => (b ? res(b) : rej(new Error('Compressione fallita'))), 'image/jpeg', quality),
-    );
-    if (blob.size < 350_000 || max <= 640) return blob;
-    max = Math.round(max * 0.8);
-    quality = Math.max(0.6, quality - 0.05);
-  }
-}
-
 export function StoredImage({ src, alt }: { src: string; alt: string }) {
   const { repo } = useStore();
   const [url, setUrl] = useState(src.startsWith('fs:') ? '' : src);
@@ -215,12 +200,14 @@ async function askNotifications() {
 }
 
 function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
+  const webinar = m.type === 'webinar';
+  const link = m.link?.trim();
   return (
     <div className="grid">
       <div className="field field-wide">
         <div className="chips" role="radiogroup" aria-label="Tipo">
           {COURSE_TYPES.map((t) => (
-            <button key={t.id} type="button" role="radio" aria-checked={(m.type ?? 'course') === t.id} className={`chip${(m.type ?? 'course') === t.id ? ' chip-on' : ''}`} onClick={() => onChange({ ...m, type: t.id })}>
+            <button key={t.id} type="button" role="radio" aria-checked={(m.type ?? 'course') === t.id} className={`chip${(m.type ?? 'course') === t.id ? ' chip-on' : ''}`} onClick={() => onChange({ ...m, type: t.id, ...(t.id === 'webinar' ? { endDate: m.startDate } : {}) })}>
               {t.label}
             </button>
           ))}
@@ -229,21 +216,54 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
       <Field label="Titolo" wide>
         <input value={m.title} placeholder="es. Congresso nazionale SIGO" onChange={(e) => onChange({ ...m, title: e.target.value })} />
       </Field>
-      <Field label="Luogo">
-        <span className="icon-input">
-          <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" />
-            <circle cx="12" cy="10" r="2.3" />
-          </svg>
-          <input value={m.place ?? ''} placeholder="es. Roma" onChange={(e) => onChange({ ...m, place: e.target.value || undefined })} />
-        </span>
-      </Field>
+      {webinar ? (
+        <div className="field field-wide">
+          <span className="field-label">Link per accedere</span>
+          <div className="link-row">
+            <span className="icon-input">
+              <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+              </svg>
+              <input type="url" inputMode="url" autoComplete="off" value={m.link ?? ''} placeholder="https://… (Zoom, Teams, Meet)" onChange={(e) => onChange({ ...m, link: e.target.value || undefined })} />
+            </span>
+            {link && (
+              <a className="btn link-open" href={webUrl(link)} target="_blank" rel="noopener noreferrer">
+                Collegati
+              </a>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="field field-wide">
+          <span className="field-label">Luogo</span>
+          <div className="link-row">
+            <span className="icon-input">
+              <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" />
+                <circle cx="12" cy="10" r="2.3" />
+              </svg>
+              <input value={m.place ?? ''} placeholder="es. Centro congressi, Roma" onChange={(e) => onChange({ ...m, place: e.target.value || undefined })} />
+            </span>
+            {m.place?.trim() && (
+              <a className="btn-ghost link-open" href={mapsUrl(m.place)} target="_blank" rel="noopener noreferrer">
+                Maps
+              </a>
+            )}
+          </div>
+        </div>
+      )}
       <Field label="Crediti ECM">
         <NumberInput value={m.ecm} step={0.5} onChange={(ecm) => onChange({ ...m, ecm })} />
       </Field>
-      <div className="field field-wide tile-grid">
-        <TimeTile type="date" label="Dal" value={m.startDate} onChange={(v) => v && onChange({ ...m, startDate: v, endDate: m.endDate < v ? v : m.endDate })} />
-        <TimeTile type="date" label="Al" value={m.endDate} min={m.startDate} onChange={(v) => v && onChange({ ...m, endDate: v < m.startDate ? m.startDate : v })} />
+      <div className={`field field-wide tile-grid${webinar ? ' pair' : ''}`}>
+        {webinar ? (
+          <TimeTile type="date" label="Giorno" value={m.startDate} onChange={(v) => v && onChange({ ...m, startDate: v, endDate: v })} />
+        ) : (
+          <>
+            <TimeTile type="date" label="Dal" value={m.startDate} onChange={(v) => v && onChange({ ...m, startDate: v, endDate: m.endDate < v ? v : m.endDate })} />
+            <TimeTile type="date" label="Al" value={m.endDate} min={m.startDate} onChange={(v) => v && onChange({ ...m, endDate: v < m.startDate ? m.startDate : v })} />
+          </>
+        )}
         <TimeTile clearable label="Ora di inizio" value={m.startTime ?? ''} onChange={(v) => onChange({ ...m, startTime: v || undefined, endTime: undefined })} />
       </div>
       <div className="field field-wide">
@@ -266,9 +286,10 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
         </label>
       </div>
       <div className="field field-wide file-slots">
-        <span className="field-label">Documenti allegati (PDF)</span>
-        <FileSlot label="Aggiungi il programma (PDF)" doneLabel="Programma" file={m.program} onChange={(program) => onChange({ ...m, program })} />
-        <FileSlot label="Aggiungi l’attestato" doneLabel="Attestato" crown file={m.certificate} onChange={(certificate) => onChange({ ...m, certificate })} />
+        <span className="field-label">Programma</span>
+        <ProgramFiles files={programOf(m)} onChange={(programFiles) => onChange({ ...m, program: undefined, programFiles })} />
+        <span className="field-label">Attestato (PDF)</span>
+        <FileSlot label="Aggiungi l’attestato (PDF)" doneLabel="Attestato" crown file={m.certificate} onChange={(certificate) => onChange({ ...m, certificate })} />
       </div>
     </div>
   );

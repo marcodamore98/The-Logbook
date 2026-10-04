@@ -212,7 +212,11 @@ export interface CourseModule {
   place?: string;
   /** Crediti ECM riconosciuti. */
   ecm?: number;
+  /** Link to join (webinars, online courses). */
+  link?: string;
+  /** Older single program file; new ones go in programFiles (PDF or photos). */
   program?: FileRef;
+  programFiles?: FileRef[];
   certificate?: FileRef;
 }
 

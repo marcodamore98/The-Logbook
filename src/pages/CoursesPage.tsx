@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { FileSlot, openFile } from '../components/files/FileSlot';
+import { FileSlot, openFile, programOf } from '../components/files/FileSlot';
+import { mapsUrl, webUrl } from '../lib/links';
 import { GlyphClip, GlyphFolder, IconCourse } from '../components/icons';
 import { COURSE_TYPES } from '../components/modules/editors';
 import { Empty } from '../components/ui';
@@ -113,12 +114,24 @@ export default function CoursesPage() {
                     </Link>
                     <span className="cc-date">
                       <IconCal /> {dateLong(m.startDate, m.endDate)}
-                      {m.place ? <> · {m.place}</> : null}
+                      {m.type === 'webinar' ? null : m.place ? (
+                        <>
+                          {' · '}
+                          <a className="cc-place" href={mapsUrl(m.place)} target="_blank" rel="noopener noreferrer">
+                            {m.place}
+                          </a>
+                        </>
+                      ) : null}
                     </span>
-                    {m.program && (
-                      <button type="button" className="cc-program" onClick={() => openFile(store.repo, m.program!)}>
-                        <GlyphClip /> <span>Programma (PDF)</span>
+                    {programOf(m).map((f, i, all) => (
+                      <button key={f.id} type="button" className="cc-program" onClick={() => openFile(store.repo, f)}>
+                        <GlyphClip /> <span>{all.length > 1 ? `Programma ${i + 1}` : 'Programma'}</span>
                       </button>
+                    ))}
+                    {m.type === 'webinar' && m.link && (
+                      <a className="cc-program" href={webUrl(m.link)} target="_blank" rel="noopener noreferrer">
+                        <span>Collegati al webinar ›</span>
+                      </a>
                     )}
                     {m.certificate ? (
                       <button type="button" className="lime-banner" onClick={() => openFile(store.repo, m.certificate!)}>
