@@ -5,9 +5,9 @@ import { GlyphTrash, IconRun } from '../components/icons';
 import { PlanBuilder } from '../components/running/PlanBuilder';
 import { RunSummary, type RunResult } from '../components/running/RunSummary';
 import { Card, Field, uid } from '../components/ui';
-import { formatLong, today } from '../lib/dates';
+import { fromISO, today } from '../lib/dates';
 import { useRunSession } from '../lib/running/engine';
-import { fmtDuration, fmtKm, fmtPace, fmtPaceSec, kmSplits, KIND_LABEL, planSummary, stepLabel } from '../lib/running/geo';
+import { fmtDuration, fmtKm, fmtPace, fmtPaceSec, KIND_LABEL, stepLabel } from '../lib/running/geo';
 import { presetPlans } from '../lib/running/plans';
 import { useStore } from '../lib/store/StoreContext';
 import type { RunModule, RunPlan, RunStep } from '../lib/types';
@@ -95,8 +95,8 @@ export default function RunPage() {
         </div>
       </header>
 
-      <Card id="run.setup" icon={null} title="Che corsa fai?" summary={mode === 'continuous' ? 'Continua' : `Intervalli · ${planName}`} defaultOpen={true}>
-        <div className="segmented" role="tablist">
+      <Card id="run.setup" icon={<span className="run-disc"><IconRun size={22} /></span>} title="Che corsa fai?" summary={mode === 'continuous' ? 'Continua' : `Intervalli · ${planName}`} defaultOpen={true}>
+        <div className="segmented kind-switch" role="tablist">
           <button role="tab" aria-selected={mode === 'continuous'} className={mode === 'continuous' ? 'on' : ''} disabled={active} onClick={() => setMode('continuous')}>
             Continua
           </button>
@@ -137,14 +137,24 @@ export default function RunPage() {
       <section ref={liveRef} className={`card run-live phase-${state.phase}${state.stepKind ? ` kind-${state.stepKind}` : ''}`}>
         {mode === 'intervals' && cur && state.phase !== 'idle' && state.phase !== 'done' && (
           <div className="run-step" aria-live="polite">
-            <span className="run-step-kind">{KIND_LABEL[cur.kind]}</span>
-            <span className="run-step-left">{stepText}</span>
+            <span className="run-step-top">
+              <span className="run-step-kind">{KIND_LABEL[cur.kind]}</span>
+              <span className="run-step-left">{stepText}</span>
+            </span>
             <span className="run-step-bar">
               <span style={{ width: `${stepPct}%` }} />
             </span>
             <span className="muted small">
               Fase {state.stepIdx + 1} di {steps.length}
               {steps[state.stepIdx + 1] ? ` · poi ${stepLabel(steps[state.stepIdx + 1])}` : ' · ultima fase'}
+            </span>
+          </div>
+        )}
+        {useGps && active && (
+          <div className="run-now">
+            <span className="run-cap">Passo attuale</span>
+            <span className="run-now-val">
+              {fmtPaceSec(state.pace)} <small>min/km</small>
             </span>
           </div>
         )}
@@ -162,12 +172,6 @@ export default function RunPage() {
             <span className="run-cap">passo medio</span>
           </div>
         </div>
-        {useGps && active && (
-          <div className="run-now">
-            <span className="run-now-val">{fmtPaceSec(state.pace)}</span>
-            <span className="run-cap">passo attuale · min/km</span>
-          </div>
-        )}
         {useGps && state.phase !== 'idle' && (
           <p className="muted small run-gps">
             {state.gps === 'ok' ? `GPS ok${state.accuracy ? ` (±${Math.round(state.accuracy)} m)` : ''}` : state.gps === 'denied' ? 'GPS non disponibile: controlla i permessi di posizione' : 'Cerco il segnale GPS…'}
@@ -181,15 +185,19 @@ export default function RunPage() {
         )}
         {state.phase === 'running' && (
           <div className="run-controls">
-            <button className="btn-ghost run-btn" onClick={run.pause}>Pausa</button>
-            {mode === 'intervals' && <button className="btn-ghost" onClick={run.skip}>Salta fase</button>}
-            <button className="btn-ghost danger" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>Fine</button>
+            <button className="btn run-btn run-main" onClick={run.pause}>❚❚ Pausa</button>
+            <div className="run-sub">
+              {mode === 'intervals' && <button className="btn-ghost" onClick={run.skip}>⏭ Salta fase</button>}
+              <button className="btn-ghost run-stop" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>■ Termina</button>
+            </div>
           </div>
         )}
         {state.phase === 'paused' && (
           <div className="run-controls">
-            <button className="btn run-btn" onClick={run.resume}>Riprendi</button>
-            <button className="btn-ghost danger" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>Fine</button>
+            <button className="btn run-btn run-main" onClick={run.resume}>▶ Riprendi</button>
+            <div className="run-sub">
+              <button className="btn-ghost run-stop" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>■ Termina</button>
+            </div>
           </div>
         )}
         {state.phase === 'idle' && (
@@ -221,16 +229,23 @@ export default function RunPage() {
         ) : (
           <ul className="run-history">
             {history.slice(0, 40).map(({ date, m }) => (
-              <li key={m.id}>
-                <div className="route-main">
-                  <strong>{m.title || (m.mode === 'intervals' ? m.planName ?? 'Intervalli' : 'Corsa continua')}</strong>
-                  <span className="muted small capitalize">
-                    {formatLong(date)} · {fmtKm(m.distanceM)} km · {fmtDuration(m.durationSec)} · {fmtPace(m.distanceM, m.durationSec)}/km
-                    {m.track && kmSplits(m.track).length ? ` · migliore ${fmtDuration(Math.min(...kmSplits(m.track)))}/km` : ''}
+              <li key={m.id} className="run-item">
+                <Link className="run-item-main" to={`/giorno/${date}`}>
+                  <span className={`run-item-icon ${m.mode === 'intervals' ? 'iv' : 'co'}`} aria-hidden="true">
+                    <IconRun size={20} />
                   </span>
-                  {m.mode === 'intervals' && m.steps && <span className="muted small">{planSummary(m.steps)}</span>}
-                </div>
-                <Link className="btn-ghost small" to={`/giorno/${date}`}>Giorno</Link>
+                  <span className="route-main">
+                    <span className="run-item-meta">
+                      {fromISO(date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                      <span className="run-tag">{m.mode === 'intervals' ? 'Intervalli' : 'Continua'}</span>
+                    </span>
+                    <strong>{m.title || (m.mode === 'intervals' ? m.planName ?? 'Intervalli' : 'Corsa continua')}</strong>
+                    <span className="muted small">
+                      {fmtKm(m.distanceM)} km · {fmtDuration(m.durationSec)} · <b>{fmtPace(m.distanceM, m.durationSec)} /km</b>
+                    </span>
+                  </span>
+                  <span className="run-item-go" aria-hidden="true">›</span>
+                </Link>
                 <button className="icon-btn small" aria-label="Elimina corsa" onClick={() => window.confirm('Eliminare questa corsa?') && store.updateDay(date, (d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }))}>
                   <GlyphTrash />
                 </button>

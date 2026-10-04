@@ -81,76 +81,89 @@ export function RunSummary({ elapsed, gpsDistanceM, useGps, track, laps, mode, p
           )}
         </div>
 
-        <div className="run-hero">
-          <div>
-            <span className="run-big">{useGps || manualKm ? fmtKm(distanceM) : '–'}</span>
-            <span className="run-cap">km</span>
+        <div className="rs-hero">
+          <span className="stat-label">Distanza totale</span>
+          <span className="rs-hero-val">
+            {useGps || manualKm ? fmtKm(distanceM) : '–'} <small>km</small>
+          </span>
+          {diff !== undefined && (
+            <span className={`run-compare ${diff <= 0 ? 'better' : 'worse'}`}>
+              {diff <= 0 ? '▲' : '▼'} {Math.abs(Math.round(diff))} s/km {diff <= 0 ? 'più veloce' : 'più lento'} dell’ultima corsa
+            </span>
+          )}
+        </div>
+
+        <div className="rs-tiles">
+          <div className="stat-tile">
+            <span className="stat-label">Tempo</span>
+            <strong>{fmtDuration(elapsed)}</strong>
           </div>
-          <div>
-            <span className="run-big">{fmtDuration(elapsed)}</span>
-            <span className="run-cap">tempo</span>
+          <div className="stat-tile">
+            <span className="stat-label">Passo medio</span>
+            <strong>
+              {fmtPaceSec(pace)}
+              <small> /km</small>
+            </strong>
+            <span className="muted small">{km > 0 ? `${kmh(distanceM, elapsed).toFixed(1).replace('.', ',')} km/h` : ''}</span>
+          </div>
+          <div className="stat-tile">
+            <span className="stat-label">Passo max</span>
+            <strong className="hi">
+              {maxKmh ? fmtPaceSec(3600 / maxKmh) : '–'}
+              <small> /km</small>
+            </strong>
+            <span className="muted small">{maxKmh ? `${maxKmh.toFixed(1).replace('.', ',')} km/h` : ''}</span>
           </div>
         </div>
 
-        <dl className="run-grid">
-          <div>
-            <dt>Passo medio</dt>
-            <dd>{fmtPaceSec(pace)} <small>/km</small></dd>
-          </div>
-          <div>
-            <dt>Velocità media</dt>
-            <dd>{km > 0 ? kmh(distanceM, elapsed).toFixed(1).replace('.', ',') : '–'} <small>km/h</small></dd>
-          </div>
-          <div>
-            <dt>Velocità massima</dt>
-            <dd>{maxKmh ? maxKmh.toFixed(1).replace('.', ',') : '–'} <small>km/h</small></dd>
-          </div>
-          <div>
-            <dt>Km più veloce</dt>
-            <dd>{bestKm ? fmtDuration(bestKm) : '–'} <small>/km</small></dd>
-          </div>
-        </dl>
-
-        {diff !== undefined && (
-          <p className={`run-compare ${diff <= 0 ? 'better' : 'worse'}`}>
-            {diff <= 0 ? '▲' : '▼'} {Math.abs(Math.round(diff))} s/km {diff <= 0 ? 'più veloce' : 'più lento'} dell’ultima corsa
-          </p>
-        )}
-
-        {work.length > 0 && (
-          <section>
-            <h3 className="sub">Ripetute</h3>
-            <table className="run-table">
-              <thead>
-                <tr><th>#</th><th>Tempo</th><th>Distanza</th><th>Passo</th></tr>
-              </thead>
-              <tbody>
-                {work.map((l, i) => (
-                  <tr key={i}>
-                    <td>{i + 1}</td>
-                    <td>{fmtDuration(l.seconds)}</td>
-                    <td>{l.meters} m</td>
-                    <td>{l.meters >= 50 ? fmtPaceSec(l.seconds / (l.meters / 1000)) : '–'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {workM > 0 && <p className="muted small">Passo medio delle ripetute {fmtPaceSec(workS / (workM / 1000))} /km</p>}
-          </section>
-        )}
-
         {splits.length > 0 && (
-          <section>
-            <h3 className="sub">Chilometri</h3>
-            <ul className="run-splits">
+          <section className="rs-list">
+            <h3 className="rs-title">
+              <i className="rs-dot" aria-hidden="true" /> Split al chilometro
+            </h3>
+            <ul className="rs-rows">
               {splits.map((sec, i) => (
-                <li key={i} className={sec === bestKm ? 'best' : ''}>
-                  <span>{i + 1}</span>
-                  <span className="run-split-bar"><span style={{ width: `${Math.min(100, ((bestKm ?? sec) / sec) * 100)}%` }} /></span>
-                  <span>{fmtDuration(sec)}</span>
+                <li key={i} className={sec === bestKm && splits.length > 1 ? 'best' : ''}>
+                  <span className="rs-idx">{i + 1}</span>
+                  <span className="rs-main">
+                    <strong>
+                      {fmtDuration(sec)} <small>/km</small>
+                    </strong>
+                    {sec === bestKm && splits.length > 1 && <span className="rs-badge">⚡ Miglior split</span>}
+                  </span>
+                  <span className="run-split-bar">
+                    <span style={{ width: `${Math.min(100, ((bestKm ?? sec) / sec) * 100)}%` }} />
+                  </span>
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {work.length > 0 && (
+          <section className="rs-list">
+            <h3 className="rs-title">
+              <i className="rs-dot lav" aria-hidden="true" /> Ripetute
+            </h3>
+            <ul className="rs-rows">
+              {work.map((l, i) => {
+                const p = l.meters >= 50 ? l.seconds / (l.meters / 1000) : Infinity;
+                const best = work.length > 1 && p === Math.min(...work.map((x) => (x.meters >= 50 ? x.seconds / (x.meters / 1000) : Infinity)));
+                return (
+                  <li key={i} className={best ? 'best-lap' : ''}>
+                    <span className="rs-idx lap">R{i + 1}</span>
+                    <span className="rs-main">
+                      <strong>
+                        {l.meters} m in {fmtDuration(l.seconds)}
+                      </strong>
+                      <span className="muted small">{Number.isFinite(p) ? `${fmtPaceSec(p)} /km` : ''}</span>
+                    </span>
+                    {best && <span className="rs-badge amber">Ripetuta migliore</span>}
+                  </li>
+                );
+              })}
+            </ul>
+            {workM > 0 && <p className="muted small">Passo medio delle ripetute {fmtPaceSec(workS / (workM / 1000))} /km</p>}
           </section>
         )}
 
