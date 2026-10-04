@@ -123,51 +123,6 @@ export function useSheetSwipeDown() {
   }, []);
 }
 
-/** The right-hand drawer ("Corpo") closes by dragging it back to the right. */
-export function useRightDrawerSwipe() {
-  useEffect(() => {
-    let g: { el: HTMLElement; x: number; y: number; dx: number; lock: 'x' | 'y' | null } | null = null;
-    const start = (e: TouchEvent) => {
-      // From the panel or the strip beside it: a rightward swipe pushes the panel away.
-      const el = (e.target as HTMLElement).closest<HTMLElement>('.drawer-backdrop:not(.left)')?.querySelector<HTMLElement>('.drawer');
-      if (!el || e.touches.length !== 1) return;
-      g = { el, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, lock: null };
-    };
-    const move = (e: TouchEvent) => {
-      if (!g) return;
-      const dx = e.touches[0].clientX - g.x;
-      const dy = e.touches[0].clientY - g.y;
-      if (!g.lock) {
-        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-        g.lock = dx > 0 && Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-        if (g.lock === 'x') g.el.style.transition = 'none';
-      }
-      if (g.lock !== 'x') return;
-      if (e.cancelable) e.preventDefault();
-      g.dx = Math.max(0, dx);
-      g.el.style.transform = `translate3d(${g.dx}px,0,0)`;
-    };
-    const end = () => {
-      const cur = g;
-      g = null;
-      if (!cur || cur.lock !== 'x') return;
-      cur.el.style.transition = 'transform 0.2s ease';
-      if (cur.dx > cur.el.offsetWidth * 0.35) {
-        cur.el.style.transform = 'translate3d(100%,0,0)';
-        window.setTimeout(() => cur.el.closest<HTMLElement>('.drawer-backdrop')?.click(), 170);
-      } else cur.el.style.transform = '';
-    };
-    document.addEventListener('touchstart', start, { passive: true });
-    document.addEventListener('touchmove', move, { passive: false });
-    document.addEventListener('touchend', end, { passive: true });
-    return () => {
-      document.removeEventListener('touchstart', start);
-      document.removeEventListener('touchmove', move);
-      document.removeEventListener('touchend', end);
-    };
-  }, []);
-}
-
 /**
  * Scroll position per page: going back returns where you were, opening a new page starts
  * from the top (React Router's own restoration needs a data router, so this is the small version).

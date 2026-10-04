@@ -18,7 +18,7 @@
 | 9 | Diario | applicato |
 | 10 | Mese e Settimana | applicato |
 | 11 | Statistiche | applicato |
-| **12** | **Menu, pannello Corpo, Impostazioni** | **in sospeso: da generare in Stitch** |
+| **12** | **Menù, Riepilogo del giorno, Impostazioni** | **in sospeso: da generare in Stitch** |
 | 13 | Versione desktop | applicato |
 
 **Come usarli.** In Stitch scegli **App (mobile)**, incolla il **Prompt 0** (stile e regole) e genera. Poi incolla i prompt delle schermate uno alla volta, nella stessa conversazione, così Stitch mantiene lo stile. Se una schermata esce troppo diversa, aggiungi in coda: *"Keep exactly the design system from the first screen: same colors, font, radius, icon style."*
@@ -46,7 +46,7 @@ VISUAL STYLE — modern, bold and friendly, like the best fitness apps (Hevy, St
 - "‹ Pagina del giorno": a small quiet pill (12px text) with a light lime tint and lime text in dark mode, not a filled lime button.
 
 LAYOUT AND BEHAVIOUR
-- Top bar: hamburger + app logo + "The Logbook" on the left (tap opens the left menu), the current section name in muted text, a small "Ricollega Google" ghost pill only when the Google session expired, and on the right a pill button "♡ Corpo" that opens the right "Corpo" panel. No bottom tab bar.
+- Top bar: hamburger + app logo + "The Logbook" on the left (tap opens the left menu), the current section name in muted text, a small "Ricollega Google" ghost pill only when the Google session expired, and nothing on the right. The right panel "Riepilogo del giorno" opens by swiping left from the right edge of the screen (the left "Menù" by swiping right from the left edge, or with the hamburger). No bottom tab bar.
 - Under the top bar, on every section except the day page, a small quiet lime-tinted pill "‹ Pagina del giorno".
 - Sections are collapsible cards: pastel-disc icon, small uppercase category label above a bold title (LAVORO, AGENDA, SPORT, SALUTE, FORMAZIONE, TEMPO LIBERO, PERSONALE), one-line summary when collapsed, a six-dot drag handle and a chevron inside a round grey button. Cards can be reordered with a long press.
 - Gestures (show as states, not as arrows): swipe left/right moves between days or tabs following the finger; swipe from the left edge opens the menu; swipe down closes bottom sheets; back closes the topmost overlay.
@@ -63,7 +63,7 @@ LAYOUT AND BEHAVIOUR
 ```
 Screen: the day page for Sunday 4 October 2026 (dark mode).
 Header on two rows: round prev chevron, bold "Domenica 4 ottobre" with a lime "OGGI" badge, round next chevron; below, a muted line "Turno 08:00–14:00 · Guardia 20:00–08:00 · Settimana 40" and two round icon buttons (reorder sections, print).
-Under the header a row of pills: "SONNO 7,3 h" (lavender value), "ACQUA 1,5 L" (blue value), "PASSI 8.200" — tapping opens the Corpo panel.
+Under the header a row of pills: "SONNO 7,3 h" (lavender value), "ACQUA 1,5 L" (blue value), "PASSI 8.200" — tapping opens the "Riepilogo del giorno" panel.
 
 Cards in this order:
 1. LAVORO "Turno" (only if there is a shift that day): "TIPO TURNO" as a pill with the shift colour dot ("● Reparto ▾"); two time tiles "DALLE 08:00" and "ALLE 14:00" (label inside, big bold time); "IN TURNO CON" with name pills "Sgro ×" and a dashed lime pill "+ Aggiungi collega"; a note line with an icon "Aggiungi una nota al turno…"; inside, a collapsed sub-card "Tabellone · 4 attività".
@@ -205,11 +205,11 @@ Then cards Turni (per tipo, colleghi in turno), Attività clinica, Studio, Allen
 
 ---
 
-## Prompt 12 — Menu, pannello "Corpo", Impostazioni  ⟵ IN SOSPESO: da generare
+## Prompt 12 — Menù, pannello "Riepilogo del giorno", Impostazioni  ⟵ IN SOSPESO: da generare
 
 ```
-(a) Left menu drawer over a dimmed page: logo + "The Logbook", close ×; items with big pastel-disc icons: Mese, Settimana, Oggi (calendar icon with today's number), Diario, Palestra, Corsa, Alimentazione, Corsi e congressi, Statistiche, Impostazioni. Active item = lighter pill.
-(b) Right panel "Corpo" (dark): lime "OGGI" badge, bold date, round close ×. RIEPILOGO: shifts line with hours, "2 interventi", "Push · 975 kg · 2 serie". Card CORPO: two-column inputs with pastel icons and goals — "Peso / 80 kg", "Massa grassa %" with a small lime link "Calcola" under it, "Sonno / 7 h", "Passi / 8500", "Acqua / 2,5 L" with thin progress bars; a row of 8 small water glasses and a pill "+ 250 ml". (No resting heart rate: it will come later from a smartwatch.) Card BILANCIO ENERGETICO: a small lime ring with "1.305 KCAL RIMANENTI · 1.095 mangiate / 2.400", assunte, proteine, calorie attive input, lime link "apri il diario alimentare". Card "PESO · 30 GIORNI": line chart with dots and 7-day averages. Collapsible "Obiettivi".
+(a) Left drawer over a dimmed page, opened by swiping right from the left edge or with the hamburger: bold title "Menù", close ×; items with big pastel-disc icons: Mese, Settimana, Oggi (calendar icon with today's number), Diario, Palestra, Corsa, Alimentazione, Corsi e congressi, Statistiche, Impostazioni. Active item = lighter pill.
+(b) Right panel opened by swiping left from the right edge (it follows the finger): bold title "Riepilogo del giorno", under it muted "Oggi · domenica 4 ottobre 2026", round close ×. IN BREVE: shifts line with hours, "2 interventi", "Push · 975 kg · 2 serie". Card CORPO: two-column inputs with pastel icons and goals — "Peso / 80 kg", "Massa grassa %" with a small lime link "Calcola" under it, "Sonno / 7 h", "Passi / 8500", "Acqua / 2,5 L" with thin progress bars; a row of 8 small water glasses and a pill "+ 250 ml". (No resting heart rate: it will come later from a smartwatch.) Card BILANCIO ENERGETICO: a small lime ring with "1.305 KCAL RIMANENTI · 1.095 mangiate / 2.400", assunte, proteine, calorie attive input, lime link "apri il diario alimentare". Card "PESO · 30 GIORNI": line chart with dots and 7-day averages. Collapsible "Obiettivi".
 (c) Bottom sheet "Calcola la massa grassa": short muted explanation (US Navy method, ±3–4%), chips "Donna | Uomo", inputs in cm with hints — Altezza (viene ricordata), Collo (appena sotto la laringe), Vita (nel punto più stretto), Fianchi (nel punto più largo dei glutei); big result "27,6% massa grassa stimata" in lime; lime "Usa questo valore ›", neutral "Annulla".
 (d) Impostazioni: collapsible cards Account e dati, Google Calendar (calendar select, "Ricollega"), Tabellone di reparto, Colleghi (groups "Strutturato · 16", "Specializzando · 23"), Tipi di turno (name, color, start, end). At the bottom a small card: muted "Versione del 4 ottobre 2026, ore 15:55", an outlined pill "Cerca aggiornamenti" and a one-line result ("Hai già l’ultima versione."), then a muted line crediting the food data (CIQUAL 2025 ANSES, Open Food Facts, estimates).
 ```
@@ -219,5 +219,5 @@ Then cards Turni (per tipo, colleghi in turno), Attività clinica, Studio, Allen
 ## Prompt 13 — Versione desktop
 
 ```
-Desktop (1440px) day page: persistent right "Corpo" sidebar 340px (cards CORPO, BILANCIO ENERGETICO with the lime calories-left ring, PESO · 30 GIORNI), central column max 860px with the collapsible cards. Header: "‹ Domenica 4 ottobre OGGI" with a segmented "Ieri | Oggi | Domani", reorder and print buttons, "›"; subtitle with shifts and week number; Sonno / Acqua / Passi pills. "Impegni" and "Da ricordare" always side by side. Same dark style; the "Corpo" button in the top bar is hidden because the sidebar is always visible. No search bar, notifications or avatar.
+Desktop (1440px) day page: persistent right "Riepilogo del giorno" sidebar 340px (cards CORPO, BILANCIO ENERGETICO with the lime calories-left ring, PESO · 30 GIORNI), central column max 860px with the collapsible cards. Header: "‹ Domenica 4 ottobre OGGI" with a segmented "Ieri | Oggi | Domani", reorder and print buttons, "›"; subtitle with shifts and week number; Sonno / Acqua / Passi pills. "Impegni" and "Da ricordare" always side by side. Same dark style; the top bar has no button on the right because the sidebar is always visible. No search bar, notifications or avatar.
 ```

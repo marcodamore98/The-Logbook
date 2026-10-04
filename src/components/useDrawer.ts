@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** Width of the strip at the left edge from which a swipe opens the menu. */
+/** Width of the strip at each side edge from which a swipe opens a panel. */
 export const EDGE_PX = 40;
 
 /**
- * Left drawer that follows the finger: dragging from the left edge pulls it out as far
- * as the finger goes, dragging it back pushes it in. On release it settles open or
- * closed depending on how far and how fast it was moved.
+ * Side drawer that follows the finger: dragging from its edge pulls it out as far as the
+ * finger goes, dragging it back pushes it in. On release it settles open or closed
+ * depending on how far and how fast it was moved. `left` is the menu, `right` the day
+ * summary (only on phones and tablets: on wide screens the summary is always shown).
  */
-export function useDrawer() {
+export function useDrawer(side: 'left' | 'right' = 'left') {
   const [visible, setVisible] = useState(false); // mounted
   const [p, setP] = useState(0); // 0 closed … 1 open
   const [dragging, setDragging] = useState(false);
@@ -29,22 +30,26 @@ export function useDrawer() {
 
   useEffect(() => {
     let g: { mode: 'open' | 'close'; x: number; y: number; t: number; engaged: boolean; w: number; lastX: number; lastT: number; v: number } | null = null;
-    const width = () => document.querySelector<HTMLElement>('.nav-drawer')?.offsetWidth ?? Math.min(300, window.innerWidth * 0.86);
+    const sel = side === 'left' ? '.nav-drawer' : '.summary-drawer';
+    const width = () => document.querySelector<HTMLElement>(sel)?.offsetWidth ?? Math.min(side === 'left' ? 300 : 360, window.innerWidth * 0.9);
+    const dir = side === 'left' ? 1 : -1; // finger movement that opens the drawer
 
     const start = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
       const cur = state.current;
       let mode: 'open' | 'close' | null = null;
-      // Never open over another panel (e.g. Corpo): that swipe closes the other panel instead.
-      if (!cur.visible && t.clientX <= EDGE_PX && !document.querySelector('.drawer-backdrop:not(.left)')) mode = 'open';
-      else if (cur.visible && cur.p > 0.5 && (e.target as HTMLElement).closest('.drawer-backdrop.left')) mode = 'close';
+      const atEdge = side === 'left' ? t.clientX <= EDGE_PX : t.clientX >= window.innerWidth - EDGE_PX;
+      const wide = side === 'right' && window.matchMedia('(min-width: 1180px)').matches;
+      // Never open over another panel or sheet: that swipe closes the other panel instead.
+      if (!cur.visible && atEdge && !wide && !document.querySelector('.drawer-backdrop, .sheet-backdrop')) mode = 'open';
+      else if (cur.visible && cur.p > 0.5 && (e.target as HTMLElement).closest(`.drawer-backdrop.${side}`)) mode = 'close';
       g = mode ? { mode, x: t.clientX, y: t.clientY, t: Date.now(), engaged: false, w: width(), lastX: t.clientX, lastT: Date.now(), v: 0 } : null;
     };
     const move = (e: TouchEvent) => {
       if (!g) return;
       const t = e.touches[0];
-      const dx = t.clientX - g.x;
+      const dx = (t.clientX - g.x) * dir;
       const dy = t.clientY - g.y;
       if (!g.engaged) {
         if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) {
@@ -60,7 +65,7 @@ export function useDrawer() {
       }
       if (e.cancelable) e.preventDefault();
       const now = Date.now();
-      g.v = (t.clientX - g.lastX) / Math.max(1, now - g.lastT);
+      g.v = ((t.clientX - g.lastX) * dir) / Math.max(1, now - g.lastT);
       g.lastX = t.clientX;
       g.lastT = now;
       const prog = g.mode === 'open' ? dx / g.w : 1 + dx / g.w;
@@ -86,7 +91,7 @@ export function useDrawer() {
       window.removeEventListener('touchend', end);
       window.removeEventListener('touchcancel', end);
     };
-  }, [open, close]);
+  }, [open, close, side]);
 
   return { visible, p, dragging, open, close };
 }

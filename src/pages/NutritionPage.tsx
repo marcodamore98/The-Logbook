@@ -51,7 +51,7 @@ function Gauge({ eaten, goal, burned }: { eaten: number; goal?: number; burned?:
           Bruciate
         </span>
       </div>
-      {!goal && <p className="muted small kg-hint">Imposta gli obiettivi di calorie e macronutrienti nella barra “Corpo” → Obiettivi.</p>}
+      {!goal && <p className="muted small kg-hint">Imposta gli obiettivi di calorie e macronutrienti nel “Riepilogo del giorno” (scorri dal bordo destro) → Obiettivi.</p>}
     </section>
   );
 }

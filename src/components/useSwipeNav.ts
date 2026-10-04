@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
 const SKIP = 'input, textarea, select, .set-wrap, .scroll-x, [data-no-swipe], .sheet-backdrop, .rest-big, .run-summary, .drawer-backdrop';
-const EDGE = 40; // the left edge belongs to the menu
+const EDGE = 40; // the side edges open the menu (left) and the day summary (right)
 
 /**
  * Swipe the page sideways to move to the previous/next item (day, week, month…).
@@ -33,7 +33,7 @@ export function useSwipeNav<T extends HTMLElement>(onPrev: () => void, onNext: (
     const start = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
-      if (t.clientX <= EDGE || (e.target as HTMLElement).closest(SKIP) || document.querySelector('.is-dragging')) return;
+      if (t.clientX <= EDGE || t.clientX >= window.innerWidth - EDGE || (e.target as HTMLElement).closest(SKIP) || document.querySelector('.is-dragging')) return;
       g = { x: t.clientX, y: t.clientY, t: Date.now(), lock: null, dx: 0, v: 0, lastX: t.clientX, lastT: Date.now() };
     };
     const move = (e: TouchEvent) => {

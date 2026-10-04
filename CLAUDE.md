@@ -16,13 +16,13 @@ Restiamo una web app (PWA): niente APK/app native finché l'utente non lo chiede
 
 `docs/stitch-prompt.md` descrive l'app com'è. **A ogni modifica dell'interfaccia o delle funzionalità aggiorna nello stesso commit il prompt della schermata coinvolta** (e la tabella "Stato delle schermate"), poi **avvisa l'utente** nella risposta con una riga del tipo: "Ho aggiornato il prompt di Stitch: Prompt N (…)".
 
-In sospeso: il **Prompt 12** (menu, pannello Corpo, Impostazioni) non è ancora stato generato dall'utente; quando arriva il suo HTML, applicalo come gli altri.
+In sospeso: il **Prompt 12** (Menù, pannello "Riepilogo del giorno", Impostazioni) non è ancora stato generato dall'utente; quando arriva il suo HTML, applicalo come gli altri.
 
 ## Design
 
 - Palette lime `#D6F25F` / lavanda `#B9B0F5` / antracite, Plus Jakarta Sans, icone disegnate su dischi pastello (non usare Material Symbols).
 - Quando arriva un HTML di Stitch: riporta solo ciò che l'app sa già fare o che l'utente approva; escludi dati inventati (FC, HRV, cadenza, ID pazienti, target ECM…) e dillo.
-- Le kcal rimanenti nel pannello Corpo restano.
+- Le kcal rimanenti nel pannello "Riepilogo del giorno" (ex Corpo) restano. Il pannello si apre scorrendo dal bordo destro, il Menù dal bordo sinistro o con ☰; niente pulsante "Corpo" in alto.
 
 ## Verifica
 

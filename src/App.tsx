@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
-import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconHeart, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
+import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
 import { UndoProvider } from './components/Undo';
@@ -14,7 +14,7 @@ import { localRepo } from './lib/store/local';
 import { StoreProvider, useStore } from './lib/store/StoreContext';
 import { today } from './lib/dates';
 import DayPage from './pages/DayPage';
-import { ScrollMemory, useBackClosesOverlays, useRightDrawerSwipe, useSheetSwipeDown } from './components/useAppGestures';
+import { ScrollMemory, useBackClosesOverlays, useSheetSwipeDown } from './components/useAppGestures';
 
 // The day page loads with the app; the other pages load the first time they are opened.
 const MonthPage = lazy(() => import('./pages/CalendarPages').then((m) => ({ default: m.MonthPage })));
@@ -57,10 +57,7 @@ function NavDrawer({ onClose, p, dragging }: { onClose: () => void; p: number; d
     <div className={`drawer-backdrop left${dragging ? ' dragging' : ''}`} style={{ background: `rgb(0 0 0 / ${0.4 * p})`, pointerEvents: p > 0.02 ? 'auto' : 'none' }} onClick={onClose}>
       <nav className="drawer nav-drawer" aria-label="Menu" onClick={(e) => e.stopPropagation()} style={{ transform: `translate3d(${(p - 1) * 100}%, 0, 0)` }}>
         <div className="nav-drawer-head">
-          <span className="brand">
-            <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={30} height={30} />
-            The Logbook
-          </span>
+          <h2 className="drawer-title">Menù</h2>
           <button className="icon-btn small" aria-label="Chiudi menu" onClick={onClose}>
             <GlyphClose />
           </button>
@@ -93,7 +90,7 @@ function BackToDay() {
   );
 }
 
-function Topbar({ onMenu, onBody }: { onMenu: () => void; onBody: () => void }) {
+function Topbar({ onMenu }: { onMenu: () => void }) {
   const title = useCurrentTitle();
   return (
     <header className="topbar">
@@ -104,9 +101,6 @@ function Topbar({ onMenu, onBody }: { onMenu: () => void; onBody: () => void }) 
       </button>
       {title && <span className="topbar-title">{title}</span>}
       <GoogleStatus />
-      <button className="btn-ghost small body-toggle" onClick={onBody} aria-label="Apri corpo e riepilogo">
-        <IconHeart size={26} /> Corpo
-      </button>
     </header>
   );
 }
@@ -124,12 +118,12 @@ function GoogleStatus() {
 }
 
 function Shell({ userEmail }: { userEmail?: string }) {
-  const [bodyOpen, setBodyOpen] = useState(false);
-  const menu = useDrawer();
+  const menu = useDrawer('left');
+  const summary = useDrawer('right');
   const menuOpen = menu.visible;
+  const bodyOpen = summary.visible;
   useBackClosesOverlays();
   useSheetSwipeDown();
-  useRightDrawerSwipe();
   useCourseReminders();
 
   // Keyboard: keep the focused field visible and give the page room to scroll.
@@ -157,14 +151,14 @@ function Shell({ userEmail }: { userEmail?: string }) {
     };
   }, []);
 
-  // Day-page shortcuts (sleep, water, steps) open the Corpo panel; on desktop it is always visible.
+  // Day-page shortcuts (sleep, water, steps) open the day summary panel; on desktop it is always visible.
   useEffect(() => {
     const onOpen = () => {
-      if (!window.matchMedia('(min-width: 1180px)').matches) setBodyOpen(true);
+      if (!window.matchMedia('(min-width: 1180px)').matches) summary.open();
     };
     window.addEventListener('logbook:open-body', onOpen);
     return () => window.removeEventListener('logbook:open-body', onOpen);
-  }, []);
+  }, [summary.open]);
 
   // The page behind a drawer must not scroll.
   useEffect(() => {
@@ -177,7 +171,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
       <RestTimerProvider>
         <UndoProvider>
         <div className="app">
-          <Topbar onMenu={menu.open} onBody={() => setBodyOpen(true)} />
+          <Topbar onMenu={menu.open} />
           <div className="layout">
             <main>
               <ScrollMemory />
@@ -206,10 +200,14 @@ function Shell({ userEmail }: { userEmail?: string }) {
           </div>
           <ActiveBar />
           {menu.visible && <NavDrawer onClose={menu.close} p={menu.p} dragging={menu.dragging} />}
-          {bodyOpen && (
-            <div className="drawer-backdrop" onClick={() => setBodyOpen(false)}>
-              <div className="drawer" onClick={(e) => e.stopPropagation()}>
-                <BodySidebar onClose={() => setBodyOpen(false)} />
+          {summary.visible && (
+            <div
+              className={`drawer-backdrop right${summary.dragging ? ' dragging' : ''}`}
+              style={{ background: `rgb(0 0 0 / ${0.4 * summary.p})`, pointerEvents: summary.p > 0.02 ? 'auto' : 'none' }}
+              onClick={summary.close}
+            >
+              <div className="drawer summary-drawer" onClick={(e) => e.stopPropagation()} style={{ transform: `translate3d(${(1 - summary.p) * 100}%, 0, 0)` }}>
+                <BodySidebar onClose={summary.close} />
               </div>
             </div>
           )}

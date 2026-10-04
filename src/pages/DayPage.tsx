@@ -652,7 +652,7 @@ function WorkTiles({ day }: { day: DayEntry }) {
   );
 }
 
-/** Sleep, water and steps of the day; tapping one opens the Corpo panel to fill it in. */
+/** Sleep, water and steps of the day; tapping one opens the day summary panel to fill it in. */
 function BodyPills({ day }: { day: DayEntry }) {
   const goals = useStore().settings.goals ?? {};
   const b = day.body ?? {};

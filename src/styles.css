@@ -2110,3 +2110,11 @@ i[class^='dot-'] { background: var(--c) !important; }
 .app-version { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; }
 .app-version p { margin: 0; }
 .app-version > p:not(:first-child) { flex-basis: 100%; }
+
+/* ---------- Side panels opened by swiping from the edges: "Menù" (left), "Riepilogo del giorno" (right) ---------- */
+.drawer-title { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; padding-left: 0.35rem; }
+.side-title { margin: 0; font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+.side-head .side-date { display: block; font-family: var(--font); font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-top: 0.15rem; }
+.drawer-backdrop.right { transition: background-color 0.24s ease; }
+.drawer-backdrop.right .summary-drawer { transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
+.drawer-backdrop.right.dragging, .drawer-backdrop.right.dragging .summary-drawer { transition: none; }

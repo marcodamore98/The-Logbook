@@ -161,11 +161,14 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
   );
 
   return (
-    <aside className="sidebar" aria-label="Corpo e riepilogo">
+    <aside className="sidebar" aria-label="Riepilogo del giorno">
       <div className="side-head">
         <div>
-          <span className="side-kicker">{date === today() ? 'Oggi' : 'Giorno'}</span>
-          <h2 className="side-date">{formatLong(date)}</h2>
+          <h2 className="side-title">Riepilogo del giorno</h2>
+          <span className="side-date">
+            {date === today() ? 'Oggi · ' : ''}
+            {formatLong(date)}
+          </span>
         </div>
         {onClose && (
           <button className="icon-btn small" aria-label="Chiudi" onClick={onClose}>
@@ -175,7 +178,7 @@ export function BodySidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       <section className="side-section">
-        <h3 className="sub">Riepilogo</h3>
+        <h3 className="sub">In breve</h3>
         <ul className="side-summary">
           <li>
             <IconShift size={22} />
