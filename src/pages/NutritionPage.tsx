@@ -1,11 +1,11 @@
 import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Columns, fmt } from '../components/charts';
+import { fmt } from '../components/charts';
 import { GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconBreakfast, IconDinner, IconLunch, IconSnack, IconWater } from '../components/icons';
 import { FoodSheet } from '../components/nutrition/FoodSheet';
 import { Card, NumberInput } from '../components/ui';
-import { addDays, formatLong, fromISO, today } from '../lib/dates';
+import { addDays, fromISO, today } from '../lib/dates';
 import { dayIntake, MEALS, totalsOf } from '../lib/nutrition/foods';
 import { useStore } from '../lib/store/StoreContext';
 import type { FoodEntry, FoodLog, MealId, MealPlanItem } from '../lib/types';
@@ -19,7 +19,7 @@ function Ring({ eaten, goal, burned }: { eaten: number; goal?: number; burned?: 
   const over = target > 0 && eaten > target;
   return (
     <div className="ring-wrap">
-      <svg viewBox="0 0 120 120" width="150" height="150" role="img" aria-label={`Calorie: ${eaten} di ${target || '—'}`}>
+      <svg viewBox="0 0 120 120" width="176" height="176" role="img" aria-label={`Calorie: ${eaten} di ${target || '—'}`}>
         <circle cx="60" cy="60" r={R} className="ring-track" />
         <circle
           cx="60"
@@ -47,18 +47,58 @@ function Ring({ eaten, goal, burned }: { eaten: number; goal?: number; burned?: 
   );
 }
 
-function MacroBar({ label, value, goal }: { label: string; value: number; goal?: number }) {
+function MacroBar({ label, value, goal, tone }: { label: string; value: number; goal?: number; tone: string }) {
   return (
-    <div className="macro">
-      <span className="macro-label">{label}</span>
-      <span className="meter">
-        <span className="meter-fill" style={{ width: `${goal ? Math.min(100, (value / goal) * 100) : 0}%` }} />
+    <div className={`macro2 tone-${tone}`}>
+      <span className="m2-row">
+        <span className="m2-label">
+          <i aria-hidden="true" /> {label}
+        </span>
+        <span className="m2-value">
+          <strong>{fmt(value)}</strong>
+          {goal ? ` / ${fmt(goal)}` : ''} g
+        </span>
       </span>
-      <span className="macro-value">
-        {fmt(value)}
-        {goal ? ` / ${fmt(goal)}` : ''} g
+      <span className="m2-track">
+        <span style={{ width: `${goal ? Math.min(100, (value / goal) * 100) : 0}%` }} />
       </span>
     </div>
+  );
+}
+
+/** Calories of the last 7 days, with the goal as a dashed line and the day in view in lime. */
+function WeekKcal({ days, goal, current }: { days: { d: string; label: string; value: number }[]; goal?: number; current: string }) {
+  const max = Math.max(goal ?? 0, ...days.map((x) => x.value), 1) * 1.08;
+  const avg = days.filter((x) => x.value > 0);
+  return (
+    <section className="card week-kcal">
+      <div className="wk-head">
+        <div>
+          <h2>Ultimi 7 giorni</h2>
+          <span className="muted small">Calorie assunte</span>
+        </div>
+        {avg.length > 0 && <strong>{fmt(Math.round(avg.reduce((n, x) => n + x.value, 0) / avg.length))} kcal media</strong>}
+      </div>
+      <div className="wk-plot">
+        {goal ? (
+          <span className="wk-goal" style={{ bottom: `${(goal / max) * 100}%` }}>
+            <span>{fmt(goal)}</span>
+          </span>
+        ) : null}
+        {days.map((x) => (
+          <div key={x.d} className={`wk-col${x.d === current ? ' on' : ''}`} title={`${fmt(x.value)} kcal`}>
+            <span className="wk-bar" style={{ height: `${Math.max(x.value ? 3 : 1.5, (x.value / max) * 100)}%` }} />
+          </div>
+        ))}
+      </div>
+      <div className="wk-labels">
+        {days.map((x) => (
+          <span key={x.d} className={x.d === current ? 'on' : ''}>
+            {x.label}
+          </span>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -89,8 +129,8 @@ export default function NutritionPage() {
   const water = day.body?.waterL ?? 0;
 
   const week = Array.from({ length: 7 }, (_, i) => addDays(date, i - 6)).map((d) => ({
-    label: fromISO(d).toLocaleDateString('it-IT', { weekday: 'short' }).slice(0, 3),
-    full: fromISO(d).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' }),
+    d,
+    label: 'DLMMGVS'[fromISO(d).getDay()],
     value: dayIntake(store.day(d)).kcal ?? 0,
   }));
 
@@ -98,12 +138,15 @@ export default function NutritionPage() {
 
   return (
     <div ref={swipeRef} className="page nutrition-page swipe-page">
-      <header className="page-head">
+      <header className="page-head day-strip">
         <button className="icon-btn" aria-label="Giorno precedente" onClick={() => nav(`/alimentazione/${addDays(date, -1)}`)}>
           <GlyphPrev />
         </button>
         <div className="page-title">
-          <h1 className="capitalize">{formatLong(date)}</h1>
+          <h1 className="capitalize">
+            {date === today() ? 'Oggi, ' : ''}
+            {fromISO(date).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' })}
+          </h1>
         </div>
         <button className="icon-btn" aria-label="Giorno successivo" onClick={() => nav(`/alimentazione/${addDays(date, 1)}`)}>
           <GlyphNext />
@@ -112,24 +155,13 @@ export default function NutritionPage() {
 
       <section className="card nutrition-summary">
         <Ring eaten={t.kcal} goal={goals.kcalIn} burned={burned} />
+        <p className="summary-line">
+          <strong>{fmt(t.kcal)}</strong> mangiate · <strong>{goals.kcalIn ? fmt(goals.kcalIn) : '—'}</strong> obiettivo · <strong>{burned ? fmt(burned) : '—'}</strong> attive
+        </p>
         <div className="summary-side">
-          <div className="summary-nums">
-            <div>
-              <strong>{fmt(t.kcal)}</strong>
-              <span>mangiate</span>
-            </div>
-            <div>
-              <strong>{goals.kcalIn ? fmt(goals.kcalIn) : '—'}</strong>
-              <span>obiettivo</span>
-            </div>
-            <div>
-              <strong>{burned ? fmt(burned) : '—'}</strong>
-              <span>attive</span>
-            </div>
-          </div>
-          <MacroBar label="Proteine" value={t.protein} goal={goals.proteinG} />
-          <MacroBar label="Carboidrati" value={t.carbs} goal={goals.carbsG} />
-          <MacroBar label="Grassi" value={t.fat} goal={goals.fatG} />
+          <MacroBar tone="lav" label="Proteine" value={t.protein} goal={goals.proteinG} />
+          <MacroBar tone="lime" label="Carboidrati" value={t.carbs} goal={goals.carbsG} />
+          <MacroBar tone="sky" label="Grassi" value={t.fat} goal={goals.fatG} />
           {!goals.kcalIn && <p className="muted small">Imposta gli obiettivi di calorie e macronutrienti nella barra “Corpo” → Obiettivi.</p>}
         </div>
       </section>
@@ -174,13 +206,18 @@ export default function NutritionPage() {
             id={`meal.${m.id}`}
             icon={<MealIcon id={m.id} />}
             className="meal"
-            title={m.label}
-            summary={entries.length ? `${entries.length} alimenti` : 'Tocca + per aggiungere'}
+            title={
+              <>
+                {m.label}
+                {entries.length > 0 && (
+                  <small className="meal-sub">
+                    {fmt(mt.kcal)} kcal · P {fmt(mt.protein)} g
+                  </small>
+                )}
+              </>
+            }
             actions={
               <>
-                <span className="meal-kcal">
-                  {fmt(mt.kcal)} kcal · P {fmt(mt.protein)} g
-                </span>
                 <button className="icon-btn" aria-label={`Aggiungi a ${m.label}`} onClick={() => setAdding(m.id)}>
                   <GlyphPlus />
                 </button>
@@ -273,7 +310,7 @@ export default function NutritionPage() {
         <div className="card-head">
           <IconWater />
           <h2>Acqua</h2>
-          <span className="muted small">
+          <span className="water-amount">
             {fmt(water, 2)} L{goals.waterL ? ` / ${fmt(goals.waterL, 1)} L` : ''}
           </span>
         </div>
@@ -294,16 +331,13 @@ export default function NutritionPage() {
               </button>
             );
           })}
+          <button className="water-add" onClick={() => store.updateDay(date, (d) => ({ ...d, body: { ...d.body, waterL: Math.round(((d.body?.waterL ?? 0) + 0.25) * 100) / 100 } }))}>
+            + 250 ml
+          </button>
         </div>
       </section>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Ultimi 7 giorni</h2>
-          {goals.kcalIn ? <span className="muted small">obiettivo {fmt(goals.kcalIn)} kcal</span> : null}
-        </div>
-        <Columns buckets={week} unit=" kcal" />
-      </section>
+      <WeekKcal days={week} goal={goals.kcalIn} current={date} />
 
       {adding && (
         <FoodSheet
