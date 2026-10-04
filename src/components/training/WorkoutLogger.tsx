@@ -9,6 +9,7 @@ import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, Wor
 import { GlyphCheck, GlyphPlus, IconTimer } from '../icons';
 import { AutoText, NumberInput, uid } from '../ui';
 import { useUndo } from '../Undo';
+import { DurationField } from '../WheelPicker';
 import { useBlockDrag, useSortableList } from '../useBlockDrag';
 import { ExAvatar } from './ExAvatar';
 import { FinishFlow } from './FinishFlow';
@@ -158,7 +159,7 @@ function SetRow({
         {usesWeight(def.kind) && <NumberInput value={s.kg} step={0.5} placeholder="kg" onChange={(kg) => onChange({ ...s, kg })} />}
         {usesDistance(def.kind) && <NumberInput value={s.km} step={0.1} placeholder="km" onChange={(km) => onChange({ ...s, km })} />}
         {usesReps(def.kind) && <NumberInput value={s.reps || undefined} placeholder="rip" onChange={(reps) => onChange({ ...s, reps: reps ?? 0 })} />}
-        {usesTime(def.kind) && <NumberInput value={s.seconds} step={5} placeholder="sec" onChange={(seconds) => onChange({ ...s, seconds })} />}
+        {usesTime(def.kind) && <DurationField label="Durata della serie" className="compact set-time" value={s.seconds} onChange={(seconds) => onChange({ ...s, seconds })} />}
         <span className="check-cell">
           <button type="button" className={`check-btn${s.done ? ' on' : ''}${locked ? ' locked' : ''}`} aria-label={s.done ? 'Segna come non fatta' : 'Segna come fatta'} aria-pressed={!!s.done} aria-disabled={locked} onClick={() => {
               if (locked) return;

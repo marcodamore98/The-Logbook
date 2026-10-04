@@ -1,3 +1,4 @@
+import { TimeField } from './WheelPicker';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Colleague, ShiftType } from '../lib/types';
 import { grouped, type VocabItem } from '../lib/vocab';
@@ -388,7 +389,16 @@ export function AutoText({ value, onChange, placeholder, className }: { value: s
 }
 
 /** Time (or date) field as a tile: small label inside, big bold value. */
-export function TimeTile({ label, value, onChange, type = 'time', min }: { label: string; value: string; onChange: (v: string) => void; type?: 'time' | 'date'; min?: string }) {
+export function TimeTile({ label, value, onChange, type = 'time', min, clearable }: { label: string; value: string; onChange: (v: string) => void; type?: 'time' | 'date'; min?: string; clearable?: boolean }) {
+  if (type === 'time') {
+    // Times use the wheels (hours : minutes), like the alarm clock.
+    return (
+      <div className="time-tile tile-time">
+        <span className="tt-label">{label}</span>
+        <TimeField value={value || undefined} label={label} clearable={clearable} onChange={(v) => onChange(v ?? '')} />
+      </div>
+    );
+  }
   return (
     <label className={`time-tile tile-${type}`}>
       <span className="tt-label">{label}</span>

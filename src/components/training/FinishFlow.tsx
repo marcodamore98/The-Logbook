@@ -8,7 +8,8 @@ import { fmt } from '../charts';
 import { GlyphPrev, IconWorkout } from '../icons';
 import { exerciseDef } from '../../lib/training/exercises';
 import { today } from '../../lib/dates';
-import { AutoText, NumField, uid } from '../ui';
+import { AutoText, uid } from '../ui';
+import { DurationField } from '../WheelPicker';
 
 
 /**
@@ -112,7 +113,7 @@ export function FinishFlow({
             <div>
               <dt>Durata</dt>
               <dd className="accent">
-                <NumField value={minutes} min={1} label="Durata in minuti" className="finish-min" onChange={setMinutes} /> min
+                <DurationField unit="min" label="Durata dell’allenamento" className="finish-min" value={minutes} onChange={(v) => setMinutes(Math.max(1, v))} />
               </dd>
             </div>
             <div>

@@ -7,6 +7,7 @@ import { firebaseConfigured, logOut } from '../lib/firebase';
 import { CoachCard } from '../components/coach/CoachCard';
 import { myRosterDays, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
+import { TimeField } from '../components/WheelPicker';
 import { BUILD_TIME, checkForUpdate } from '../lib/update';
 import type { Colleague, DayEntry, Settings, ShiftType } from '../lib/types';
 
@@ -284,8 +285,8 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
                   <li key={t.id}>
                     <input type="color" value={t.color} aria-label="Colore" onChange={(e) => setShiftType({ ...t, color: e.target.value })} />
                     <input className="grow" value={t.name} onChange={(e) => setShiftType({ ...t, name: e.target.value })} />
-                    <input type="time" value={t.start} aria-label="Inizio" onChange={(e) => setShiftType({ ...t, start: e.target.value })} />
-                    <input type="time" value={t.end} aria-label="Fine" onChange={(e) => setShiftType({ ...t, end: e.target.value })} />
+                    <TimeField label={`${t.name}: inizio`} className="compact" value={t.start} onChange={(v) => v && setShiftType({ ...t, start: v })} />
+                    <TimeField label={`${t.name}: fine`} className="compact" value={t.end} onChange={(v) => v && setShiftType({ ...t, end: v })} />
                     <select value={t.group ?? 'Altri turni'} aria-label="Gruppo" onChange={(e) => setShiftType({ ...t, group: e.target.value })}>
                       {[...new Set([...settings.shiftTypes.map((x) => x.group ?? 'Altri turni'), 'Guardia medica'])].map((g) => (
                         <option key={g}>{g}</option>
