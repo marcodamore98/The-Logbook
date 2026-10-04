@@ -2168,3 +2168,9 @@ i[class^='dot-'] { background: var(--c) !important; }
 .tm-now strong { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .tm-now span { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 .tm-now > div:last-child strong { color: var(--lavender); }
+
+/* ---------- Palestra: exercises reordered by holding their header ---------- */
+.ex-blk { position: relative; }
+.ex-blk .exercise-head { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: pan-y; }
+.workout.is-dragging, .routine-editor.is-dragging { user-select: none; -webkit-user-select: none; }
+.ex-blk.dragging > .exercise { box-shadow: 0 14px 28px rgb(0 0 0 / 0.3); }
