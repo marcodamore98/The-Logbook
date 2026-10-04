@@ -22,7 +22,11 @@ import { DiaryEntryView } from '../components/diary/DiaryEntry';
 import { useUndo } from '../components/Undo';
 import { useBlockDrag } from '../components/useBlockDrag';
 import { useSwipeNav } from '../components/useSwipeNav';
-import { Card, CardDecor, ColleaguePicker, Empty, Field, ShiftTypeSelect, uid } from '../components/ui';
+import { Card, CardDecor, ColleaguePicker, Empty, ShiftTypeSelect, TimeTile, uid } from '../components/ui';
+import { PrintButton } from '../components/PrintDialog';
+import { openFile } from '../components/files/FileSlot';
+import { rangeLabel } from '../components/modules/meta';
+import { GlyphClip } from '../components/icons';
 import { fmt } from '../components/charts';
 import { blockOrder, DAY_BLOCKS, MODULE_BLOCK } from '../lib/dayLayout';
 import { CATEGORIES } from '../lib/vocab';
@@ -46,6 +50,14 @@ const BLOCK_KICKER: Record<string, string> = {
   private: 'Tempo libero',
   diary: 'Personale',
 };
+const DAY_PRINT = [
+  { id: 'lavoro', label: 'Lavoro' },
+  { id: 'agenda', label: 'Impegni e promemoria' },
+  { id: 'palestra', label: 'Allenamento' },
+  { id: 'alimentazione', label: 'Alimentazione' },
+  { id: 'privato', label: 'Viaggi e uscite' },
+  { id: 'diario', label: 'Diario' },
+];
 const KIND_KICKER: Partial<Record<ModuleKind, string>> = { study: 'Formazione', course: 'Formazione' };
 
 const ADDABLE: ModuleKind[] = ['surgery', 'study', 'travel'];
@@ -160,6 +172,9 @@ export default function DayPage() {
       ? `Dal tabellone: ${myCodes.map(codeShort).join(' · ')}`
       : 'Nessun turno';
   const order = blockOrder(settings.dayLayout);
+  // "Domenica 4 ottobre": the year only when it isn't the current one.
+  const longDate = formatLong(date).replace(new RegExp(` ${today().slice(0, 4)}$`), '');
+  const dayTitle = longDate.charAt(0).toUpperCase() + longDate.slice(1);
   const dayShifts = [day.shift && `${shiftName} ${day.shift.start}–${day.shift.end}`, day.guardia && `Guardia ${day.guardia.start}–${day.guardia.end}`].filter((x): x is string => !!x);
 
   // Courses and trips that began on another day but cover this one.
@@ -182,7 +197,7 @@ export default function DayPage() {
         const n = Math.round((new Date(`${date}T12:00:00`).getTime() - new Date(`${m.startDate}T12:00:00`).getTime()) / 864e5) + 1;
         const total = Math.round((new Date(`${m.endDate}T12:00:00`).getTime() - new Date(`${m.startDate}T12:00:00`).getTime()) / 864e5) + 1;
         return (
-          <Card key={`span-${m.id}`} id={`span.${m.id}`} className={`module module-${m.kind}`} icon={<meta.Icon />} kicker={KIND_KICKER[m.kind]} title={meta.label} summary={`${m.title || meta.label} · giorno ${n} di ${total}`} defaultOpen={false}>
+          <Card key={`span-${m.id}`} id={`span.${m.id}`} className={`module module-${m.kind}`} icon={<meta.Icon />} kicker={KIND_KICKER[m.kind]} peek={<SpanPeek m={m} />} title={meta.label} summary={`${m.title || meta.label} · giorno ${n} di ${total}`} defaultOpen={false}>
             <p>
               <strong>{m.title || meta.label}</strong> · giorno {n} di {total}
             </p>
@@ -208,8 +223,9 @@ export default function DayPage() {
             className={`module module-${m.kind}`}
             icon={<meta.Icon />}
             kicker={KIND_KICKER[m.kind]}
+            peek={m.kind === 'course' || m.kind === 'travel' ? <SpanPeek m={m} /> : undefined}
             title={meta.label}
-            summary={summarize(m)}
+            summary={m.kind === 'course' || m.kind === 'travel' ? undefined : summarize(m)}
             open={open}
             onToggle={() => setOpenId(open ? null : m.id)}
             actions={
@@ -257,25 +273,27 @@ export default function DayPage() {
                 </button>
               </div>
             )}
-            <div className="grid">
-              <Field label="Tipo di turno">
-                <ShiftTypeSelect types={settings.shiftTypes.filter((t) => t.group !== 'Guardia medica' || t.id === day.shift?.shiftTypeId)} value={day.shift?.shiftTypeId} onChange={chooseShiftType} />
-              </Field>
+            <div className="shift-form">
+              <div className="field">
+                <span className="mini-label">Tipo turno</span>
+                <ShiftTypeSelect pill types={settings.shiftTypes.filter((t) => t.group !== 'Guardia medica' || t.id === day.shift?.shiftTypeId)} value={day.shift?.shiftTypeId} onChange={chooseShiftType} />
+              </div>
               {day.shift && (
                 <>
-                  <Field label="Dalle">
-                    <input type="time" value={day.shift.start} onChange={(e) => setShift({ ...day.shift!, start: e.target.value })} />
-                  </Field>
-                  <Field label="Alle">
-                    <input type="time" value={day.shift.end} onChange={(e) => setShift({ ...day.shift!, end: e.target.value })} />
-                  </Field>
-                  <div className="field field-wide">
-                    <span className="field-label">In turno con</span>
+                  <div className="time-pair">
+                    <TimeTile label="Dalle" value={day.shift.start} onChange={(start) => setShift({ ...day.shift!, start })} />
+                    <TimeTile label="Alle" value={day.shift.end} onChange={(end) => setShift({ ...day.shift!, end })} />
+                  </div>
+                  <div className="field">
+                    <span className="mini-label">In turno con</span>
                     <ColleaguePicker colleagues={settings.colleagues} selected={day.shift.colleagueIds} onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })} />
                   </div>
-                  <Field label="Note sul turno" wide>
-                    <input value={day.shift.note ?? ''} onChange={(e) => setShift({ ...day.shift!, note: e.target.value })} />
-                  </Field>
+                  <label className="note-line">
+                    <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 7h10M4 12h7M4 17h6M14.5 18.5l5.2-5.2a1.6 1.6 0 0 0-2.3-2.3l-5.2 5.2-.7 3z" />
+                    </svg>
+                    <input aria-label="Note sul turno" placeholder="Aggiungi una nota al turno…" value={day.shift.note ?? ''} onChange={(e) => setShift({ ...day.shift!, note: e.target.value })} />
+                  </label>
                 </>
               )}
             </div>
@@ -308,12 +326,8 @@ export default function DayPage() {
             }
           >
             <div className="time-pair">
-              <Field label="Dalle">
-                <input type="time" value={day.guardia.start} onChange={(e) => setGuardia({ ...day.guardia!, start: e.target.value })} />
-              </Field>
-              <Field label="Alle">
-                <input type="time" value={day.guardia.end} onChange={(e) => setGuardia({ ...day.guardia!, end: e.target.value })} />
-              </Field>
+              <TimeTile label="Dalle" value={day.guardia.start} onChange={(start) => setGuardia({ ...day.guardia!, start })} />
+              <TimeTile label="Alle" value={day.guardia.end} onChange={(end) => setGuardia({ ...day.guardia!, end })} />
             </div>
           </Card>
         );
@@ -476,8 +490,11 @@ export default function DayPage() {
         <button className="icon-btn no-print" aria-label="Giorno precedente" onClick={() => nav(`/giorno/${addDays(date, -1)}`)}>
           <GlyphPrev />
         </button>
-        <div className="page-title">
-          <h1>{formatLong(date)}</h1>
+        <div className="page-title day-title">
+          <h1>
+            <span className="dt-text">{dayTitle}</span>
+            {date === today() && <span className="today-badge">Oggi</span>}
+          </h1>
           <span className="page-sub">{[...dayShifts, `Settimana ${isoWeek(date)}`].join(' · ')}</span>
         </div>
         <button className="icon-btn no-print" aria-label="Ordina le sezioni" title="Ordina le sezioni" onClick={() => setOrdering(true)}>
@@ -485,6 +502,7 @@ export default function DayPage() {
             <path d="M8 4v16M4.5 7.5L8 4l3.5 3.5M16 20V4M12.5 16.5L16 20l3.5-3.5" />
           </svg>
         </button>
+        <PrintButton title={`The Logbook · ${formatLong(date)}`} sections={DAY_PRINT} />
         <button className="icon-btn no-print" aria-label="Giorno successivo" onClick={() => nav(`/giorno/${addDays(date, 1)}`)}>
           <GlyphNext />
         </button>
@@ -638,6 +656,32 @@ function BodyPills({ day }: { day: DayEntry }) {
           {p.value && p.goal && <span className="bp-goal">/ {p.goal}</span>}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Course or trip while its card is closed: title, dates and the attached PDFs. */
+function SpanPeek({ m }: { m: Extract<Module, { kind: 'course' | 'travel' }> }) {
+  const { repo } = useStore();
+  const files = m.kind === 'course' ? ([['Programma', m.program, false], ['Attestato', m.certificate, true]] as const) : [];
+  return (
+    <div className="span-peek">
+      <div className="sp-head">
+        <i className={`sp-dot sp-${m.kind}`} aria-hidden="true" />
+        <strong>{m.title || (m.kind === 'course' ? 'Corso / congresso' : 'Viaggio')}</strong>
+        <span className="sp-dates">{rangeLabel(m.startDate, m.endDate)}</span>
+      </div>
+      {files.some(([, f]) => f) && (
+        <div className="sp-files no-print">
+          {files.map(([label, f, crown]) =>
+            f ? (
+              <button key={label} type="button" className="file-chip" onClick={() => openFile(repo, f)}>
+                <GlyphClip crown={crown} /> {label}
+              </button>
+            ) : null,
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -28,6 +28,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       {children}
       {offer && (
         <div key={offer.n} className="snackbar" role="status">
+          <i className="snack-dot" aria-hidden="true" />
           <span>{offer.label}</span>
           <button
             type="button"

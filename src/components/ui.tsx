@@ -161,11 +161,14 @@ export function ShiftTypeSelect({
   value,
   onChange,
   empty = 'Nessun turno',
+  pill = false,
 }: {
   types: ShiftType[];
   value: string | undefined;
   onChange: (id: string) => void;
   empty?: string;
+  /** Compact pill with the shift colour as a dot. */
+  pill?: boolean;
 }) {
   const groups = new Map<string, ShiftType[]>();
   for (const t of types) {
@@ -173,8 +176,8 @@ export function ShiftTypeSelect({
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g)!.push(t);
   }
-  return (
-    <select value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+  const select = (
+    <select value={value ?? ''} onChange={(e) => onChange(e.target.value)} aria-label="Tipo di turno">
       <option value="">{empty}</option>
       {[...groups.entries()].map(([g, list]) => (
         <optgroup key={g} label={g}>
@@ -186,6 +189,13 @@ export function ShiftTypeSelect({
         </optgroup>
       ))}
     </select>
+  );
+  if (!pill) return select;
+  const color = types.find((t) => t.id === value)?.color;
+  return (
+    <span className="type-pill" style={color ? ({ '--dot': color } as CSSProperties) : undefined}>
+      {select}
+    </span>
   );
 }
 
@@ -207,21 +217,17 @@ export function ColleaguePicker({
     byRole.get(r)!.push(c);
   }
   return (
-    <div className="picker">
-      {selected.length > 0 && (
-        <div className="chips">
-          {selected.map((id) => {
-            const c = colleagues.find((x) => x.id === id);
-            return (
-              <button type="button" key={id} className="chip chip-on" aria-label={`Rimuovi ${c?.name ?? id}`} onClick={() => onChange(selected.filter((x) => x !== id))}>
-                {c?.name ?? '—'} <span aria-hidden="true">×</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-      <select value="" onChange={(e) => e.target.value && onChange([...selected, e.target.value])} aria-label="Aggiungi collega">
-        <option value="">+ Aggiungi collega…</option>
+    <div className="picker picker-pills">
+      {selected.map((id) => {
+        const c = colleagues.find((x) => x.id === id);
+        return (
+          <button type="button" key={id} className="person-pill" aria-label={`Rimuovi ${c?.name ?? id}`} onClick={() => onChange(selected.filter((x) => x !== id))}>
+            {c?.name ?? '—'} <span aria-hidden="true">×</span>
+          </button>
+        );
+      })}
+      <select className="add-pill" value="" onChange={(e) => e.target.value && onChange([...selected, e.target.value])} aria-label="Aggiungi collega">
+        <option value="">+ Aggiungi collega</option>
         {[...byRole.entries()].map(([role, list]) => (
           <optgroup key={role} label={role}>
             {list.map((c) => (
@@ -278,6 +284,7 @@ export function Card({
   id,
   icon,
   kicker: kickerProp,
+  peek,
   title,
   summary,
   actions,
@@ -294,6 +301,8 @@ export function Card({
   icon?: ReactNode;
   /** Small uppercase label above the title. */
   kicker?: ReactNode;
+  /** Shown under the head while the card is collapsed (e.g. a congress with its files). */
+  peek?: ReactNode;
   title: ReactNode;
   summary?: ReactNode;
   actions?: ReactNode;
@@ -323,6 +332,11 @@ export function Card({
             <h2>{title}</h2>
             {!open && summary && <span className="card-summary">{summary}</span>}
           </button>
+        ) : kicker ? (
+          <div className="card-title-btn has-kicker">
+            <span className="card-kicker">{kicker}</span>
+            <h2>{title}</h2>
+          </div>
         ) : (
           <h2>{title}</h2>
         )}
@@ -340,6 +354,7 @@ export function Card({
           </button>
         )}
       </div>
+      {!open && peek}
       {/* Body stays mounted (hidden) so printing can include closed cards. */}
       <div className="card-body" hidden={!open}>
         {/* Cards nested inside (e.g. the roster in Turno) don't inherit the block's label. */}
@@ -359,4 +374,14 @@ export function AutoText({ value, onChange, placeholder, className }: { value: s
     el.style.height = `${el.scrollHeight}px`;
   }, [value]);
   return <textarea ref={ref} rows={1} className={`auto-text ${className ?? ''}`} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
+}
+
+/** Time field as a tile: small label inside, big bold time. */
+export function TimeTile({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="time-tile">
+      <span className="tt-label">{label}</span>
+      <input type="time" value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
+  );
 }

@@ -71,7 +71,7 @@ export function DiaryEntryView({ day, onSave, placeholder = 'Come è andata oggi
   const photos = editing ? draft.photos : saved.photos;
 
   return (
-    <div className={`diary-entry${editing ? ' editing' : ''}`}>
+    <div className={`diary-entry${editing ? ' editing' : ''}${empty && !editing ? ' is-empty' : ''}`}>
       {editing ? (
         <textarea
           className="diary-text"

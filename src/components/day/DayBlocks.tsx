@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { dayIntake, MEALS, totalsOf } from '../../lib/nutrition/foods';
+import { dayIntake } from '../../lib/nutrition/foods';
 import { useStore } from '../../lib/store/StoreContext';
 import { bestsBefore, prsOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import { exerciseDef } from '../../lib/training/exercises';
@@ -201,55 +201,45 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
   );
 }
 
-/** Calories and protein of the day; the full food diary is on the nutrition page. */
+/** Calories and protein of the day, always visible; the full food diary is on the nutrition page. */
 export function NutritionBlock({ day }: { day: DayEntry }) {
   const { settings } = useStore();
   const goals = settings.goals ?? {};
   const intake = dayIntake(day);
-  const meals = MEALS.map((m) => ({ ...m, t: totalsOf(day.food?.meals[m.id] ?? []), n: day.food?.meals[m.id]?.length ?? 0 }));
   const kcal = intake.kcal ?? 0;
   const protein = intake.protein ?? 0;
-  const summary =
-    intake.kcal !== undefined
-      ? `${fmt(kcal)}${goals.kcalIn ? ` / ${fmt(goals.kcalIn)}` : ''} kcal · proteine ${fmt(protein)}${goals.proteinG ? ` / ${fmt(goals.proteinG)}` : ''} g`
-      : 'Niente registrato';
+  const logged = intake.kcal !== undefined;
+  const bar = (v: number, goal?: number, thin = false) =>
+    goal ? (
+      <span className={`nut-bar${thin ? ' thin' : ''}`}>
+        <span style={{ width: `${Math.min(100, (v / goal) * 100)}%` }} />
+      </span>
+    ) : null;
   return (
-    <Card id="day.nutrition" print="alimentazione" icon={<IconFood />} title="Alimentazione" defaultOpen={false} summary={summary}>
-      <div className="focus-row">
-        <div className="focus">
-          <span className="focus-label">Calorie</span>
-          <strong>{fmt(kcal)}</strong>
-          {goals.kcalIn ? (
-            <span className="meter">
-              <span className="meter-fill" style={{ width: `${Math.min(100, (kcal / goals.kcalIn) * 100)}%` }} />
-            </span>
-          ) : null}
-          <span className="muted small">{goals.kcalIn ? `obiettivo ${fmt(goals.kcalIn)} kcal` : 'kcal'}</span>
+    <Card
+      id="day.nutrition"
+      print="alimentazione"
+      icon={<IconFood />}
+      title="Alimentazione"
+      collapsible={false}
+      actions={
+        <span className={`nut-head${logged ? '' : ' muted'}`}>
+          {logged ? `${fmt(kcal)}${goals.kcalIn ? ` / ${fmt(goals.kcalIn)}` : ''} kcal` : 'Niente registrato'}
+        </span>
+      }
+    >
+      {logged && (
+        <div className="nut-bars">
+          {bar(kcal, goals.kcalIn)}
+          <span className="nut-protein">
+            <span>Proteine</span>
+            <strong>
+              {fmt(protein)}
+              {goals.proteinG ? ` / ${fmt(goals.proteinG)}` : ''} g
+            </strong>
+          </span>
+          {bar(protein, goals.proteinG, true)}
         </div>
-        <div className="focus">
-          <span className="focus-label">Proteine</span>
-          <strong>{fmt(protein)} g</strong>
-          {goals.proteinG ? (
-            <span className="meter">
-              <span className="meter-fill" style={{ width: `${Math.min(100, (protein / goals.proteinG) * 100)}%` }} />
-            </span>
-          ) : null}
-          <span className="muted small">{goals.proteinG ? `obiettivo ${fmt(goals.proteinG)} g` : ''}</span>
-        </div>
-      </div>
-      {intake.fromLog && (
-        <ul className="summary-list">
-          {meals
-            .filter((m) => m.n)
-            .map((m) => (
-              <li key={m.id}>
-                <span>{m.label}</span>
-                <span className="muted">
-                  {fmt(m.t.kcal)} kcal · P {fmt(m.t.protein)} g
-                </span>
-              </li>
-            ))}
-        </ul>
       )}
       <Link className="lime-banner" to={`/alimentazione/${day.date}`}>
         <span>Apri il diario alimentare</span>
