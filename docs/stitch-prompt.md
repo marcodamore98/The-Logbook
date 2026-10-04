@@ -146,9 +146,13 @@ Run summary (no map): "Corsa completata!" lime header; a card DISTANZA TOTALE "4
 ## Prompt 7 — Alimentazione
 
 ```
-Screen: food diary (dark mode), swipe between days. A day strip "‹ Oggi, dom 4 ottobre ›".
-Summary card: big centered lime ring "1.637 KCAL RIMANENTI", a line "663 mangiate · 2.300 obiettivo · — attive", then three macro rows with coloured dots and bars: Proteine (lavender) 63 / 175 g, Carboidrati (lime) 95 / 260 g, Grassi (blue) 4 / 65 g.
-Meal cards Colazione, Pranzo, Cena, Spuntini: meal icon, title with "245 kcal · P 22 g" under it, a round "+" (lime in dark), food rows "Yogurt greco · 170 g · P 17 · C 6,8 · G 0" with kcal at the right.
+Screen: food diary (dark mode, Lifesum-like), swipe between days. A day strip "‹ OGGI, 04 OTT ›" in small uppercase letters.
+Gauge card: a large lime half-circle arc with "1.637" big in the middle and "RIMANENTI" under it; below, left "663 ASSUNTE", centre "Obiettivo 2.300 kcal", right "0 BRUCIATE".
+Three small macro cards side by side: Carboidrati (lime bar) "95/260g", Proteine (lavender bar) "63/175g", Grassi (blue bar) "4/65g".
+Small uppercase kicker "REGISTRO ALIMENTARE".
+Meal cards Colazione, Pranzo, Cena, Spuntini: pastel meal icon disc, title, subtitle "Consigliato 460 - 690 kcal" when empty (a share of the daily goal) or "143 kcal · P 18 · C 17 · G 0" when there are foods, a round grey "+" (lime glyph in dark). Food rows "Yogurt greco / 170 g · P 17 · C 6,8 · G 0" with "97 kcal" at the right.
+Swiping a food row to the left reveals a red "🗑 Elimina" area (a long swipe deletes at once, with an "Annulla" snackbar). Holding a row starts multi-select: round check circles appear (lime with a check when picked, rows tinted lime) and a dark floating bar at the bottom shows "× · 2 selezionati · Sposta in… · red Elimina".
+A floating round lime "+" at the bottom right adds a food to the meal of the current time.
 Water card "1 L / 2,5 L" in blue, a row of glasses and a pill "+ 250 ml".
 "Ultimi 7 giorni · Calorie assunte · 1.969 kcal media": rounded bars with a dashed goal line labelled "2.300", today in lime.
 Bottom sheet "Aggiungi a Colazione": chips with small icons (Cerca, Recenti, Preferiti, Codice a barre, Nuovo alimento, Aggiunta rapida); search field with a magnifier and a round ×, "Cerca prodotti online"; results as rows with a coloured initial disc, name, "370 kcal / 100 g · P 13 · C 60 · G 7" and a star. The chosen food gets a lime border and opens right below it: "PORZIONE RAPIDA" 2×2 grid, a "Grammi − 40 g +" stepper, a summary "● 148 kcal · Proteine 5,2 g · Carboidrati 24 g · Grassi 2,8 g", "Pasto" select, lime "Aggiungi a Colazione ›" and a link "Annulla o scegli un altro alimento".
