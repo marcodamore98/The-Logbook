@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
-import type { ClinicalCase, ClinicalItem, ClinicalModule, Colleague, Module, SurgeryCase, SurgeryModule, SurgeryProcedure } from '../../lib/types';
+import type { ClinicalCase, ClinicalItem, ClinicalModule, Colleague, Module, ProcedureGroup, SurgeryCase, SurgeryModule, SurgeryProcedure } from '../../lib/types';
 import {
   APPROACHES,
   approachesFor,
@@ -253,7 +253,7 @@ export function VocabSearch({
       </div>
       {open && (hits.length > 0 || typed) && (
         <ul className="search-hits" role="listbox">
-          {!typed && <li className="hits-cap">Usati più spesso</li>}
+          {!typed && <li className="hits-cap">Suggeriti</li>}
           {hits.map((i) => (
             <li key={i.id}>
               <button type="button" role="option" aria-selected={i.id === value} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(i)}>
@@ -323,6 +323,99 @@ const ROLE_CHIPS: VocabItem[] = SURGICAL_ROLES.map((r) => ({ id: r.id, label: RO
 const PICKABLE = PROCEDURES.filter((p) => !p.legacy);
 const SEARCHABLE = [...PICKABLE, ...PROCEDURE_COMBOS];
 
+// ---------- Saved groups of procedures ----------
+
+const GROUP_PREFIX = 'grp:';
+const signature = (ps: Omit<SurgeryProcedure, 'id'>[]) => ps.filter((p) => p.procedureId).map((p) => `${p.procedureId}|${p.role}|${p.approach}`).join(',');
+const groupItem = (g: ProcedureGroup): VocabItem => ({ id: GROUP_PREFIX + g.id, label: g.name, group: 'I miei gruppi', parts: g.procedures.map((p) => p.procedureId), kw: 'gruppo' });
+/** "Gruppo 3": the first number not used yet. */
+const nextGroupName = (groups: ProcedureGroup[]) => {
+  let n = 1;
+  while (groups.some((g) => g.name.trim().toLowerCase() === `gruppo ${n}`)) n++;
+  return `Gruppo ${n}`;
+};
+
+/** Save, update or rename the group of a patient's procedures. */
+function GroupBar({ c, onChange }: { c: SurgeryCase; onChange: (c: SurgeryCase) => void }) {
+  const store = useStore();
+  const groups = store.settings.procedureGroups ?? [];
+  const saveGroups = (procedureGroups: ProcedureGroup[]) => store.saveSettings({ ...store.settings, procedureGroups });
+  const loaded = groups.find((g) => g.id === c.groupId);
+  const mine = c.procedures.filter((p) => p.procedureId).map(({ procedureId, role, approach }) => ({ procedureId, role, approach }));
+  const changed = loaded && signature(loaded.procedures) !== signature(mine);
+  const saveNew = () => {
+    const g: ProcedureGroup = { id: uid(), name: nextGroupName(groups), procedures: mine };
+    saveGroups([...groups, g]);
+    onChange({ ...c, groupId: g.id });
+  };
+  if (loaded)
+    return (
+      <div className={`op-group${changed ? ' changed' : ''}`}>
+        <label className="op-group-name">
+          <span className="op-group-tag">Gruppo</span>
+          <input value={loaded.name} aria-label="Nome del gruppo" onChange={(e) => saveGroups(groups.map((g) => (g.id === loaded.id ? { ...g, name: e.target.value } : g)))} />
+        </label>
+        {changed && (
+          <>
+            <span className="op-group-note">Hai modificato le procedure del gruppo.</span>
+            <div className="op-group-actions">
+              <button type="button" className="btn-ghost small" onClick={() => saveGroups(groups.map((g) => (g.id === loaded.id ? { ...g, procedures: mine } : g)))}>
+                Aggiorna “{loaded.name || 'gruppo'}”
+              </button>
+              <button type="button" className="btn-ghost small lime" disabled={!mine.length} onClick={saveNew}>
+                Salva come nuovo gruppo
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  if (mine.length < 2) return null;
+  return (
+    <button type="button" className="btn-ghost small op-group-save" onClick={saveNew}>
+      Salva queste procedure come gruppo
+    </button>
+  );
+}
+
+/** Saved groups: rename, reorder (hold and drag), delete (swipe left). */
+function GroupsManager() {
+  const store = useStore();
+  const offerUndo = useUndo();
+  const groups = store.settings.procedureGroups ?? [];
+  const save = (procedureGroups: ProcedureGroup[]) => store.saveSettings({ ...store.settings, procedureGroups });
+  const drag = useRowDrag(groups, save, 'pgrp', '.pg-row');
+  if (!groups.length) return null;
+  return (
+    <Fold title="I miei gruppi di procedure" summary={`${groups.length}`}>
+      <div className={`op-procs${drag.dragging ? ' is-dragging' : ''}${drag.compact ? ' is-compacting' : ''}`} onPointerDown={drag.onPointerDown}>
+        {groups.map((g) => {
+          const r = drag.row(g.id);
+          return (
+            <div key={g.id} {...r} className={`op-proc${r.className}`}>
+              <SwipeDelete
+                onDelete={() => {
+                  save(groups.filter((x) => x.id !== g.id));
+                  offerUndo(`Gruppo “${g.name}” eliminato`, () => save(groups));
+                }}
+              >
+                <div className="pg-row">
+                  <DragGrip />
+                  <div className="pg-main">
+                    <input value={g.name} aria-label="Nome del gruppo" onChange={(e) => save(groups.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))} />
+                    <span className="op-proc-meta">{g.procedures.map((p) => labelOf(PROCEDURES, p.procedureId)).join(' · ')}</span>
+                  </div>
+                </div>
+              </SwipeDelete>
+            </div>
+          );
+        })}
+      </div>
+      <p className="muted small">Scorri a sinistra per eliminare un gruppo, tieni premuto per spostarlo.</p>
+    </Fold>
+  );
+}
+
 // ---------- Surgical activity ----------
 
 export function SurgeryEditor({ value: m, onChange }: { value: SurgeryModule; onChange: (m: SurgeryModule) => void }) {
@@ -380,6 +473,7 @@ export function SurgeryEditor({ value: m, onChange }: { value: SurgeryModule; on
       <button type="button" className="add-ex op-add" onClick={() => addCase()}>
         <GlyphPlus /> Aggiungi paziente
       </button>
+      <GroupsManager />
     </div>
   );
 }
@@ -422,7 +516,17 @@ function CaseView({
     compl ? `Clavien ${c.clavien}` : '',
   ].filter(Boolean);
 
+  const groups = useStore().settings.procedureGroups ?? [];
+  const loadGroup = (g: ProcedureGroup) => {
+    const added = g.procedures.map((p) => ({ ...p, id: uid() }));
+    // On an empty patient the group is "loaded" (changes can be saved back); otherwise its procedures are just added.
+    if (!c.procedures.length) set({ procedures: added, groupId: g.id });
+    else set({ procedures: [...c.procedures, ...added] });
+    setOpenP(new Set());
+  };
   const add = (item: VocabItem) => {
+    const g = item.id.startsWith(GROUP_PREFIX) && groups.find((x) => GROUP_PREFIX + x.id === item.id);
+    if (g) return loadGroup(g);
     const last = c.procedures[c.procedures.length - 1];
     const ids = item.parts ?? [item.id];
     const added: SurgeryProcedure[] = ids.map((procedureId) => ({
@@ -475,10 +579,23 @@ function CaseView({
               })}
             </div>
           )}
+          <GroupBar c={c} onChange={onChange} />
+          {!c.procedures.length && groups.length > 0 && (
+            <div className="scroll-x op-scroll">
+              <div className="chips group-chips">
+                {groups.map((g) => (
+                  <button key={g.id} type="button" className="chip" onClick={() => loadGroup(g)}>
+                    <span className="combo-tag">{g.procedures.length}</span>
+                    {g.name || 'Gruppo'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <VocabSearch
-            items={SEARCHABLE}
-            browse={[...PROCEDURE_COMBOS, ...PICKABLE]}
-            frequent={frequent}
+            items={[...groups.map(groupItem), ...SEARCHABLE]}
+            browse={[...groups.map(groupItem), ...PROCEDURE_COMBOS, ...PICKABLE]}
+            frequent={[...groups.map(groupItem), ...frequent].slice(0, 8)}
             autoFocus={fresh}
             placeholder={c.procedures.length ? 'Aggiungi un’altra procedura…' : 'Cerca intervento (es. isterectomia, sentinella, TOT)…'}
             onPick={add}

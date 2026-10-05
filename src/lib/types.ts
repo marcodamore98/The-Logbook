@@ -67,10 +67,19 @@ export interface SurgeryProcedure {
   approach: string; // vocab.APPROACHES
 }
 
+/** A saved set of procedures (with roles and routes) to load for a patient in one tap. */
+export interface ProcedureGroup {
+  id: string;
+  name: string;
+  procedures: Omit<SurgeryProcedure, 'id'>[];
+}
+
 /** One patient in the operating room ("Paziente 1, 2…": no identifying data). */
 export interface SurgeryCase {
   id: string;
   procedures: SurgeryProcedure[];
+  /** Saved group these procedures were loaded from (to offer saving the changes). */
+  groupId?: string;
   setting: string; // elezione / urgenza
   durationMin?: number;
   tutorId?: string;
@@ -484,6 +493,7 @@ export interface Settings {
   mealPlans?: MealPlan[];
   foods?: Food[]; // alimenti personali e salvati da Open Food Facts
   favoriteFoods?: string[];
+  procedureGroups?: ProcedureGroup[]; // gruppi di procedure salvati (attività chirurgica)
   shopping?: ShopItem[]; // lista della spesa: unica, la stessa in tutti i giorni
   dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno
   runPlans?: RunPlan[]; // sessioni a intervalli salvate
