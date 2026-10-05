@@ -28,6 +28,7 @@ const G = {
   ob: 'Ostetricia',
   hys: 'Ginecologia – isteroscopia',
   lps: 'Ginecologia – laparoscopia/laparotomia',
+  steps: 'Tempi chirurgici',
   vag: 'Ginecologia – vaginale e minori',
   cx: 'Oncologia – cervice',
   endo: 'Oncologia – endometrio',
@@ -130,6 +131,11 @@ export const PROCEDURES: VocabItem[] = [
   { id: 'lps-isterectomia-subtotale', label: 'Isterectomia subtotale (sopracervicale)', group: G.lps, kw: 'LSH' },
   { id: 'lps-cromosalpingoscopia', label: 'Cromosalpingoscopia', group: G.lps },
   { id: 'lps-sterilizzazione', label: 'Sterilizzazione tubarica', group: G.lps },
+
+  // Tempi chirurgici: parts of an intervention that can be done (and logged) on their own
+  { id: 'step-accessi-lps', label: 'Accessi laparoscopici (pneumoperitoneo e trocar)', group: G.steps, approach: 'laparoscopic', kw: 'trocar Veress Hasson open laparoscopy ombelicale' },
+  { id: 'step-docking-robotico', label: 'Docking robotico', group: G.steps, approach: 'robotic', kw: 'robot da Vinci undocking' },
+  { id: 'step-sutura-cupola', label: 'Sutura della cupola vaginale', group: G.steps, approach: 'laparoscopic', kw: 'chiusura cupola vaginale isterectomia' },
 
   // Vaginale e minori
   { id: 'vag-isterectomia', label: 'Isterectomia vaginale', group: G.vag, kw: 'VH' },
