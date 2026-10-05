@@ -585,13 +585,14 @@ export default function NutritionPage() {
       {adding && (
         <FoodSheet
           meal={adding}
+          eaten={t}
+          goals={goals}
           onClose={() => setAdding(null)}
           onAdd={(meal, e) => {
             setLog((l) => ({
               ...l,
               meals: { ...l.meals, [meal]: [...(l.meals[meal] ?? []), e] },
             }));
-            setAdding(null);
           }}
         />
       )}

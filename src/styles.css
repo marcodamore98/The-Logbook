@@ -2379,3 +2379,60 @@ a.btn.link-open, a.btn-ghost.link-open { display: inline-flex; padding-block: 0;
 .pg-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.4rem; background: var(--surface-2); -webkit-user-select: none; user-select: none; }
 .pg-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
 .pg-main input { font-weight: 700; background: var(--surface); padding-block: 0.4rem; }
+
+/* Adding foods to a meal: a full page like Lifesum (search + barcode, daily intake, icon tabs, food cards with +) */
+.sheet-backdrop.food-screen { align-items: stretch; background: var(--bg); animation: none; }
+.fs-page { position: relative; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; height: 100dvh; background: var(--bg); }
+.fs-head { display: flex; align-items: center; gap: 0.5rem; padding: calc(env(safe-area-inset-top) + 0.6rem) 1rem 0.3rem; }
+.fs-back { border: none; background: none; }
+.fs-meal { position: relative; }
+.fs-meal select { border: none; background: none; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.04em; padding: 0.3rem 1.6rem 0.3rem 0.2rem; color: var(--ink); appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: right 0.55rem center, right 0.25rem center; background-size: 0.3rem 0.3rem; background-repeat: no-repeat; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.fs-search { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 1rem 0.8rem; }
+.fs-search .icon-input { flex: 1; min-width: 0; border-radius: 999px; padding-inline: 1rem; min-height: 3rem; }
+.fs-scan { flex: none; width: 3rem; height: 3rem; display: grid; place-items: center; border: none; border-radius: 14px; background: none; color: var(--lime); }
+:root:not([data-theme='dark']) .fs-scan { color: #6f8a17; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .fs-scan { color: var(--lime); } }
+.fs-scan.on { background: var(--surface-2); }
+.fs-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 1rem calc(env(safe-area-inset-bottom) + 5rem); display: flex; flex-direction: column; gap: 0.9rem; }
+.fs-intake { background: var(--surface); border-radius: 20px; padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.fs-intake-head { display: flex; justify-content: space-between; gap: 0.6rem; font-size: 0.95rem; }
+.fs-track { display: block; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.fs-track.big { height: 8px; }
+.fs-track > span { display: block; height: 100%; border-radius: inherit; background: var(--c, var(--lime)); }
+.fs-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
+.fs-macro { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; font-size: 0.85rem; }
+.fs-macro .fs-track { width: 100%; }
+.fs-macro small { color: var(--muted); font-size: 0.8rem; }
+.fs-macro.tone-lime { --c: var(--lime); } .fs-macro.tone-lav { --c: var(--lavender); } .fs-macro.tone-sky { --c: var(--water); }
+.fs-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+.fs-tabs button { border: none; background: none; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; padding: 0.6rem 0.2rem 0.55rem; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.fs-tabs button small { font-size: 0.68rem; font-weight: 700; }
+.fs-tabs button.on { color: var(--ink); border-bottom-color: var(--lime); }
+.fs-tabs button.on svg { color: var(--lime); }
+:root:not([data-theme='dark']) .fs-tabs button.on svg { color: #6f8a17; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .fs-tabs button.on svg { color: var(--lime); } }
+.fs-kicker { margin: 0.2rem 0 -0.2rem; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.fs-empty { text-align: center; color: var(--muted); padding: 2rem 1.5rem; line-height: 1.5; }
+.fs-online { align-self: flex-start; }
+.food-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.food-card { display: flex; align-items: center; gap: 0.2rem; background: var(--surface); border-radius: 18px; padding: 0.4rem 0.6rem 0.4rem 0.2rem; border: 1px solid transparent; }
+.food-card.picked { border-color: var(--lime); }
+.fc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; border: none; background: none; text-align: left; padding: 0.55rem 0.7rem; font: inherit; color: var(--ink); }
+.fc-name { font-weight: 700; font-size: 0.98rem; line-height: 1.25; }
+.fc-portion { font-size: 0.82rem; color: var(--ink-2); }
+.fc-portion b { font-weight: 700; color: var(--ink); }
+.fc-src { color: var(--muted); }
+.fc-macros { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--ink-2); }
+.mb { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; font-size: 0.62rem; font-weight: 800; color: #1d1d1f; margin-left: 0.25rem; }
+.mb:first-child { margin-left: 0; }
+.mb.c { background: var(--lime); } .mb.p { background: var(--lavender); } .mb.g { background: var(--water); }
+.fc-fav { flex: none; border: none; background: none; width: 2.4rem; height: 2.4rem; display: grid; place-items: center; color: var(--muted); }
+.fc-fav.on { color: #3ccf8e; }
+.fc-add { flex: none; width: 2.9rem; height: 2.9rem; border-radius: 50%; border: none; background: var(--surface-2); color: var(--ink); display: grid; place-items: center; }
+.fc-add:active { background: var(--lime); color: #1d1d1f; }
+.food-cards .q-inline { list-style: none; background: var(--surface); border-radius: 18px; padding: 0.4rem 0.9rem 0.8rem; margin-top: -0.3rem; }
+.fs-added { position: absolute; left: 1rem; right: 1rem; bottom: calc(env(safe-area-inset-bottom) + 1rem); background: var(--ink); color: var(--bg); border-radius: 14px; padding: 0.8rem 1rem; font-weight: 700; font-size: 0.9rem; box-shadow: 0 10px 30px rgb(0 0 0 / 0.3); animation: fade-in 0.15s ease-out; }
+.fs-body .barcode { padding-top: 0.2rem; }
+.fs-search .icon-input { background: var(--surface); border: 1px solid var(--line); }
+.food-cards .q-inline { background: none; padding: 0; margin-top: -0.2rem; }

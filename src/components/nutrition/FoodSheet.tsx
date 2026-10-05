@@ -4,29 +4,34 @@ import { allFoods, entryFor, FOOD_CATEGORIES, MEALS } from '../../lib/nutrition/
 import { useLibrary } from '../../lib/nutrition/library';
 import { barcodeDetector, hasTorch, openBackCamera, productByBarcode, searchOff, setFocus, setTorch, validBarcode } from '../../lib/nutrition/off';
 import type { Food, FoodEntry, MealId } from '../../lib/types';
-import { GlyphClose, GlyphPlus } from '../icons';
+import { GlyphPlus } from '../icons';
 import { Field, NumberInput, uid } from '../ui';
 
 type Tab = 'search' | 'recent' | 'favorites' | 'barcode' | 'create' | 'quick';
 
+/** The icon tabs under the search (search and barcode open from the search row). */
 const TABS: [Tab, string][] = [
-  ['search', 'Cerca'],
   ['recent', 'Recenti'],
   ['favorites', 'Preferiti'],
-  ['barcode', 'Codice a barre'],
   ['create', 'Nuovo alimento'],
   ['quick', 'Aggiunta rapida'],
 ];
 
-const TAB_ICON: Record<Tab, string> = {
+const ICON: Record<Tab | 'heart' | 'back', string> = {
   search: 'M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM16 16l4.5 4.5',
-  recent: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM12 7.5V12l3 2',
-  favorites: 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z',
-  barcode: 'M4 5v14M7 5v14M10.5 5v14M14 5v14M16.5 5v14M20 5v14',
-  create: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM12 8v8M8 12h8',
+  recent: 'M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v3.2h3.2M12 8v4.2l2.8 1.8',
+  favorites: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z',
+  heart: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z',
+  barcode: 'M3.5 8V4.5H7M17 4.5h3.5V8M20.5 16v3.5H17M7 19.5H3.5V16M7.5 8v8M10 8v8M12.5 8v8M15 8v5M16.8 8v8',
+  create: 'M4 7h11M4 12h11M4 17h7M18 14v6M15 17h6',
   quick: 'M13 3L5 13.5h6L10 21l8-10.5h-6z',
+  back: 'M19 12H5.5M11 6l-6 6 6 6',
 };
-const TONES = ['lime', 'lav', 'sage', 'sky', 'terra'];
+const Icon = ({ d, size = 22, fill }: { d: string; size?: number; fill?: boolean }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill={fill ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
 
 /** Lower case without accents, so "ragu" finds "ragù". */
 const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -41,27 +46,45 @@ function rankOf(name: string, text: string, words: string[]) {
   return text.startsWith(words[0]) ? 4 : 5;
 }
 
-function FoodRow({ food, onPick, fav, onFav, picked }: { food: Food; onPick: () => void; fav: boolean; onFav: () => void; picked?: boolean }) {
+/** Usual portion of a food: its own portion, or 100 g. */
+const usual = (f: Food) => f.portionG ?? 100;
+
+/** A food as a card: name, usual portion with kcal and ♥, macro badges, round + that adds the usual portion. */
+function FoodRow({ food, onPick, fav, onFav, onQuick, picked }: { food: Food; onPick: () => void; fav: boolean; onFav: () => void; onQuick: () => void; picked?: boolean }) {
+  const g = usual(food);
+  const e = entryFor(food, g, '');
+  const portion = food.portionG ? `${(food.portionName ?? '1 porzione').replace(/^1\s+/, '1 ')} (${g} g)` : '100 g';
   return (
-    <li className={`food-row${picked ? ' picked' : ''}`}>
-      <span className={`food-disc tone-${TONES[(food.name.charCodeAt(0) || 0) % TONES.length]}`} aria-hidden="true">
-        {food.name.charAt(0).toUpperCase()}
-      </span>
-      <button className="ex-item" onClick={onPick}>
-        <span className="ex-name">
+    <li className={`food-card${picked ? ' picked' : ''}`}>
+      <button type="button" className="fc-main" onClick={onPick}>
+        <span className="fc-name">
           {food.name}
           {food.brand && <span className="muted"> · {food.brand}</span>}
         </span>
-        <span className="ex-meta">
-          <b>{food.kcal} kcal</b> / 100 g · P {food.protein} · C {food.carbs} · G {food.fat}{food.source === 'off' ? ' · Open Food Facts' : food.origin ? ` · ${food.origin}` : ''}
+        <span className="fc-portion">
+          {portion} · <b>{e.kcal} kcal</b>
+          {food.source === 'off' ? <span className="fc-src"> · Open Food Facts</span> : food.origin ? <span className="fc-src"> · {food.origin}</span> : null}
+        </span>
+        <span className="fc-macros">
+          <span className="mb c">C</span>
+          {fmtG(e.carbs)}
+          <span className="mb p">P</span>
+          {fmtG(e.protein)}
+          <span className="mb g">G</span>
+          {fmtG(e.fat)}
         </span>
       </button>
-      <button className={`fav${fav ? ' on' : ''}`} aria-label={fav ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'} aria-pressed={fav} onClick={onFav}>
-        ★
+      <button type="button" className={`fc-fav${fav ? ' on' : ''}`} aria-label={fav ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'} aria-pressed={fav} onClick={onFav}>
+        <Icon d={ICON.heart} size={20} fill={fav} />
+      </button>
+      <button type="button" className="fc-add" aria-label={`Aggiungi ${food.name} (${g} g)`} onClick={onQuick}>
+        <Icon d="M12 5v14M5 12h14" size={22} />
       </button>
     </li>
   );
 }
+
+const fmtG = (n: number) => `${Math.round(n * 10) / 10}`.replace('.', ',') + ' g';
 
 /** Quantity step: quick portions, grams with − / +, live macros, meal choice. */
 function Quantity({ food, meal, onMeal, onAdd, onBack, inline }: { food: Food; meal: MealId; onMeal: (m: MealId) => void; onAdd: (e: FoodEntry) => void; onBack: () => void; inline?: boolean }) {
@@ -138,12 +161,26 @@ function Quantity({ food, meal, onMeal, onAdd, onBack, inline }: { food: Food; m
   );
 }
 
-export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId; onAdd: (meal: MealId, e: FoodEntry) => void; onClose: () => void }) {
+export function FoodSheet({
+  meal: initialMeal,
+  onAdd,
+  onClose,
+  eaten,
+  goals,
+}: {
+  meal: MealId;
+  onAdd: (meal: MealId, e: FoodEntry) => void;
+  onClose: () => void;
+  /** What the day already has, to show the daily intake at the top. */
+  eaten: { kcal: number; protein: number; carbs: number; fat: number };
+  goals: { kcalIn?: number; proteinG?: number; carbsG?: number; fatG?: number };
+}) {
   const store = useStore();
   const { settings } = store;
   const custom = settings.foods ?? [];
   const favs = settings.favoriteFoods ?? [];
-  const [tab, setTab] = useState<Tab>('search');
+  const [tab, setTab] = useState<Tab>('recent');
+  const [added, setAdded] = useState<string | null>(null);
   const [meal, setMeal] = useState<MealId>(initialMeal);
   const [q, setQ] = useState('');
   const [picked, setPicked] = useState<Food | null>(null);
@@ -271,108 +308,178 @@ export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId;
     }
   }
 
-  // The chosen food opens right under its row; foods picked elsewhere (barcode, new) open on top.
+  // The chosen food opens right under its card; foods picked elsewhere (barcode, new) open on top.
+  // The screen stays open after adding, to add more foods to the same meal.
   let shownInline = false;
+  const flash = (name: string) => {
+    setAdded(name);
+    window.setTimeout(() => setAdded((x) => (x === name ? null : x)), 1800);
+  };
   const add = (e: FoodEntry) => {
     if (!picked) return;
     remember(picked);
     onAdd(meal, e);
+    flash(picked.name);
     setPicked(null);
   };
-  const list = (items: Food[], empty: string) =>
+  const quickAdd = (f: Food) => {
+    remember(f);
+    onAdd(meal, entryFor(f, usual(f), uid()));
+    navigator.vibrate?.(10);
+    flash(f.name);
+  };
+  const list = (items: Food[], empty: string, title?: string) =>
     items.length ? (
-      <ul className="ex-list">
-        {items.map((f) => {
-          const open = picked?.id === f.id;
-          if (open) shownInline = true;
-          return (
-            <Fragment key={f.id}>
-              <FoodRow food={f} picked={open} fav={favs.includes(f.id)} onFav={() => toggleFav(f.id)} onPick={() => setPicked(open ? null : f)} />
-              {open && (
-                <li className="q-inline">
-                  <Quantity inline food={f} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} />
-                </li>
-              )}
-            </Fragment>
-          );
-        })}
-      </ul>
+      <>
+        {title && <h3 className="fs-kicker">{title}</h3>}
+        <ul className="food-cards">
+          {items.map((f) => {
+            const open = picked?.id === f.id;
+            if (open) shownInline = true;
+            return (
+              <Fragment key={f.id}>
+                <FoodRow food={f} picked={open} fav={favs.includes(f.id)} onFav={() => toggleFav(f.id)} onPick={() => setPicked(open ? null : f)} onQuick={() => quickAdd(f)} />
+                {open && (
+                  <li className="q-inline">
+                    <Quantity inline food={f} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} />
+                  </li>
+                )}
+              </Fragment>
+            );
+          })}
+        </ul>
+      </>
     ) : (
-      <p className="empty">{empty}</p>
+      <p className="fs-empty">{empty}</p>
     );
 
+  const searching = tab === 'search';
+  const bar = (label: string, v: number, goal: number | undefined, tone: string) => (
+    <div className={`fs-macro tone-${tone}`}>
+      <span>{label}</span>
+      <span className="fs-track">
+        <span style={{ width: `${goal ? Math.min(100, (v / goal) * 100) : 0}%` }} />
+      </span>
+      <small>
+        {Math.round(v)} g{goal ? ` / ${goal} g` : ''}
+      </small>
+    </div>
+  );
+
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet food-sheet" role="dialog" aria-label="Aggiungi alimento" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head">
-          <h2>Aggiungi a {MEALS.find((m) => m.id === meal)?.label}</h2>
-          <button className="icon-btn" aria-label="Chiudi" onClick={onClose}>
-            <GlyphClose />
+    <div className="sheet-backdrop food-screen">
+      <div className="fs-page" role="dialog" aria-label={`Aggiungi a ${MEALS.find((m) => m.id === meal)?.label}`}>
+        <header className="fs-head">
+          <button type="button" className="icon-btn fs-back" aria-label="Indietro" data-back onClick={onClose}>
+            <Icon d={ICON.back} />
+          </button>
+          <label className="fs-meal">
+            <span className="sr-only">Pasto</span>
+            <select value={meal} onChange={(e) => setMeal(e.target.value as MealId)}>
+              {MEALS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </label>
+        </header>
+        <div className="fs-search">
+          <span className="icon-input food-search">
+            <Icon d={ICON.search} size={18} />
+            <input
+              type="search"
+              placeholder="Cibo, piatto o marca"
+              value={q}
+              onFocus={() => setTab('search')}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setOnline(null);
+                setTab('search');
+              }}
+            />
+            {q && (
+              <button type="button" className="clear-q" aria-label="Cancella" onClick={() => { setQ(''); setOnline(null); }}>
+                ×
+              </button>
+            )}
+          </span>
+          <button type="button" className={`fs-scan${tab === 'barcode' ? ' on' : ''}`} aria-label="Codice a barre" onClick={() => { setTab('barcode'); setPicked(null); }}>
+            <Icon d={ICON.barcode} size={28} />
           </button>
         </div>
-        {(
-          <>
-            <div className="tabs-scroll" role="tablist">
+
+        <div className="fs-body">
+          {!searching && tab !== 'barcode' && (
+            <section className="fs-intake">
+              <div className="fs-intake-head">
+                <strong>Assunzione giornaliera</strong>
+                <strong>
+                  {Math.round(eaten.kcal)}
+                  {goals.kcalIn ? ` / ${goals.kcalIn}` : ''} kcal
+                </strong>
+              </div>
+              <span className="fs-track big">
+                <span style={{ width: `${goals.kcalIn ? Math.min(100, (eaten.kcal / goals.kcalIn) * 100) : 0}%` }} />
+              </span>
+              <div className="fs-macros">
+                {bar('Carboidrati', eaten.carbs, goals.carbsG, 'lime')}
+                {bar('Proteine', eaten.protein, goals.proteinG, 'lav')}
+                {bar('Grassi', eaten.fat, goals.fatG, 'sky')}
+              </div>
+            </section>
+          )}
+
+          {!searching && tab !== 'barcode' && (
+            <div className="fs-tabs" role="tablist">
               {TABS.map(([id, label]) => (
-                <button key={id} role="tab" aria-selected={tab === id} className={`chip${tab === id ? ' chip-on' : ''}`} onClick={() => { setTab(id); setPicked(null); }}>
-                  <svg viewBox="0 0 24 24" width={15} height={15} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={TAB_ICON[id]} />
-                  </svg>
-                  {label}
+                <button key={id} role="tab" aria-selected={tab === id} aria-label={label} title={label} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setPicked(null); }}>
+                  <Icon d={ICON[id]} size={24} />
+                  <small>{label}</small>
                 </button>
               ))}
             </div>
-            {err && <p className="error small">{err}</p>}
+          )}
+          {err && <p className="error small">{err}</p>}
 
-            {tab === 'search' && (
-              <>
-                <div className="picker-tools">
-                  <span className="icon-input food-search">
-                    <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                      <path d={TAB_ICON.search} />
-                    </svg>
-                    <input
-                      type="search"
-                      autoFocus
-                      placeholder="Cerca alimento, piatto o marca…"
-                      value={q}
-                      onChange={(e) => {
-                        setQ(e.target.value);
-                        setOnline(null);
-                      }}
-                    />
-                    {q && (
-                      <button type="button" className="clear-q" aria-label="Cancella" onClick={() => { setQ(''); setOnline(null); }}>
-                        ×
-                      </button>
-                    )}
-                  </span>
-                  <button
-                    className="btn-ghost small"
-                    disabled={q.trim().length < 3 || busy}
-                    onClick={async () => {
-                      setBusy(true);
-                      setErr(undefined);
-                      try {
-                        setOnline(await searchOff(q.trim()));
-                      } catch (e) {
-                        setErr(`Ricerca online non riuscita: ${e instanceof Error ? e.message : e}`);
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  >
-                    {busy ? 'Cerco…' : 'Cerca prodotti online'}
-                  </button>
-                </div>
-                {online ? list(online, 'Nessun prodotto trovato online.') : list(local, 'Nessun alimento trovato: prova “Cerca prodotti online” o creane uno nuovo.')}
-              </>
-            )}
-            {tab === 'recent' && list(recent, 'Gli alimenti che registri compariranno qui.')}
-            {tab === 'favorites' && list(foods.filter((f) => favs.includes(f.id)), 'Tocca ★ su un alimento per aggiungerlo ai preferiti.')}
+          {searching && (
+            <>
+              <button
+                type="button"
+                className="btn-ghost small fs-online"
+                disabled={q.trim().length < 3 || busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setErr(undefined);
+                  try {
+                    setOnline(await searchOff(q.trim()));
+                  } catch (e) {
+                    setErr(`Ricerca online non riuscita: ${e instanceof Error ? e.message : e}`);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {busy ? 'Cerco…' : 'Cerca anche tra i prodotti online'}
+              </button>
+              {online
+                ? list(online, 'Nessun prodotto trovato online.', 'Prodotti online')
+                : q.trim()
+                  ? list(local, 'Nessun alimento trovato: prova la ricerca online o crea un nuovo alimento.', 'Alimenti')
+                  : list(recent.length ? recent : local, 'Scrivi il nome di un alimento.', recent.length ? 'Recenti' : 'Alimenti')}
+              <button type="button" className="q-back" onClick={() => { setQ(''); setOnline(null); setTab('recent'); }}>
+                Chiudi la ricerca
+              </button>
+            </>
+          )}
+            {tab === 'recent' && list(recent, 'Qui troverai i cibi registrati di recente, per aggiungerli al volo.', 'Recenti')}
+            {tab === 'favorites' && list(foods.filter((f) => favs.includes(f.id)), 'Tocca ♡ su un alimento per averlo qui tra i preferiti.', 'Preferiti')}
 
             {tab === 'barcode' && (
               <div className="barcode">
+                <button type="button" className="q-back" onClick={() => { stopScan(); setTab('recent'); }}>
+                  ‹ Torna agli alimenti
+                </button>
                 {scanning ? (
                   <div className="scanner-wrap">
                     {/* Tapping the preview refocuses, like the camera app. */}
@@ -513,9 +620,13 @@ export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId;
                 </div>
               </div>
             )}
-          </>
+          {picked && !shownInline && <Quantity food={picked} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} />}
+        </div>
+        {added && (
+          <div className="fs-added" role="status">
+            ✓ {added} aggiunto a {MEALS.find((m) => m.id === meal)?.label}
+          </div>
         )}
-        {picked && !shownInline && <Quantity food={picked} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} />}
       </div>
     </div>
   );
