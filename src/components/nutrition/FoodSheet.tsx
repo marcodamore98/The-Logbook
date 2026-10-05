@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import { allFoods, entryFor, FOOD_CATEGORIES, MEALS } from '../../lib/nutrition/foods';
 import { useLibrary } from '../../lib/nutrition/library';
-import { barcodeDetector, productByBarcode, searchOff } from '../../lib/nutrition/off';
+import { barcodeDetector, hasTorch, openBackCamera, productByBarcode, searchOff, setFocus, setTorch, validBarcode } from '../../lib/nutrition/off';
 import type { Food, FoodEntry, MealId } from '../../lib/types';
 import { GlyphClose, GlyphPlus } from '../icons';
 import { Field, NumberInput, uid } from '../ui';
@@ -153,6 +153,8 @@ export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId;
   const [code, setCode] = useState('');
   const [scanning, setScanning] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
+  const stream = useRef<MediaStream | null>(null);
+  const [torch, setTorchOn] = useState<boolean | null>(null); // null: the camera has no torch
   const [draft, setDraft] = useState<Food>({ id: '', name: '', kcal: 0, protein: 0, carbs: 0, fat: 0, source: 'custom', category: 'Piatti pronti' });
   const [quick, setQuick] = useState({ name: '', kcal: undefined as number | undefined, protein: undefined as number | undefined, carbs: undefined as number | undefined, fat: undefined as number | undefined });
 
@@ -217,34 +219,54 @@ export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId;
     }
   }
 
+  const stopScan = () => {
+    stream.current?.getTracks().forEach((t) => t.stop());
+    stream.current = null;
+    setScanning(false);
+    setTorchOn(null);
+  };
+  useEffect(() => () => stream.current?.getTracks().forEach((t) => t.stop()), []);
+
   async function startScan() {
     const det = barcodeDetector();
     if (!det) {
       setErr('Questo browser non legge i codici a barre dalla fotocamera: inserisci il numero sotto il codice.');
       return;
     }
+    setErr(undefined);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const s = await openBackCamera();
+      stream.current = s;
+      setTorchOn(hasTorch(s) ? false : null);
       setScanning(true);
       await new Promise((r) => setTimeout(r, 50));
-      if (!video.current) return;
-      video.current.srcObject = stream;
+      if (!video.current || stream.current !== s) return;
+      video.current.srcObject = s;
       await video.current.play();
-      const stop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        setScanning(false);
-      };
+      // A code counts only when its check digit is right and the same code is read in
+      // three frames in a row: blurred frames give wrong or changing numbers.
+      let last = '';
+      let same = 0;
       const loop = async () => {
-        if (!video.current || video.current.paused) return stop();
+        if (stream.current !== s || !video.current || video.current.paused) return;
         const found = await det.detect(video.current).catch(() => []);
-        if (found[0]) {
-          stop();
-          setCode(found[0].rawValue);
-          lookup(found[0].rawValue);
-        } else requestAnimationFrame(loop);
+        const hit = found.find((f) => validBarcode(f.rawValue, f.format));
+        if (hit) {
+          same = hit.rawValue === last ? same + 1 : 1;
+          last = hit.rawValue;
+          if (same >= 3) {
+            navigator.vibrate?.(30);
+            stopScan();
+            setCode(hit.rawValue);
+            lookup(hit.rawValue);
+            return;
+          }
+        } else same = 0;
+        window.setTimeout(loop, 90);
       };
       loop();
     } catch {
+      stopScan();
       setErr('Fotocamera non disponibile.');
     }
   }
@@ -351,7 +373,34 @@ export function FoodSheet({ meal: initialMeal, onAdd, onClose }: { meal: MealId;
 
             {tab === 'barcode' && (
               <div className="barcode">
-                {scanning ? <video ref={video} className="scanner" playsInline muted /> : (
+                {scanning ? (
+                  <div className="scanner-wrap">
+                    {/* Tapping the preview refocuses, like the camera app. */}
+                    <div className="scanner-box">
+                      <video ref={video} className="scanner" playsInline muted onClick={() => stream.current && setFocus(stream.current, 'single-shot').then(() => window.setTimeout(() => stream.current && setFocus(stream.current, 'continuous'), 1200))} />
+                      <span className="scan-frame" aria-hidden="true" />
+                    </div>
+                    <span className="scan-hint">Avvicina il codice dentro il riquadro · tocca per mettere a fuoco</span>
+                    <div className="scan-actions">
+                      {torch !== null && (
+                        <button
+                          type="button"
+                          className={`btn-ghost small${torch ? ' on' : ''}`}
+                          onClick={() => {
+                            if (!stream.current) return;
+                            setTorch(stream.current, !torch);
+                            setTorchOn(!torch);
+                          }}
+                        >
+                          {torch ? 'Spegni torcia' : 'Torcia'}
+                        </button>
+                      )}
+                      <button type="button" className="btn-ghost small" onClick={stopScan}>
+                        Annulla
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                   <button className="btn" onClick={startScan}>
                     Scansiona con la fotocamera
                   </button>

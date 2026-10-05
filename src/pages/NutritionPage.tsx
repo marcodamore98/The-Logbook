@@ -9,7 +9,7 @@ import { NumberInput } from '../components/ui';
 import { addDays, fromISO, today } from '../lib/dates';
 import { dayIntake, MEALS, totalsOf } from '../lib/nutrition/foods';
 import { useStore } from '../lib/store/StoreContext';
-import type { FoodEntry, FoodLog, MealId, MealPlanItem } from '../lib/types';
+import type { FoodEntry, FoodLog, MealId } from '../lib/types';
 
 /** Half-circle gauge like Lifesum: remaining kcal in the middle, eaten on the left, burned on the right. */
 function Gauge({ eaten, goal, burned }: { eaten: number; goal?: number; burned?: number }) {
@@ -375,42 +375,6 @@ export default function NutritionPage() {
       </div>
 
       <h2 className="log-kicker">Registro alimentare</h2>
-
-      {(store.settings.mealPlans ?? []).length > 0 && (
-        <div className="row plan-row">
-          <select
-            value=""
-            aria-label="Applica un piano alimentare"
-            onChange={(e) => {
-              const plan = store.settings.mealPlans!.find((p) => p.id === e.target.value);
-              if (!plan) return;
-              const replace = all.length > 0 && window.confirm('Sostituire i pasti già registrati oggi? (Annulla = aggiungi al diario)');
-              setLog((l) => {
-                const meals = { ...(replace ? {} : l.meals) };
-                for (const [meal, items] of Object.entries(plan.meals) as [MealId, MealPlanItem[]][]) {
-                  meals[meal] = [
-                    ...(meals[meal] ?? []),
-                    ...items.map((it) => ({
-                      ...it,
-                      id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
-                    })),
-                  ];
-                }
-                return { ...l, meals };
-              });
-            }}
-          >
-            <option value="">Applica un piano alimentare…</option>
-            {store.settings.mealPlans!.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-                {p.targets?.kcal ? ` · ${fmt(p.targets.kcal)} kcal` : ''}
-              </option>
-            ))}
-          </select>
-          <span className="muted small">poi modifica le quantità come vuoi</span>
-        </div>
-      )}
 
       {MEALS.map((m) => {
         const entries = log.meals[m.id] ?? [];

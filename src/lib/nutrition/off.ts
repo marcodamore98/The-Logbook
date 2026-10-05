@@ -62,11 +62,63 @@ export async function productByBarcode(code: string): Promise<Food | null> {
 }
 
 interface Detector {
-  detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>;
+  detect(source: CanvasImageSource): Promise<{ rawValue: string; format?: string }[]>;
 }
 
 /** Native barcode scanning (Chrome on Android); null when the browser has no BarcodeDetector. */
 export function barcodeDetector(): Detector | null {
   const BD = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => Detector }).BarcodeDetector;
   return BD ? new BD({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }) : null;
+}
+
+/** Check digit of EAN-13 / EAN-8 / UPC-A: a code misread from a blurred frame almost always fails it. */
+export function validBarcode(code: string, format?: string): boolean {
+  if (!/^\d+$/.test(code)) return false;
+  if (format === 'upc_e') return code.length >= 6 && code.length <= 8; // its check digit needs the expanded code: three equal reads decide
+  if (![8, 12, 13].includes(code.length)) return false;
+  const digits = code.split('').map(Number);
+  const check = digits.pop()!;
+  const sum = digits.reverse().reduce((s, d, i) => s + d * (i % 2 === 0 ? 3 : 1), 0);
+  return (10 - (sum % 10)) % 10 === check;
+}
+
+type FocusCaps = MediaTrackCapabilities & { focusMode?: string[]; torch?: boolean; zoom?: { min: number; max: number } };
+
+/**
+ * The back camera that can focus close. On phones with several back lenses (Samsung)
+ * "environment" may open the ultra-wide one, which has a fixed focus and blurs labels.
+ */
+export async function openBackCamera(): Promise<MediaStream> {
+  const want = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, ...want } });
+  const focusable = (s: MediaStream) => ((s.getVideoTracks()[0]?.getCapabilities?.() as FocusCaps | undefined)?.focusMode ?? []).includes('continuous');
+  if (!focusable(stream)) {
+    // Labels are known now that the permission is granted: try the other back cameras.
+    const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput' && /back|rear|environment|posteriore/i.test(d.label));
+    const current = stream.getVideoTracks()[0]?.getSettings().deviceId;
+    for (const c of cams) {
+      if (c.deviceId === current) continue;
+      stream.getTracks().forEach((t) => t.stop());
+      stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: c.deviceId }, ...want } });
+      if (focusable(stream)) break;
+    }
+  }
+  await setFocus(stream, 'continuous');
+  return stream;
+}
+
+/** Continuous autofocus, or one refocus ("single-shot") when the preview is tapped. */
+export async function setFocus(stream: MediaStream, mode: 'continuous' | 'single-shot') {
+  const track = stream.getVideoTracks()[0];
+  const caps = track?.getCapabilities?.() as FocusCaps | undefined;
+  if (!track || !caps?.focusMode?.includes(mode)) return;
+  await track.applyConstraints({ advanced: [{ focusMode: mode } as MediaTrackConstraintSet] }).catch(() => undefined);
+}
+
+export function hasTorch(stream: MediaStream): boolean {
+  return !!(stream.getVideoTracks()[0]?.getCapabilities?.() as FocusCaps | undefined)?.torch;
+}
+
+export async function setTorch(stream: MediaStream, on: boolean) {
+  await stream.getVideoTracks()[0]?.applyConstraints({ advanced: [{ torch: on } as MediaTrackConstraintSet] }).catch(() => undefined);
 }

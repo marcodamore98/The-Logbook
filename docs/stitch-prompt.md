@@ -1,6 +1,6 @@
 # Prompt per Google Stitch — The Logbook
 
-*Aggiornato al 4 ottobre 2026 (webinar di un giorno con link per collegarsi, luogo aperto in Maps, programma in PDF o foto, eventi "Webinar:/Corso:/Congresso:" importati da Google Calendar; attività chirurgica e clinica per pazienti, con più procedure e ruoli; banner lime più piccoli e discreti), dopo il restyling Stitch portato nell'app principale. Questo file viene aggiornato a ogni modifica dell'app (vedi `CLAUDE.md`).*
+*Aggiornato al 5 ottobre 2026 (scanner del codice a barre con messa a fuoco e riquadro, tolto "Applica un piano alimentare"; webinar di un giorno con link per collegarsi, luogo aperto in Maps, programma in PDF o foto, eventi "Webinar:/Corso:/Congresso:" importati da Google Calendar; attività chirurgica e clinica per pazienti, con più procedure e ruoli; banner lime più piccoli e discreti), dopo il restyling Stitch portato nell'app principale. Questo file viene aggiornato a ogni modifica dell'app (vedi `CLAUDE.md`).*
 
 **Stato delle schermate**
 
@@ -163,6 +163,7 @@ A floating round lime "+" at the bottom right adds a food to the meal of the cur
 Water card "1 L / 2,5 L" in blue, a row of glasses and a pill "+ 250 ml".
 "Ultimi 7 giorni · Calorie assunte · 1.969 kcal media": rounded bars with a dashed goal line labelled "2.300", today in lime.
 Bottom sheet "Aggiungi a Colazione": chips with small icons (Cerca, Recenti, Preferiti, Codice a barre, Nuovo alimento, Aggiunta rapida); search field "Cerca alimento, piatto o marca…" with a magnifier and a round ×, "Cerca prodotti online"; results as rows with a coloured initial disc, name, "370 kcal / 100 g · P 13 · C 60 · G 7" and a star; about 3,300 generic foods and dishes from the CIQUAL table end with "· CIQUAL", canteen and restaurant dishes (pasta al ragù, cotoletta, pizza diavola…) end with "· stima" and open on a standard portion "½ piatto · 1 piatto (280 g) · 2 × piatto · 100 g". The chosen food gets a lime border and opens right below it: "PORZIONE RAPIDA" 2×2 grid, a "Grammi − 40 g +" stepper, a summary "● 148 kcal · Proteine 5,2 g · Carboidrati 24 g · Grassi 2,8 g", "Pasto" select, lime "Aggiungi a Colazione ›" and a link "Annulla o scegli un altro alimento".
+"Codice a barre" tab while scanning: the camera preview with rounded corners, a lime rectangular guide frame in the middle (the rest slightly darkened), a muted hint "Avvicina il codice dentro il riquadro · tocca per mettere a fuoco", ghost pills "Torcia" (lime when on) and "Annulla"; below, the field "oppure scrivi il codice (EAN)" with "Cerca". There is no "Applica un piano alimentare" select in the food log.
 ```
 
 ---
