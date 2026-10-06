@@ -203,12 +203,20 @@ Both screens start with a switch "Mese | Settimana | Giorno".
 ## Prompt 11 — Statistiche
 
 ```
-Screen: "Statistiche" (dark mode). Lime switch Settimana · Mese · Anno; a strip "‹ Ottobre 2026 🖨 ›".
-"Il periodo in sintesi" as a bento grid: a full-width lime tile "OSPEDALE E TURNI · 192 h di turno · 28 turni · 4 notti"; tiles CHIRURGIA "18 interventi · 31 procedure" with a lavender pill "17 procedure da primo (55%)", CLINICA "32 pazienti · 40 prestazioni", STUDIO "6 h di studio", PALESTRA "10 allenamenti · 12 h in palestra" (lime value); full-width rows "3 corse · 22,4 km (lime) · passo medio 5:28/km" and "1 gita o uscita".
-"Tempo e obiettivi": donut of hours (turni, studio, allenamento) and rings (promemoria completati, giorni nel target calorico, procedure da primo operatore).
-"Andamento" with a metric select and rounded bars.
-"Chirurgia" card with CSV export: a split box PRIMO OPERATORE 11 (61%) | ALTRI RUOLI 7 (39%); "Per area" as one rounded stacked bar with a legend; "Via d'accesso" as small tiles (Laparoscopico 12 · Laparotomico 4 · Vaginale 2); "Procedure più frequenti" and "Ruolo" as lime bars; a line "Complicanze: 1 su 18 pazienti (5,6%) · tempo operatorio 31 h". The CSV has one row per procedure with "Paziente N".
-Then cards Turni (per tipo, colleghi in turno), Attività clinica (donut per prestazione and bars per ruolo), Studio, Allenamento, Corsa (progressione del passo), Vita privata, Impegni e promemoria, Alimentazione (ripartizione delle calorie), Corpo (medie). Print sheet "Stampa / PDF" with checkboxes per section.
+Screen: "Statistiche" (dark mode). Lime switch Settimana · Mese · Anno; a strip "‹ Settembre 2026 🖨 ›"; a small grey hint "Tocca una sezione per ridurla o aprirla. Le frecce ▲▼ confrontano con il mese prima."
+Then one collapsible card per topic, in the order and with the small uppercase labels of the day page (LAVORO, FORMAZIONE, SPORT, SALUTE, AGENDA, TEMPO LIBERO), each with its pastel icon disc and a chevron; when closed, the card shows its key numbers in grey under the title (e.g. "Turni · 114 h · 18 turni", "Attività chirurgica · 24 interventi · 63% da primo").
+Every open card starts with 2–4 number tiles (uppercase label, big number, unit in grey, a small ▲/▼ change against the previous period: green when better, coral when worse, grey when neither, e.g. hours on shift), then only the charts that answer a question:
+- LAVORO · Turni: ORE 114 h ▼24 h · TURNI 18 · NOTTI 1; thin rounded columns "Ore di turno, giorno per giorno" (month by month in the year view); bar lists "Per tipo di turno" and "Colleghi con cui hai lavorato di più".
+- LAVORO · Attività chirurgica (CSV button in the header): INTERVENTI 24 (24 procedure) · DA PRIMO OPERATORE 63% ▲21 pt (15 proc., 7 senza tutor) · TEMPO OPERATORIO 29,3 h · COMPLICANZE 2 (8,3% dei pazienti); columns "Interventi"; "Ruolo nelle procedure" as one stacked bar in a single hue from dark (Primo operatore) to light (Osservatore) with a legend with numbers and %; in the year view a line "Autonomia: procedure da primo operatore, mese per mese"; bar lists Per area, Procedure più frequenti, Via d'accesso, Regime. The CSV has one row per procedure with "Paziente N".
+- LAVORO · Attività clinica: PAZIENTI · PRESTAZIONI; columns "Pazienti"; "Ruolo" stacked bar (Autonomia → Supervisione → Osservazione); bar list "Per prestazione".
+- FORMAZIONE · Studio, corsi e congressi: STUDIO h · CORSI E CONGRESSI (1 congresso) · CREDITI ECM; columns of study hours; bar lists per area and per tipo (hours).
+- SPORT · Palestra: ALLENAMENTI · TEMPO · VOLUME 10,5 t (27 serie); columns "Volume sollevato"; bar lists "Serie per muscolo" and "Esercizi con più volume".
+- SPORT · Corsa: DISTANZA km · CORSE · PASSO MEDIO 5:42/km ▼15 s (green); columns "Chilometri"; line "Passo di ogni corsa" (faster drawn higher) with "▲ In miglioramento / ▼ Più lento: da 5:34 a 5:37"; a grey box "Record del periodo" (corsa più lunga, miglior passo, km più veloce, velocità massima, only when known); "Tipo di corsa" stacked bar.
+- SALUTE · Alimentazione: KCAL MEDIE 2.020 (obiettivo 2.000) · PROTEINE MEDIE 104 g · GIORNI REGISTRATI 15; "Obiettivi rispettati" as thin meters "Calorie entro ±10% 15 su 15", "Proteine raggiunte 8 su 15"; "Da dove vengono le calorie" as a 3-colour stacked bar (carboidrati violet, proteine coral, grassi teal) with kcal and %.
+- SALUTE · Corpo: PESO MEDIO 61,5 kg (obiettivo 60 kg) · PASSI AL GIORNO · SONNO MEDIO; line "Andamento del peso" (never zoomed below a 2 kg range).
+- AGENDA · Impegni e promemoria: IMPEGNI · PROMEMORIA FATTI 77% (23 su 30); bar lists per categoria.
+- TEMPO LIBERO · Gite, uscite e ricordi: USCITE E GITE · FOTO NEL DIARIO (· UMORE MEDIO when recorded); bar list per tipo.
+Chart rules: no pies or donuts; columns and bars thin with 4px rounded ends, solid hairline gridlines, one colour (lime on dark, violet on light) unless a legend is needed; tap a column or point for a tooltip; "Vedi come tabella" under each time chart. Two columns of cards on desktop. Print sheet "Stampa / PDF" with checkboxes per section (Lavoro, Formazione, Sport, Salute, Impegni, Tempo libero).
 ```
 
 ---

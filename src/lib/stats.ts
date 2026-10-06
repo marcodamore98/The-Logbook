@@ -4,7 +4,7 @@ import { dayFoodTotals, dayIntake } from './nutrition/foods';
 import { countsSet, setsPerMuscle, setVolume } from './training/analytics';
 import { exerciseDef } from './training/exercises';
 import type { DayEntry, ISODate, Settings } from './types';
-import { clinicalCases, surgeryCases, surgeryTotals } from './worklog';
+import { clinicalCases, clinicalTotals, surgeryCases, surgeryTotals } from './worklog';
 import {
   APPROACHES,
   CLAVIEN,
@@ -30,9 +30,11 @@ export interface Count {
 export interface Stats {
   days: number;
   work: { shifts: number; hours: number; nights: number; byType: Count[]; colleagues: Count[] };
-  surgery: { total: number; patients: number; byGroup: Count[]; byProcedure: Count[]; byRole: Count[]; byApproach: Count[]; bySetting: Count[]; complications: number; minutes: number };
+  surgery: { total: number; patients: number; byGroup: Count[]; byProcedure: Count[]; byRole: Count[]; byApproach: Count[]; bySetting: Count[]; complications: number; minutes: number; firstOp: number; firstSolo: number };
   clinical: { total: number; patients: number; byActivity: Count[]; byRole: Count[] };
   study: { minutes: number; byArea: Count[]; byType: Count[] };
+  /** Courses, congresses and webinars starting in the period (each counted once). */
+  courses: { course: number; congress: number; webinar: number; ecm: number };
   workout: { sessions: number; minutes: number; volumeKg: number; km: number; sets: number; byType: Count[]; byExercise: Count[] };
   outings: { total: number; byType: Count[] };
   run: {
@@ -52,7 +54,7 @@ export interface Stats {
   mood?: number;
   categories: { appointments: Count[]; todos: Count[]; todosDone: number; todosTotal: number };
   muscles: Count[];
-  body: { weight?: number; kcalIn?: number; steps?: number; sleepH?: number };
+  body: { weight?: number; kcalIn?: number; steps?: number; sleepH?: number; weights: { date: ISODate; kg: number }[] };
   nutrition: { days: number; kcal?: number; protein?: number; carbs?: number; fat?: number; daysOnKcal: number; daysOnProtein: number };
 }
 
@@ -75,20 +77,22 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   const s: Stats = {
     days: days.length,
     work: { shifts: 0, hours: 0, nights: 0, byType: [], colleagues: [] },
-    surgery: { total: 0, patients: 0, byGroup: [], byProcedure: [], byRole: [], byApproach: [], bySetting: [], complications: 0, minutes: 0 },
+    surgery: { total: 0, patients: 0, byGroup: [], byProcedure: [], byRole: [], byApproach: [], bySetting: [], complications: 0, minutes: 0, firstOp: 0, firstSolo: 0 },
     clinical: { total: 0, patients: 0, byActivity: [], byRole: [] },
     study: { minutes: 0, byArea: [], byType: [] },
+    courses: { course: 0, congress: 0, webinar: 0, ecm: 0 },
     workout: { sessions: 0, minutes: 0, volumeKg: 0, km: 0, sets: 0, byType: [], byExercise: [] },
     outings: { total: 0, byType: [] },
     run: { sessions: 0, km: 0, minutes: 0, byMode: [], longestKm: 0, runs: [] },
     photos: 0,
     categories: { appointments: [], todos: [], todosDone: 0, todosTotal: 0 },
     muscles: [],
-    body: {},
+    body: { weights: [] },
     nutrition: { days: 0, daysOnKcal: 0, daysOnProtein: 0 },
   };
   let moodSum = 0, moodN = 0, workM = 0, workS = 0;
   const apCat = new Tally(), tdCat = new Tally();
+  const seenCourses = new Set<string>();
   const nutri: Record<'protein' | 'carbs' | 'fat', number[]> = { protein: [], carbs: [], fat: [] };
   const bodyVals: Record<'weight' | 'kcalIn' | 'steps' | 'sleepH', number[]> = { weight: [], kcalIn: [], steps: [], sleepH: [] };
 
@@ -114,7 +118,10 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
       s.categories.todosTotal++;
       if (t.done) s.categories.todosDone++;
     }
-    if (d.body?.weightKg) bodyVals.weight.push(d.body.weightKg);
+    if (d.body?.weightKg) {
+      bodyVals.weight.push(d.body.weightKg);
+      s.body.weights.push({ date: d.date, kg: d.body.weightKg });
+    }
     const intake = dayIntake(d);
     if (intake.kcal) {
       bodyVals.kcalIn.push(intake.kcal);
@@ -149,6 +156,8 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
               sProc.add(p.procedureId);
               sRole.add(p.role);
               sAppr.add(p.approach);
+              if (p.role === 'first' || p.role === 'first-tutored') s.surgery.firstOp++;
+              if (p.role === 'first') s.surgery.firstSolo++;
             }
           }
           const t = surgeryTotals([m]);
@@ -168,6 +177,12 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
               if (it.role) clinRole.add(it.role, n);
             }
           }
+          break;
+        case 'course':
+          if (seenCourses.has(m.id)) break;
+          seenCourses.add(m.id);
+          s.courses[m.type ?? 'course']++;
+          s.courses.ecm += m.ecm ?? 0;
           break;
         case 'study':
           s.study.minutes += m.durationMin;
@@ -248,18 +263,20 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   s.muscles = [...setsPerMuscle(days, settings.exercises ?? []).entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
   const mean = (v: number[]) => (v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : undefined);
   s.nutrition = { ...s.nutrition, kcal: mean(bodyVals.kcalIn), protein: mean(nutri.protein), carbs: mean(nutri.carbs), fat: mean(nutri.fat) };
-  s.body = { weight: mean(bodyVals.weight), kcalIn: mean(bodyVals.kcalIn), steps: mean(bodyVals.steps), sleepH: mean(bodyVals.sleepH) };
+  s.body = { weight: mean(bodyVals.weight), kcalIn: mean(bodyVals.kcalIn), steps: mean(bodyVals.steps), sleepH: mean(bodyVals.sleepH), weights: s.body.weights.sort((a, b) => a.date.localeCompare(b.date)) };
   s.mood = moodN ? Math.round((moodSum / moodN) * 10) / 10 : undefined;
   return s;
 }
 
-export type Metric = 'surgery' | 'hours' | 'study' | 'workout' | 'run' | 'volume' | 'kcal';
+export type Metric = 'surgery' | 'clinical' | 'hours' | 'study' | 'workout' | 'run' | 'volume' | 'kcal';
 
 export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Settings): number {
   if (!day) return 0;
   switch (metric) {
     case 'surgery':
       return surgeryTotals(day.modules).patients;
+    case 'clinical':
+      return clinicalTotals(day.modules).patients;
     case 'hours': {
       return [day.shift, day.guardia].reduce((n, sh) => {
         if (!sh) return n;

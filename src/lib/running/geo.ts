@@ -114,6 +114,10 @@ export function recentPace(track: TrackPoint[], now: number, window = 25): numbe
   return d > 15 && dt > 8 ? dt / (d / 1000) : null;
 }
 
-export const fmtPaceSec = (secPerKm: number | null | undefined) => (secPerKm && Number.isFinite(secPerKm) ? `${Math.floor(secPerKm / 60)}:${String(Math.round(secPerKm % 60)).padStart(2, '0')}` : '–');
+export const fmtPaceSec = (secPerKm: number | null | undefined) => {
+  if (!secPerKm || !Number.isFinite(secPerKm)) return '–';
+  const s = Math.round(secPerKm); // round first, or 5:59.7 would read "5:60"
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
 
 export const kmh = (distanceM: number, sec: number) => (sec > 0 ? (distanceM / sec) * 3.6 : 0);
