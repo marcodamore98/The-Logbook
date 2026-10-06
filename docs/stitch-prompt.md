@@ -1,6 +1,6 @@
 # Prompt per Google Stitch — The Logbook
 
-*Aggiornato al 5 ottobre 2026 (pagina "Aggiungi alimenti" in stile Lifesum, gruppi di procedure salvati; scanner del codice a barre con messa a fuoco e riquadro, tolto "Applica un piano alimentare"; webinar di un giorno con link per collegarsi, luogo aperto in Maps, programma in PDF o foto, eventi "Webinar:/Corso:/Congresso:" importati da Google Calendar; attività chirurgica e clinica per pazienti, con più procedure e ruoli; banner lime più piccoli e discreti), dopo il restyling Stitch portato nell'app principale. Questo file viene aggiornato a ogni modifica dell'app (vedi `CLAUDE.md`).*
+*Aggiornato al 6 ottobre 2026 (pagina del giorno da Stitch: intestazione compatta, riquadri su una riga, riepiloghi in pillola, snackbar a pillola; pagina "Aggiungi alimenti" in stile Lifesum, gruppi di procedure salvati; scanner del codice a barre con messa a fuoco e riquadro, tolto "Applica un piano alimentare"; webinar di un giorno con link per collegarsi, luogo aperto in Maps, programma in PDF o foto, eventi "Webinar:/Corso:/Congresso:" importati da Google Calendar; attività chirurgica e clinica per pazienti, con più procedure e ruoli; banner lime più piccoli e discreti), dopo il restyling Stitch portato nell'app principale. Questo file viene aggiornato a ogni modifica dell'app (vedi `CLAUDE.md`).*
 
 **Stato delle schermate**
 
@@ -64,21 +64,21 @@ Reordering rule for every list that has an order (day cards, exercises, sets, ru
 
 ```
 Screen: the day page for Sunday 4 October 2026 (dark mode).
-Header on two rows: round prev chevron, bold "Domenica 4 ottobre" with a lime "OGGI" badge, round next chevron; below, a muted line "Turno 08:00–14:00 · Guardia 20:00–08:00 · Settimana 40" and two round icon buttons (reorder sections, print).
+Header inside one rounded card on two rows: small prev chevron, bold centred "Domenica 4 ottobre" with a lime "OGGI" badge, small next chevron; a thin divider, then one muted line "Turno 08:00–14:00 · Guardia 20:00–08:00 · Settimana 40" (ellipsis if long) with two small borderless icon buttons on its right (reorder sections, print).
 Under the header a row of pills: "SONNO 7,3 h" (lavender value), "ACQUA 1,5 L" (blue value), "PASSI 8.200" — tapping opens the "Riepilogo del giorno" panel.
 
 Cards in this order:
 1. LAVORO "Turno" (only if there is a shift that day): "TIPO TURNO" as a pill with the shift colour dot ("● Reparto ▾"); two time tiles "DALLE 08:00" and "ALLE 14:00" (label inside, big bold time); "IN TURNO CON" with name pills "Sgro ×" and a dashed lime pill "+ Aggiungi collega"; a note line with an icon "Aggiungi una nota al turno…"; inside, a collapsed sub-card "Tabellone · 4 attività".
 2. LAVORO "Guardia medica": only two time tiles DALLE / ALLE and a trash icon.
-3. Tiles above the surgery/clinical cards: "INTERVENTI 2" (patients operated, lime), "PROCEDURE 5", "PAZIENTI IN CLINICA 6", "TEMPO OPERATORIO 3h 40m", "COMPLICANZE 0".
-4. LAVORO "Attività chirurgica" card (collapsed, summary "2 pazienti · 5 procedure") and LAVORO "Attività clinica" (collapsed, summary "6 pazienti · 8 prestazioni").
+3. Tiles above the surgery/clinical cards, on one line that scrolls sideways: "INTERVENTI 2" (patients operated, lime), "PROCEDURE 5", "PAZIENTI IN CLINICA 6", "TEMPO OPERATORIO 3h 40m", "COMPLICANZE 0".
+4. LAVORO "Attività chirurgica" card (collapsed: the summary "2 pazienti · 5 procedure" sits in a small rounded pill under the title — every closed card shows its summary this way, keeping the pastel icon disc) and LAVORO "Attività clinica" (collapsed, summary "6 pazienti · 8 prestazioni").
 5. AGENDA "Impegni" ("14:30 Journal club") and AGENDA "Da ricordare" ("2 da fare · Firmare lettere") side by side, compact, each with a round "+". Inside "Da ricordare" a segmented switch "Promemoria | Spesa · 3": Spesa is a plain shopping checklist (one list shared by every day) — rows with a square checkbox and the item name only, thin dividers, ticked rows struck through and moved down, a last row with a dashed "+" box and placeholder "Aggiungi…", and a quiet underlined link "Togli gli spuntati (1)".
 6. SPORT "Allenamento": a summary block "Push" with an amber banner "👑 Nuovo record · Panca piana 82,5 kg × 6" and three tiles CARICO SOLLEVATO 975 kg (lime) · DURATA 1h 02m · ORARIO 07:00–08:02; a run block with tiles DISTANZA 5,20 km · DURATA 21:40 · PASSO 4:10/km; a "QUESTA SETTIMANA · 2 h 53 min" mini bar chart L–D with the current day ringed in lime. If nothing is logged: two slim lime pills side by side "Inizia allenamento ›" | "Inizia corsa ›".
 7. SALUTE "Alimentazione" — a normal collapsible card with drag handle and round chevron like the others; collapsed summary "1.850 / 2.300 kcal · proteine 120 / 175 g"; open: "Calorie 1.850 / 2.300 kcal" with a lime progress bar, "Proteine 120 / 175 g" with a thin lavender bar, lime banner "Apri il diario alimentare ›".
 8. FORMAZIONE "Corsi e congressi" (collapsed) showing a box: "● Congresso SIGO" with a date pill "4 OTT – 7 OTT" and chips "📍 Lingotto, Torino" (opens Maps), "📎 Programma", "👑 Attestato"; a webinar shows the chip "Collegati al webinar ›" instead of the place.
 9. PERSONALE "Diario": italic muted "Nessuna pagina scritta per questo giorno." and a ghost "✎ Scrivi" pill on the same row.
 At the bottom a dashed full-width pill "+ Aggiungi scheda" (lime text in dark mode).
-Also show the snackbar state: "● Guardia medica eliminata   ANNULLA".
+Also show the snackbar state: a fully rounded pill "● Guardia medica eliminata   ANNULLA" (red dot, lime ANNULLA).
 Workout and run summaries in the day page: tapping one opens the workout (or Corsa) directly; a small "⋮" in its top-right corner opens a sheet with only "Elimina" (coral) and "Annulla".
 ```
 

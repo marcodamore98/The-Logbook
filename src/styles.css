@@ -2436,3 +2436,27 @@ a.btn.link-open, a.btn-ghost.link-open { display: inline-flex; padding-block: 0;
 .fs-body .barcode { padding-top: 0.2rem; }
 .fs-search .icon-input { background: var(--surface); border: 1px solid var(--line); }
 .food-cards .q-inline { background: none; padding: 0; margin-top: -0.2rem; }
+
+/* Day page (Stitch, Prompt 1): compact header card on the phone */
+@media (max-width: 899px) {
+  .day-page .page-head { grid-template-columns: auto minmax(0, 1fr) auto auto auto; grid-template-areas: 'prev title title title next' 'sub sub sub reorder print'; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 0.55rem 0.6rem 0.4rem; row-gap: 0.35rem; column-gap: 0.25rem; }
+  .day-page .page-head::before { content: ''; grid-column: 1 / -1; grid-row: 2; align-self: start; border-top: 1px solid var(--line); margin-top: -0.15rem; }
+  .day-title h1 { justify-self: center; }
+  .day-title .page-sub { align-self: center; padding-left: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; min-width: 0; }
+  .day-page .page-head > button[aria-label='Ordina le sezioni'], .day-page .page-head > button[aria-label='Stampa o salva in PDF'] { width: 32px; height: 32px; min-width: 32px; border: none; background: none; color: var(--muted); }
+  .day-page .page-head > button[aria-label='Ordina le sezioni'] svg, .day-page .page-head > button[aria-label='Stampa o salva in PDF'] svg { width: 17px; height: 17px; }
+}
+
+/* Work numbers on one line that scrolls sideways */
+.stat-tiles.work-tiles-row { display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; margin-inline: -0.1rem; padding-inline: 0.1rem; }
+.stat-tiles.work-tiles-row::-webkit-scrollbar { display: none; }
+.stat-tiles.work-tiles-row .stat-tile { flex: none; min-width: 7.6rem; scroll-snap-align: start; }
+.stat-tiles.work-tiles-row .stat-label { white-space: nowrap; }
+
+/* Closed cards: the summary as a pill */
+.blk:not([data-block='agenda']):not([data-block='todos']) > .card.collapsed .card-summary,
+.blk:not([data-block='agenda']):not([data-block='todos']) > .modules > .card.collapsed .card-summary { align-self: flex-start; max-width: 100%; margin-top: 0.3rem; padding: 0.18rem 0.65rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); font-size: 0.78rem; font-weight: 600; }
+
+/* Snackbar as a pill */
+.snackbar { border-radius: 999px; padding: 0.55rem 0.6rem 0.55rem 1.1rem; }
+.snackbar .snack-dot { width: 9px; height: 9px; background: #f87171; }

@@ -697,7 +697,7 @@ function WorkTiles({ day }: { day: DayEntry }) {
   if (minutes) tiles.push(['Tempo operatorio', minutes >= 60 ? `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m` : `${minutes}m`]);
   if (s.patients) tiles.push(['Complicanze', String(s.complications)]);
   return (
-    <div className="stat-tiles">
+    <div className="stat-tiles work-tiles-row scroll-x">
       {tiles.map(([label, value, hi]) => (
         <div key={label} className="stat-tile">
           <span className="stat-label">{label}</span>
