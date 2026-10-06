@@ -16,7 +16,7 @@ Restiamo una web app (PWA): niente APK/app native finché l'utente non lo chiede
 
 `docs/stitch-prompt.md` descrive l'app com'è. **A ogni modifica dell'interfaccia o delle funzionalità aggiorna nello stesso commit il prompt della schermata coinvolta** (e la tabella "Stato delle schermate"), poi **avvisa l'utente** nella risposta con una riga del tipo: "Ho aggiornato il prompt di Stitch: Prompt N (…)".
 
-In sospeso: il **Prompt 12** (Menù, pannello "Riepilogo del giorno", Impostazioni) non è ancora stato generato dall'utente; quando arriva il suo HTML, applicalo come gli altri.
+Tutti i prompt (0–13) sono stati applicati; quando arriva un nuovo HTML di Stitch, confrontalo con l'app e chiedi all'utente quali differenze portare.
 
 ## Design
 

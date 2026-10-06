@@ -12,18 +12,46 @@ import { BUILD_TIME, checkForUpdate } from '../lib/update';
 import type { Colleague, DayEntry, Settings, ShiftType } from '../lib/types';
 
 /** Sub-list with its own arrow, closed by default (remembered on this device). */
-function Group({ id, title, count, children }: { id: string; title: string; count: number; children: React.ReactNode }) {
+const GROUP_DOTS = ['var(--lime)', 'var(--lavender)', 'var(--terra)', 'var(--sky)', 'var(--sage)', 'var(--plum)'];
+
+function Group({ id, title, count, preview, unit = '', index = 0, children }: { id: string; title: string; count: number; preview?: string; unit?: string; index?: number; children: React.ReactNode }) {
   const [open, toggle] = useCollapsible(id, false);
   return (
-    <div className="group">
-      <button type="button" className="side-toggle group-toggle" onClick={toggle} aria-expanded={open}>
-        <h3 className="sub">
-          {title} <span className="muted">· {count}</span>
-        </h3>
+    <div className={`group set-group${open ? ' open' : ''}`}>
+      <button type="button" className="set-group-head" onClick={toggle} aria-expanded={open}>
+        <span className="sg-top">
+          <i style={{ background: GROUP_DOTS[index % GROUP_DOTS.length] }} aria-hidden="true" />
+          <strong>{title}</strong>
+          <span className="sg-count">
+            {count}
+            {unit ? ` ${unit}` : ''}
+          </span>
+        </span>
+        {!open && preview && <span className="sg-preview">{preview}</span>}
         <Chevron open={open} />
       </button>
-      {open && children}
+      {open && <div className="set-group-body">{children}</div>}
     </div>
+  );
+}
+
+/** A shift type as one line (colour dot, name, group, times); tap it to edit. */
+function ShiftTypeRow({ t, children }: { t: ShiftType; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <li className={`st-row${open ? ' open' : ''}`}>
+      <button type="button" className="st-line" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <i style={{ background: t.color }} aria-hidden="true" />
+        <span className="st-name">
+          <strong>{t.name || 'Senza nome'}</strong>
+          <small>{t.countsAsWork ? 'conta come lavoro' : 'non conta come lavoro'}</small>
+        </span>
+        <span className="st-time">
+          {t.start === t.end && t.start === '00:00' ? 'Tutto il giorno' : `${t.start} – ${t.end}`}
+        </span>
+      </button>
+      {open && <div className="st-edit">{children}</div>}
+    </li>
   );
 }
 
@@ -88,11 +116,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
         </div>
       </header>
 
-      <section className="card">
-        <div className="card-head">
-          <IconSettings />
-          <h2>Account e dati</h2>
-        </div>
+      <Card id="settings.account" className="set-card" icon={<IconSettings />} title="Account e dati" sub={firebaseConfigured ? 'Sincronizzazione cloud · backup' : 'Solo su questo dispositivo · backup'}>
         {firebaseConfigured ? (
           <p>
             Sincronizzazione cloud attiva{userEmail ? ` come ${userEmail}` : ''}. I dati restano disponibili offline e si sincronizzano appena torni online.{' '}
@@ -115,14 +139,19 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           <input ref={file} type="file" accept="application/json" hidden onChange={(e) => importJson(e.target.files?.[0])} />
         </div>
         {msg && !msg.startsWith('Turni importati') && <p className="muted small">{msg}</p>}
-      </section>
+      </Card>
 
-      <section className="card">
-        <div className="card-head">
-          <IconSync />
-          <h2>Google Calendar</h2>
-          {gcal.connected && <span className="badge badge-sync">collegato</span>}
-        </div>
+      <Card
+        id="settings.gcal"
+        className="set-card"
+        icon={<IconSync />}
+        title="Google Calendar"
+        sub={
+          <span className={`set-status${gcal.connected ? ' on' : ''}`}>
+            <i aria-hidden="true" /> {gcal.connected ? 'Collegato e sincronizzato' : 'Non collegato'}
+          </span>
+        }
+      >
         {!gcal.configured ? (
           <p className="muted">Manca VITE_GOOGLE_CLIENT_ID: segui la sezione “Google Calendar” del README.</p>
         ) : !gcal.connected ? (
@@ -187,13 +216,14 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           </div>
         )}
         {gcal.error && <p className="error small">{gcal.error}</p>}
-      </section>
+      </Card>
 
       <Card
         id="settings.roster"
         icon={<IconShift />}
+        className="set-card"
         title="Tabellone di reparto"
-        summary={`${myDays} tuoi turni da importare`}
+        sub={`${myDays} tuoi turni da importare`}
         defaultOpen={false}
       >
         <p>
@@ -223,8 +253,9 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
       <Card
         id="settings.colleagues"
         icon={<IconPeople />}
+        className="set-card"
         title="Colleghi"
-        summary={`${settings.colleagues.length} colleghi`}
+        sub={`${settings.colleagues.length} colleghi · per ruolo`}
         defaultOpen={false}
         actions={
           <button className="icon-btn" aria-label="Aggiungi collega" onClick={() => save({ colleagues: [...settings.colleagues, { id: uid(), name: '' }] })}>
@@ -233,10 +264,12 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
         }
       >
         {settings.colleagues.length === 0 && <Empty>Nessun collega. Aggiungili uno per uno o incolla un elenco qui sotto.</Empty>}
-        {[...new Set(settings.colleagues.map((c) => c.role || 'Altri'))].map((role) => {
+        {[...new Set(settings.colleagues.map((c) => c.role || 'Altri'))].map((role, gi) => {
           const list = settings.colleagues.filter((c) => (c.role || 'Altri') === role);
+          const names = list.map((c) => c.name).filter(Boolean);
+          const preview = names.slice(0, 3).join(', ') + (names.length > 3 ? ` +${names.length - 3}` : '');
           return (
-            <Group key={role} id={`settings.colleagues.${role}`} title={role} count={list.length}>
+            <Group key={role} id={`settings.colleagues.${role}`} title={role} count={list.length} unit={list.length === 1 ? 'collega' : 'colleghi'} preview={preview} index={gi}>
               <ul className="list-edit">
                 {list.map((c) => (
                   <li key={c.id}>
@@ -262,8 +295,9 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
       <Card
         id="settings.shifttypes"
         icon={<IconShift />}
+        className="set-card"
         title="Tipi di turno"
-        summary={`${settings.shiftTypes.length} tipi`}
+        sub={`${settings.shiftTypes.length} tipi · colori e orari`}
         defaultOpen={false}
         actions={
           <button
@@ -276,13 +310,13 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
         }
       >
         <p className="muted small">I tipi del gruppo “Guardia medica” compaiono nella sezione Guardia medica del giorno, gli altri nel turno principale.</p>
-        {[...new Set(settings.shiftTypes.map((t) => t.group ?? 'Altri turni'))].map((group) => {
+        {[...new Set(settings.shiftTypes.map((t) => t.group ?? 'Altri turni'))].map((group, gi) => {
           const list = settings.shiftTypes.filter((t) => (t.group ?? 'Altri turni') === group);
           return (
-            <Group key={group} id={`settings.shifttypes.${group}`} title={group} count={list.length}>
+            <Group key={group} id={`settings.shifttypes.${group}`} title={group} count={list.length} unit={list.length === 1 ? 'tipo' : 'tipi'} preview={list.slice(0, 3).map((t) => t.name).join(', ')} index={gi + 1}>
               <ul className="list-edit shift-types">
                 {list.map((t) => (
-                  <li key={t.id}>
+                  <ShiftTypeRow key={t.id} t={t}>
                     <input type="color" value={t.color} aria-label="Colore" onChange={(e) => setShiftType({ ...t, color: e.target.value })} />
                     <input className="grow" value={t.name} onChange={(e) => setShiftType({ ...t, name: e.target.value })} />
                     <TimeField label={`${t.name}: inizio`} className="compact" value={t.start} onChange={(v) => v && setShiftType({ ...t, start: v })} />
@@ -298,7 +332,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
                     <button className="icon-btn small" aria-label="Elimina tipo di turno" onClick={() => save({ shiftTypes: settings.shiftTypes.filter((x) => x.id !== t.id) })}>
                       <GlyphTrash />
                     </button>
-                  </li>
+                  </ShiftTypeRow>
                 ))}
               </ul>
             </Group>

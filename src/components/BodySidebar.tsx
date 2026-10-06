@@ -3,10 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import { addDays, formatLong, fromISO, shiftMinutes, today } from '../lib/dates';
 import { useStore } from '../lib/store/StoreContext';
 import { dayIntake } from '../lib/nutrition/foods';
-import { workingSets, workoutVolume } from '../lib/training/analytics';
+import { workoutVolume } from '../lib/training/analytics';
 import type { BodyGoals, BodyLog, DayEntry, ISODate } from '../lib/types';
 import { fmt } from './charts';
-import { GlyphClose, IconBolt, IconFlame, IconFood, IconScale, IconShift, IconSleep, IconSteps, IconTarget, IconWater, IconWorkout } from './icons';
+import { GlyphClose, IconScale, IconShift, IconSleep, IconSteps, IconSurgery, IconTarget, IconWater, IconWorkout } from './icons';
 import { NumberInput, useCollapsible, Chevron } from './ui';
 import { BodyFatCalc } from './BodyFatCalc';
 import { clinicalTotals, surgeryTotals } from '../lib/worklog';
@@ -21,11 +21,6 @@ const FIELDS: FieldDef[] = [
   { key: 'waterL', label: 'Acqua', unit: 'L', step: 0.25, goal: 'waterL', Icon: IconWater },
 ];
 
-const NUTRITION: FieldDef[] = [
-  { key: 'kcalIn', label: 'Calorie assunte', unit: 'kcal', step: 50, goal: 'kcalIn', Icon: IconFood },
-  { key: 'kcalOut', label: 'Calorie attive', unit: 'kcal', step: 50, Icon: IconFlame },
-  { key: 'proteinG', label: 'Proteine', unit: 'g', step: 5, goal: 'proteinG', Icon: IconBolt },
-];
 
 function focusDate(pathname: string): ISODate {
   const m = pathname.match(/\/giorno\/(\d{4}-\d{2}-\d{2})/);
@@ -37,27 +32,46 @@ function avg(nums: (number | undefined)[]): number | undefined {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined;
 }
 
-/** Weight over the last 30 days: a single 2px line with markers and a hover readout. */
-function WeightSpark({ points }: { points: { date: ISODate; kg: number }[] }) {
+/** Weight over the last 30 days: lime line with a soft area, 7-day average dashed, tap/hover readout. */
+function WeightChart({ points, goal }: { points: { date: ISODate; kg: number }[]; goal?: number }) {
   const [hover, setHover] = useState<number | null>(null);
   if (points.length < 2) return <p className="muted small">Inserisci il peso per qualche giorno per vedere l'andamento.</p>;
-  const W = 260, H = 70, P = 6;
-  const min = Math.min(...points.map((p) => p.kg)) - 0.3;
-  const max = Math.max(...points.map((p) => p.kg)) + 0.3;
+  const W = 300, H = 110, P = 8;
+  const kgs = points.map((p) => p.kg);
+  const lo = Math.min(...kgs);
+  const hi = Math.max(...kgs);
+  const min = lo - 0.4;
+  const max = hi + 0.4;
   const t0 = fromISO(points[0].date).getTime();
   const t1 = fromISO(points.at(-1)!.date).getTime() || t0 + 1;
   const x = (d: ISODate) => P + ((fromISO(d).getTime() - t0) / Math.max(1, t1 - t0)) * (W - 2 * P);
   const y = (kg: number) => P + (1 - (kg - min) / (max - min)) * (H - 2 * P);
-  const path = points.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.kg).toFixed(1)}`).join(' ');
+  const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.kg).toFixed(1)}`).join(' ');
+  const area = `${line} L${x(points.at(-1)!.date).toFixed(1)},${H} L${x(points[0].date).toFixed(1)},${H} Z`;
+  // 7-day moving average: mean of the weights in the 7 days up to each point.
+  const ma = points.map((p) => {
+    const from = addDays(p.date, -6);
+    const win = points.filter((q) => q.date >= from && q.date <= p.date).map((q) => q.kg);
+    return { date: p.date, kg: win.reduce((a, b) => a + b, 0) / win.length };
+  });
+  const maPath = ma.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.kg).toFixed(1)}`).join(' ');
   const h = hover !== null ? points[hover] : points.at(-1)!;
+  const dm = (d: ISODate) => fromISO(d).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+  const mid = points[Math.floor(points.length / 2)];
   return (
-    <div className="spark">
+    <div className="wchart">
+      <div className="wchart-top">
+        <span>Max {fmt(hi, 1)} kg</span>
+        <span>Min {fmt(lo, 1)} kg</span>
+        {goal ? <span>Obiettivo {fmt(goal, 1)} kg</span> : null}
+      </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
         role="img"
         aria-label="Andamento del peso negli ultimi 30 giorni"
-        onMouseLeave={() => setHover(null)}
-        onMouseMove={(e) => {
+        onPointerLeave={() => setHover(null)}
+        onPointerMove={(e) => {
           const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
           const px = ((e.clientX - r.left) / r.width) * W;
           let best = 0;
@@ -65,25 +79,52 @@ function WeightSpark({ points }: { points: { date: ISODate; kg: number }[] }) {
           setHover(best);
         }}
       >
-        <path d={path} className="spark-line" />
+        <defs>
+          <linearGradient id="wfill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" className="wfill-a" />
+            <stop offset="100%" className="wfill-b" />
+          </linearGradient>
+        </defs>
+        {[0.2, 0.5, 0.8].map((f) => (
+          <line key={f} x1="0" x2={W} y1={H * f} y2={H * f} className="wgrid" />
+        ))}
+        <path d={area} fill="url(#wfill)" />
+        <path d={maPath} className="wma" />
+        <path d={line} className="wline" />
         {points.map((p, i) => (
-          <circle key={p.date} cx={x(p.date)} cy={y(p.kg)} r={hover === i ? 4 : 2.5} className="spark-dot" />
+          <circle key={p.date} cx={x(p.date)} cy={y(p.kg)} r={hover === i || (hover === null && i === points.length - 1) ? 4.5 : 2.2} className={`wdot${hover === i || (hover === null && i === points.length - 1) ? ' on' : ''}`} />
         ))}
       </svg>
-      <span className="spark-read">
-        {fromISO(h.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}: <strong>{fmt(h.kg, 1)} kg</strong>
-      </span>
+      <div className="wchart-x">
+        <span>{dm(points[0].date)}</span>
+        <span>{dm(mid.date)}</span>
+        <span className="wchart-now">
+          {hover === null && h.date === points.at(-1)!.date ? 'Ultimo' : dm(h.date)} ({fmt(h.kg, 1)})
+        </span>
+      </div>
+      <div className="wchart-legend">
+        <span><i className="l-line" /> peso</span>
+        <span><i className="l-ma" /> media 7 giorni</span>
+      </div>
     </div>
   );
 }
 
-function Meter({ value, goal, unit }: { value?: number; goal?: number; unit: string }) {
-  if (!goal) return null;
-  const pct = Math.min(100, ((value ?? 0) / goal) * 100);
+/** One body value as a tile: goal on top, big editable number, name below. */
+function BodyTile({ f, value, goal, onChange, children }: { f: FieldDef; value?: number; goal?: number; onChange: (v: number | undefined) => void; children?: React.ReactNode }) {
   return (
-    <span className="meter" title={`${fmt(value ?? 0)} / ${fmt(goal)} ${unit}`}>
-      <span className="meter-fill" style={{ width: `${pct}%` }} />
-    </span>
+    <label className={`btile btile-${f.key}`}>
+      <span className="btile-top">
+        <span className="btile-goal">{goal ? `Ob. ${fmt(goal, 1)}${f.unit ? ` ${f.unit}` : ''}` : ' '}</span>
+        <f.Icon size={22} />
+      </span>
+      <span className="btile-val">
+        <NumberInput value={value} step={f.step} placeholder="–" onChange={onChange} />
+        {f.unit && <small>{f.unit}</small>}
+      </span>
+      <span className="btile-label">{f.label}</span>
+      {children}
+    </label>
   );
 }
 
@@ -134,33 +175,6 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
   const intake = dayIntake(day);
   const balance = intake.kcal !== undefined && body.kcalOut !== undefined ? intake.kcal - body.kcalOut : undefined;
 
-  const input = (f: FieldDef) => (
-    <label key={f.key} className="side-field">
-      <span className="side-label">
-        <f.Icon size={24} />
-        {f.label}
-        {f.goal && goals[f.goal] ? <span className="muted"> / {fmt(goals[f.goal]!, 1)}</span> : null}
-      </span>
-      <span className="side-input">
-        <NumberInput value={body[f.key]} step={f.step} onChange={(v) => setBody({ [f.key]: v })} />
-        <span className="unit">{f.unit}</span>
-      </span>
-      {f.goal && f.key !== 'weightKg' && <Meter value={body[f.key]} goal={goals[f.goal]} unit={f.unit} />}
-      {f.key === 'bodyFatPct' && (
-        <button
-          type="button"
-          className="link-quiet small calc-link"
-          onClick={(e) => {
-            e.preventDefault();
-            setCalcOpen(true);
-          }}
-        >
-          Calcola
-        </button>
-      )}
-    </label>
-  );
-
   return (
     <aside className="sidebar" aria-label="Riepilogo del giorno">
       <div className="side-head">
@@ -178,37 +192,43 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      <section className="side-section">
+      <section className="side-section side-card">
         <h3 className="sub">In breve</h3>
-        <ul className="side-summary">
-          <li>
-            <IconShift size={22} />
-            <span>
+        <div className="brief-shift">
+          <IconShift size={30} />
+          <span>
+            <small>Turno</small>
+            <strong>
               {day.shift || day.guardia
                 ? [day.shift, day.guardia]
                     .filter((sh): sh is NonNullable<typeof sh> => !!sh)
-                    .map((sh) => `${settings.shiftTypes.find((t) => t.id === sh.shiftTypeId)?.name ?? 'Turno'} · ${sh.start}–${sh.end}`)
-                    .join(' + ')
+                    .map((sh) => `${settings.shiftTypes.find((t) => t.id === sh.shiftTypeId)?.name ?? 'Turno'} ${sh.start}–${sh.end}`)
+                    .join(' · ')
                 : 'Nessun turno'}
-            </span>
-            {hoursToday > 0 && <span className="muted">{fmt(hoursToday, 1)} h</span>}
-          </li>
-          {(surgeries > 0 || clinical > 0 || study > 0) && (
-            <li className="muted small">
-              {[surgeries && `${surgeries} interventi`, clinical && `${clinical} prestazioni`, study && `${study}′ di studio`].filter(Boolean).join(' · ')}
-            </li>
-          )}
-          <li>
-            <IconWorkout size={22} />
+            </strong>
+          </span>
+          {hoursToday > 0 && <em>{fmt(hoursToday, 1)} h</em>}
+        </div>
+        <div className="brief-tiles">
+          <div className="brief-tile">
+            <IconSurgery size={28} />
             <span>
-              {workouts.length
-                ? workouts
-                    .map((w) => (w.kind === 'workout' ? `${w.title ?? 'Allenamento'} · ${fmt(workoutVolume(w))} kg · ${workingSets(w)} serie` : ''))
-                    .join(' / ')
-                : 'Nessun allenamento'}
+              <small>Lavoro</small>
+              <strong>{[surgeries && `${surgeries} ${surgeries === 1 ? 'intervento' : 'interventi'}`, clinical && `${clinical} ${clinical === 1 ? 'prestazione' : 'prestazioni'}`, study && `${study}′ studio`].filter(Boolean).join(' · ') || 'Niente registrato'}</strong>
             </span>
-          </li>
-        </ul>
+          </div>
+          <div className="brief-tile">
+            <IconWorkout size={28} />
+            <span>
+              <small>Allenamento</small>
+              <strong>
+                {workouts.length
+                  ? workouts.map((w) => (w.kind === 'workout' ? `${w.title ?? 'Allenamento'} · ${fmt(workoutVolume(w))} kg` : '')).join(' / ')
+                  : 'Nessuno'}
+              </strong>
+            </span>
+          </div>
+        </div>
         {!loc.pathname.startsWith('/giorno') && (
           <Link className="link-quiet small" to={`/giorno/${date}`}>
             apri la giornata
@@ -218,16 +238,49 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
 
       <section className="side-section side-card">
         <h3 className="sub">Corpo</h3>
-        <div className="side-grid">{FIELDS.map(input)}</div>
-        <div className="side-water">
-          <span className="sw-glasses" aria-hidden="true">
-            {Array.from({ length: 8 }, (_, i) => (
-              <i key={i} className={i < Math.round((body.waterL ?? 0) / 0.25) ? 'full' : ''} />
-            ))}
-          </span>
-          <button type="button" onClick={() => setBody({ waterL: Math.round(((body.waterL ?? 0) + 0.25) * 100) / 100 })}>
-            + 250 ml
-          </button>
+        <div className="btiles">
+          {FIELDS.filter((f) => f.key !== 'waterL').map((f) => (
+            <BodyTile key={f.key} f={f} value={body[f.key]} goal={f.goal ? goals[f.goal] : undefined} onChange={(v) => setBody({ [f.key]: v })}>
+              {f.key === 'bodyFatPct' && (
+                <button
+                  type="button"
+                  className="btile-calc"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCalcOpen(true);
+                  }}
+                >
+                  Calcola →
+                </button>
+              )}
+            </BodyTile>
+          ))}
+        </div>
+        <div className="water-box">
+          <div className="water-head">
+            <IconWater size={24} />
+            <strong>Acqua</strong>
+            {goals.waterL ? <span className="muted small">/ {fmt(goals.waterL, 1)} L</span> : null}
+            <span className="water-val">
+              <NumberInput value={body.waterL} step={0.25} placeholder="0" onChange={(v) => setBody({ waterL: v })} />
+              <small>L</small>
+            </span>
+          </div>
+          {goals.waterL ? (
+            <span className="water-bar">
+              <span style={{ width: `${Math.min(100, ((body.waterL ?? 0) / goals.waterL) * 100)}%` }} />
+            </span>
+          ) : null}
+          <div className="side-water">
+            <span className="sw-glasses" aria-hidden="true">
+              {Array.from({ length: Math.max(8, Math.ceil((goals.waterL ?? 2) / 0.25)) }, (_, i) => (
+                <i key={i} className={i < Math.round((body.waterL ?? 0) / 0.25) ? 'full' : ''} />
+              ))}
+            </span>
+            <button type="button" onClick={() => setBody({ waterL: Math.round(((body.waterL ?? 0) + 0.25) * 100) / 100 })}>
+              + 250 ml
+            </button>
+          </div>
         </div>
         {calcOpen && <BodyFatCalc last={lastMeasures} onUse={setBody} onClose={() => setCalcOpen(false)} />}
       </section>
@@ -235,33 +288,43 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
       <section className="side-section side-card">
         <h3 className="sub">Bilancio energetico</h3>
         <KcalRing eaten={intake.kcal ?? 0} goal={goals.kcalIn} burned={body.kcalOut} />
-        {intake.fromLog ? (
-          <>
-            <div className="side-grid">
-              <div className="side-field">
-                <span className="side-label">Assunte (diario)</span>
-                <strong>{fmt(intake.kcal ?? 0)} kcal</strong>
-                <Meter value={intake.kcal} goal={goals.kcalIn} unit="kcal" />
+        <div className="bal-tiles">
+          {intake.fromLog ? (
+            <>
+              <div className="bal-tile">
+                <small>Assunte</small>
+                <strong>{fmt(intake.kcal ?? 0)}</strong>
+                <span>kcal</span>
               </div>
-              <div className="side-field">
-                <span className="side-label">Proteine (diario)</span>
+              <div className="bal-tile prot">
+                <small>Proteine</small>
                 <strong>{fmt(intake.protein ?? 0)} g</strong>
-                <Meter value={intake.protein} goal={goals.proteinG} unit="g" />
+                <span>{goals.proteinG ? `/ ${fmt(goals.proteinG)} g` : ' '}</span>
               </div>
-              {input(NUTRITION[1])}
-            </div>
-            <Link className="link-quiet small" to={`/alimentazione/${date}`}>
-              apri il diario alimentare
-            </Link>
-          </>
-        ) : (
-          <>
-            <div className="side-grid">{NUTRITION.map(input)}</div>
-            <Link className="link-quiet small" to={`/alimentazione/${date}`}>
-              oppure registra i pasti nel diario alimentare
-            </Link>
-          </>
-        )}
+            </>
+          ) : (
+            <>
+              <label className="bal-tile">
+                <small>Assunte</small>
+                <NumberInput value={body.kcalIn} step={50} placeholder="–" onChange={(v) => setBody({ kcalIn: v })} />
+                <span>kcal</span>
+              </label>
+              <label className="bal-tile prot">
+                <small>Proteine</small>
+                <NumberInput value={body.proteinG} step={5} placeholder="–" onChange={(v) => setBody({ proteinG: v })} />
+                <span>{goals.proteinG ? `g / ${fmt(goals.proteinG)}` : 'g'}</span>
+              </label>
+            </>
+          )}
+          <label className="bal-tile act">
+            <small>Attive</small>
+            <NumberInput value={body.kcalOut} step={50} placeholder="–" onChange={(v) => setBody({ kcalOut: v })} />
+            <span>kcal</span>
+          </label>
+        </div>
+        <Link className="link-lime small" to={`/alimentazione/${date}`}>
+          {intake.fromLog ? 'apri il diario alimentare ›' : 'oppure registra i pasti nel diario alimentare ›'}
+        </Link>
         {balance !== undefined && (
           <p className="small">
             Bilancio: <strong>{balance > 0 ? '+' : ''}{fmt(balance)} kcal</strong> <span className="muted">(assunte − attive)</span>
@@ -270,8 +333,16 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
       </section>
 
       <section className="side-section side-card">
-        <h3 className="sub">Peso · 30 giorni</h3>
-        <WeightSpark points={weights} />
+        <div className="wsec-head">
+          <h3 className="sub">Peso · 30 giorni</h3>
+          {weights.length > 1 && (
+            <span className="wdelta">
+              {weights.at(-1)!.kg - weights[0].kg > 0 ? '+' : ''}
+              {fmt(weights.at(-1)!.kg - weights[0].kg, 1)} kg
+            </span>
+          )}
+        </div>
+        <WeightChart points={weights} goal={goals.weightKg} />
         <dl className="side-stats">
           <div>
             <dt>Media 7 gg</dt>

@@ -299,6 +299,7 @@ export function Card({
   peek,
   title,
   summary,
+  sub,
   actions,
   defaultOpen = true,
   className = '',
@@ -317,6 +318,8 @@ export function Card({
   peek?: ReactNode;
   title: ReactNode;
   summary?: ReactNode;
+  /** Line under the title shown open or closed (settings sections). */
+  sub?: ReactNode;
   actions?: ReactNode;
   defaultOpen?: boolean;
   className?: string;
@@ -342,6 +345,7 @@ export function Card({
           <button type="button" className={`card-title-btn${kicker ? ' has-kicker' : ''}`} onClick={toggle} aria-expanded={open}>
             {kicker && <span className="card-kicker">{kicker}</span>}
             <h2>{title}</h2>
+            {sub && <span className="card-sub">{sub}</span>}
             {!open && summary && <span className="card-summary">{summary}</span>}
           </button>
         ) : kicker ? (

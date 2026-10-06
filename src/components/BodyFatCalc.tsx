@@ -31,13 +31,13 @@ export function BodyFatCalc({ last, onUse, onClose }: { last: BodyLog; onUse: (p
   const pct = raw !== undefined && raw > 2 && raw < 70 ? Math.round(raw * 10) / 10 : undefined;
 
   const field = (label: string, hint: string, value: number | undefined, set: (v: number | undefined) => void) => (
-    <label className="side-field">
-      <span className="side-label">{label}</span>
-      <span className="side-input">
+    <label className="bf-field">
+      <span className="bf-label">{label}</span>
+      <span className="bf-input">
         <NumberInput value={value} step={0.5} onChange={set} />
         <span className="unit">cm</span>
       </span>
-      <span className="muted small">{hint}</span>
+      <span className="bf-hint">{hint}</span>
     </label>
   );
 
@@ -45,31 +45,42 @@ export function BodyFatCalc({ last, onUse, onClose }: { last: BodyLog; onUse: (p
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet bf-calc" role="dialog" aria-label="Calcolo massa grassa" onClick={(e) => e.stopPropagation()}>
         <div className="grabber" />
-        <h2 className="sheet-title">Calcola la massa grassa</h2>
-        <p className="muted small">Metodo US Navy: bastano un metro da sarta e qualche misura, al mattino, a digiuno. Stima con margine di circa ±3–4%: utile soprattutto per vedere l'andamento.</p>
-        <div className="chips" role="radiogroup" aria-label="Formula">
+        <div className="bf-head">
+          <div>
+            <h2 className="sheet-title">Calcola la massa grassa</h2>
+            <p className="muted small">Metodo US Navy: metro da sarta, al mattino, a digiuno. Stima con margine di circa ±3–4%, utile soprattutto per l'andamento.</p>
+          </div>
+          <button type="button" className="icon-btn small" aria-label="Chiudi" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <span className="bf-label">Sesso biologico</span>
+        <div className="segmented bf-sex" role="radiogroup" aria-label="Formula">
           {(
             [
               ['f', 'Donna'],
               ['m', 'Uomo'],
             ] as [Sex, string][]
           ).map(([id, label]) => (
-            <button key={id} type="button" role="radio" aria-checked={sex === id} className={`chip${sex === id ? ' chip-on' : ''}`} onClick={() => setProfile({ sex: id })}>
+            <button key={id} type="button" role="radio" aria-checked={sex === id} className={sex === id ? 'on' : ''} onClick={() => setProfile({ sex: id })}>
               {label}
             </button>
           ))}
         </div>
-        <div className="side-grid">
+        <div className="bf-grid">
           {field('Altezza', 'viene ricordata', h, (v) => setProfile({ heightCm: v }))}
           {field('Collo', 'appena sotto la laringe', m.neckCm, (v) => setM({ ...m, neckCm: v }))}
           {field('Vita', sex === 'm' ? "all'altezza dell'ombelico" : 'nel punto più stretto', m.waistCm, (v) => setM({ ...m, waistCm: v }))}
           {sex !== 'm' && field('Fianchi', 'nel punto più largo dei glutei', m.hipCm, (v) => setM({ ...m, hipCm: v }))}
         </div>
         <div className="bf-result" aria-live="polite">
+          <span className="bf-cap">
+            <i aria-hidden="true" /> Stima calcolata
+          </span>
           {pct !== undefined ? (
-            <>
-              <strong>{fmt(pct, 1)}%</strong> <span className="muted">massa grassa stimata</span>
-            </>
+            <span className="bf-big">
+              <strong>{fmt(pct, 1)}%</strong> <span>massa grassa stimata</span>
+            </span>
           ) : (
             <span className="muted">{sex ? 'Inserisci le misure' : 'Scegli la formula e inserisci le misure'}</span>
           )}

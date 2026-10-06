@@ -12,7 +12,8 @@ import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
 import { localRepo } from './lib/store/local';
 import { StoreProvider, useStore } from './lib/store/StoreContext';
-import { today } from './lib/dates';
+import { isoWeek, today } from './lib/dates';
+import { runningWorkout } from './lib/training/analytics';
 import DayPage from './pages/DayPage';
 import { ScrollMemory, useBackClosesOverlays, useSheetSwipeDown } from './components/useAppGestures';
 
@@ -46,8 +47,27 @@ function useCurrentTitle() {
   return NAV.find((n) => loc.pathname.startsWith(n.to))?.label ?? '';
 }
 
+/** Small facts shown at the right of some menu items. */
+function useNavInfo(): Record<string, string | undefined> {
+  const store = useStore();
+  const d = today();
+  const running = runningWorkout(store.day(d));
+  const year = d.slice(0, 4);
+  const ecm = store.allDays.reduce((n, day) => n + day.modules.reduce((a, m) => a + (m.kind === 'course' && m.endDate.startsWith(year) ? m.ecm ?? 0 : 0), 0), 0);
+  const date = new Date(`${d}T12:00:00`);
+  return {
+    '/mese': date.toLocaleDateString('it-IT', { month: 'short' }).replace('.', ''),
+    '/settimana': `Sett. ${isoWeek(d)}`,
+    '/giorno': date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }),
+    '/palestra': running ? running.title || 'In corso' : undefined,
+    '/corsi': ecm ? `${ecm.toLocaleString('it-IT')} ECM ${year}` : undefined,
+  };
+}
+
 function NavDrawer({ onClose, p, dragging }: { onClose: () => void; p: number; dragging: boolean }) {
   const loc = useLocation();
+  const info = useNavInfo();
+  const { gcal, settings } = useStore();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -70,9 +90,17 @@ function NavDrawer({ onClose, p, dragging }: { onClose: () => void; p: number; d
             className={() => `nav-item${loc.pathname.startsWith(to) ? ' active' : ''}`}
           >
             <Icon size={40} />
-            <span>{label}</span>
+            <span className="nav-label">{label}</span>
+            {info[to] && <span className={`nav-info${to === '/palestra' ? ' live' : ''}`}>{info[to]}</span>}
           </NavLink>
         ))}
+        <div className="nav-foot">
+          <i className={gcal.connected && settings.gcal.enabled ? 'on' : firebaseConfigured ? 'cloud' : ''} aria-hidden="true" />
+          <span>
+            {firebaseConfigured ? 'Dati sincronizzati tra i dispositivi' : 'Dati solo su questo dispositivo'}
+            {gcal.configured && settings.gcal.enabled ? (gcal.connected ? ' · Google Calendar collegato' : ' · Google da ricollegare') : ''}
+          </span>
+        </div>
       </nav>
     </div>
   );
