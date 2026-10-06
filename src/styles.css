@@ -2557,3 +2557,32 @@ a.btn.link-open, a.btn-ghost.link-open { display: inline-flex; padding-block: 0;
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .scan-last-add { color: var(--lime); } }
 .scan-help { text-align: center; }
 .fs-body > * { flex-shrink: 0; }
+
+/* Courses & certificates (Stitch, Prompt 8) */
+.cc-place { color: var(--accent); text-decoration-color: color-mix(in srgb, var(--lavender) 60%, transparent); text-underline-offset: 4px; }
+:root[data-theme='dark'] .cc-place { color: var(--lavender); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .cc-place { color: var(--lavender); } }
+.cc-online { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--ink); }
+.cc-online i { width: 7px; height: 7px; border-radius: 50%; background: var(--terra); }
+.cc-files { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 1rem; padding-top: 0.55rem; border-top: 1px solid var(--line); }
+.cc-join span { color: #c46a3c; text-decoration-color: color-mix(in srgb, var(--terra) 60%, transparent); }
+:root[data-theme='dark'] .cc-join span { color: var(--terra); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .cc-join span { color: var(--terra); } }
+.arch-summary { display: flex; align-items: center; gap: 0.8rem; padding: 0.85rem 1rem; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.arch-summary .folder-ico { flex: none; background: var(--lime); color: #1d1d1f; box-shadow: 0 0 16px rgb(214 242 95 / 0.2); }
+.arch-summary strong { font-size: 0.92rem; }
+.arch-summary b { color: var(--ink); }
+:root[data-theme='dark'] .arch-summary b { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .arch-summary b { color: var(--lime); } }
+.archive-page .icon-input { border: 1px solid var(--line); background: var(--surface); }
+.cert-tile { padding: 0; gap: 0; }
+.cert-tile:active { transform: none; }
+.ct-open { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.9rem 0.9rem 0.2rem; border: none; background: none; color: var(--ink); font: inherit; text-align: left; }
+.ct-open:active { transform: scale(0.98); }
+.cert-tile .ct-foot { align-items: center; margin: 0.4rem 0.9rem 0.6rem; padding-top: 0.35rem; }
+.ct-actions { display: inline-flex; gap: 0.1rem; }
+.ct-actions .icon-btn { border: none; background: none; width: 30px; height: 30px; min-width: 30px; color: var(--muted); }
+.arch-upload { border-radius: 999px; }
+.new-cert { display: flex; flex-direction: column; gap: 0.7rem; }
+.new-cert h2 { margin: 0; }
+.new-cert-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
