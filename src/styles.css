@@ -2832,3 +2832,38 @@ a.btn.link-open, a.btn-ghost.link-open { display: inline-flex; padding-block: 0;
 .fp-check { margin-left: auto; width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; border: 1.5px solid var(--line); }
 .fav-pick-item.on .fp-check { background: var(--lime); border-color: var(--lime); color: #1d1d1f; }
 .btn-ghost.danger { color: var(--error); }
+
+/* ---- Shift type pill and colleague add pill open the full-page chooser ---- */
+.type-pill-btn { gap: 0.5rem; padding: 0.45rem 0.8rem 0.45rem 1.8rem; font: inherit; font-weight: 700; color: var(--ink); cursor: pointer; }
+.type-pill-btn .chevron { transform: rotate(90deg); }
+.tp-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+button.add-pill { border-radius: 999px; border: 1.5px dashed color-mix(in srgb, var(--ink) 30%, transparent); background: transparent; padding: 0.3rem 0.85rem; font: inherit; font-size: 0.85rem; font-weight: 700; color: var(--ink); }
+:root[data-theme='dark'] button.add-pill { color: var(--lime); border-color: color-mix(in srgb, var(--lime) 40%, transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) button.add-pill { color: var(--lime); border-color: color-mix(in srgb, var(--lime) 40%, transparent); } }
+button.op-tutor { font: inherit; color: var(--ink); text-align: left; width: 100%; cursor: pointer; }
+button.op-tutor:disabled { opacity: 0.7; cursor: default; }
+
+/* ---- Full-page chooser with search (shift types, colleagues, tutor) ---- */
+.pick-title { flex: 1; text-align: center; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.02em; }
+.pick-body { gap: 1rem; }
+.pick-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.pick-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+.pick-row { width: 100%; display: flex; align-items: center; gap: 0.8rem; padding: 0.75rem 0.9rem; border-radius: 18px; background: var(--surface); border: 2px solid transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.pick-row.on { border-color: var(--lime); box-shadow: 0 0 18px rgb(214 242 95 / 0.12); }
+.pick-dot { flex: none; width: 14px; height: 14px; border-radius: 50%; background: var(--dot, var(--line)); margin-inline: 0.6rem; }
+.pick-avatar { flex: none; width: 2.4rem; height: 2.4rem; border-radius: 50%; display: grid; place-items: center; background: var(--lavender); color: #1d1d1f; font-weight: 800; font-size: 0.85rem; }
+.pick-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pick-label { font-weight: 700; font-size: 1rem; }
+.pick-sub { font-size: 0.82rem; color: var(--muted); }
+.pick-check { flex: none; width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; border: 1.5px solid var(--line); }
+.pick-row.on .pick-check { background: var(--lime); border-color: var(--lime); color: #1d1d1f; }
+.pick-none { color: var(--muted); }
+.pick-empty { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+.pick-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 0.8rem 1rem calc(env(safe-area-inset-bottom) + 0.9rem); background: linear-gradient(transparent, var(--bg) 35%); display: flex; justify-content: center; }
+.pick-done { min-width: 60%; justify-content: center; }
+
+/* ---- Appointment place with Maps ---- */
+.appt-place { flex-basis: 100%; display: flex; align-items: center; gap: 0.4rem; }
+.appt-place .icon-input { flex: 1; min-width: 0; }
+.appt-place .icon-input input { min-width: 0; }
+.agenda-row:has(.appt-place) { flex-wrap: wrap; }

@@ -313,7 +313,7 @@ export default function DayPage() {
                   </div>
                   <div className="field">
                     <span className="mini-label">In turno con</span>
-                    <ColleaguePicker colleagues={settings.colleagues} selected={day.shift.colleagueIds} onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })} />
+                    <ColleaguePicker colleagues={settings.colleagues} selected={day.shift.colleagueIds} onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })} onCreate={(name) => { const id = uid(); store.saveSettings({ ...settings, colleagues: [...settings.colleagues, { id, name }] }); return id; }} />
                   </div>
                   <label className="note-line">
                     <Sym name="edit_note" size={18} />
@@ -395,14 +395,45 @@ export default function DayPage() {
                         G
                       </span>
                     )}
+                    {item.a.location === undefined && (
+                      <button className="icon-btn small no-print" aria-label="Aggiungi il luogo" title="Aggiungi il luogo" onClick={() => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, location: '' } : x)) }))}>
+                        <Sym name="location_on" size={18} />
+                      </button>
+                    )}
                     <button className="icon-btn small no-print" aria-label="Elimina impegno" onClick={() => update((d) => ({ ...d, appointments: d.appointments.filter((x) => x.id !== item.a!.id) }))}>
                       <GlyphTrash />
                     </button>
+                    {item.a.location !== undefined && (
+                      <div className="appt-place">
+                        <span className="icon-input">
+                          <Sym name="location_on" size={18} />
+                          <input
+                            value={item.a.location}
+                            placeholder="Luogo (es. Ospedale Sant'Anna, Torino)"
+                            autoFocus={!item.a.location}
+                            onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, location: e.target.value } : x)) }))}
+                          />
+                        </span>
+                        {item.a.location.trim() && (
+                          <a className="btn-ghost link-open" href={mapsUrl(item.a.location)} target="_blank" rel="noopener noreferrer">
+                            Maps
+                          </a>
+                        )}
+                        <button className="icon-btn small no-print" aria-label="Togli il luogo" title="Togli il luogo" onClick={() => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, location: undefined } : x)) }))}>
+                          <Sym name="close" size={18} />
+                        </button>
+                      </div>
+                    )}
                   </li>
                 ) : (
                   <li key={item.key} className="agenda-row gcal">
                     <span className="time">{'e' in item && item.e && (eventLocal(item.e.start).time ?? 'tutto il giorno')}</span>
                     <span className="grow">{'e' in item && item.e?.summary}</span>
+                    {'e' in item && item.e?.location?.trim() && (
+                      <a className="btn-ghost link-open small" href={mapsUrl(item.e.location)} target="_blank" rel="noopener noreferrer" title={item.e.location}>
+                        Maps
+                      </a>
+                    )}
                     <span className="badge badge-sync" title="Evento di Google Calendar">
                       G
                     </span>

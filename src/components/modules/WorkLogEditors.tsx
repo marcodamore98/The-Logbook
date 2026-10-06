@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { SwipeDelete } from '../SwipeDelete';
+import { SearchPicker } from '../SearchPicker';
 import { useStore } from '../../lib/store/StoreContext';
 import type { ClinicalCase, ClinicalItem, ClinicalModule, Colleague, Module, ProcedureGroup, SurgeryCase, SurgeryModule, SurgeryProcedure } from '../../lib/types';
 import {
@@ -235,23 +236,34 @@ function useFrequent(collect: (m: Module) => string[], vocab: VocabItem[]) {
 
 /** Tutor as a small tile: the name and ›; tapping opens the list of colleagues. */
 function TutorTile({ colleagues, value, onChange }: { colleagues: Colleague[]; value?: string; onChange: (id: string | undefined) => void }) {
+  const [open, setOpen] = useState(false);
   const name = colleagues.find((c) => c.id === value)?.name;
   return (
-    <label className="op-tile op-tutor">
-      <span className="op-tile-label">Tutor</span>
-      <span className="op-tile-value">{name ?? (colleagues.length ? 'Nessuno' : 'Aggiungi i colleghi in Impostazioni')}</span>
-      <Sym name="chevron_right" size={18} className="op-tile-more" />
-      {colleagues.length > 0 && (
-        <select value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)} aria-label="Tutor">
-          <option value="">Nessuno</option>
-          {colleagues.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+    <>
+      <button type="button" className="op-tile op-tutor" disabled={!colleagues.length} onClick={() => setOpen(true)} aria-label={`Tutor: ${name ?? 'nessuno'}`}>
+        <span className="op-tile-label">Tutor</span>
+        <span className="op-tile-value">{name ?? (colleagues.length ? 'Nessuno' : 'Aggiungi i colleghi in Impostazioni')}</span>
+        <Sym name="chevron_right" size={18} className="op-tile-more" />
+      </button>
+      {open && (
+        <SearchPicker
+          title="Tutor"
+          placeholder="Cerca uno strutturato"
+          items={colleagues.map((c) => ({ id: c.id, label: c.name, sub: c.role, group: c.role || 'Altri' }))}
+          selected={value ? [value] : []}
+          onPick={(id) => onChange(id === value ? undefined : id)}
+          onClose={() => setOpen(false)}
+          extra={
+            value ? (
+              <button type="button" className="pick-row pick-none" onClick={() => { onChange(undefined); setOpen(false); }}>
+                <span className="pick-dot" />
+                <span className="pick-text"><span className="pick-label">Nessun tutor</span></span>
+              </button>
+            ) : null
+          }
+        />
       )}
-    </label>
+    </>
   );
 }
 

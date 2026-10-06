@@ -1,4 +1,5 @@
 import { TimeField } from './WheelPicker';
+import { SearchPicker } from './SearchPicker';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Colleague, ShiftType } from '../lib/types';
 import { grouped, type VocabItem } from '../lib/vocab';
@@ -158,66 +159,63 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="empty">{children}</p>;
 }
 
+/** Shift type as a pill with its colour dot; tapping opens the full-page chooser with search. */
 export function ShiftTypeSelect({
   types,
   value,
   onChange,
   empty = 'Nessun turno',
-  pill = false,
 }: {
   types: ShiftType[];
   value: string | undefined;
   onChange: (id: string) => void;
   empty?: string;
-  /** Compact pill with the shift colour as a dot. */
   pill?: boolean;
 }) {
-  const groups = new Map<string, ShiftType[]>();
-  for (const t of types) {
-    const g = t.group ?? 'Altri turni';
-    if (!groups.has(g)) groups.set(g, []);
-    groups.get(g)!.push(t);
-  }
-  const select = (
-    <select value={value ?? ''} onChange={(e) => onChange(e.target.value)} aria-label="Tipo di turno">
-      <option value="">{empty}</option>
-      {[...groups.entries()].map(([g, list]) => (
-        <optgroup key={g} label={g}>
-          {list.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </optgroup>
-      ))}
-    </select>
-  );
-  if (!pill) return select;
-  const color = types.find((t) => t.id === value)?.color;
+  const [open, setOpen] = useState(false);
+  const cur = types.find((t) => t.id === value);
   return (
-    <span className="type-pill" style={color ? ({ '--dot': color } as CSSProperties) : undefined}>
-      {select}
-    </span>
+    <>
+      <button type="button" className="type-pill type-pill-btn" style={cur ? ({ '--dot': cur.color } as CSSProperties) : undefined} aria-label="Tipo di turno" onClick={() => setOpen(true)}>
+        <span className="tp-name">{cur?.name ?? empty}</span>
+        <Chevron open={false} />
+      </button>
+      {open && (
+        <SearchPicker
+          title="Tipo di turno"
+          placeholder="Cerca un turno"
+          items={types.map((t) => ({ id: t.id, label: t.name, sub: `${t.start}–${t.end}`, group: t.group ?? 'Altri turni', color: t.color }))}
+          selected={value ? [value] : []}
+          onPick={onChange}
+          onClose={() => setOpen(false)}
+          extra={
+            value ? (
+              <button type="button" className="pick-row pick-none" onClick={() => { onChange(''); setOpen(false); }}>
+                <span className="pick-dot" />
+                <span className="pick-text"><span className="pick-label">{empty}</span></span>
+              </button>
+            ) : null
+          }
+        />
+      )}
+    </>
   );
 }
 
-/** Selected colleagues as removable chips, plus a grouped picker to add more. */
+/** Selected colleagues as removable chips, plus a full-page chooser with search to add more. */
 export function ColleaguePicker({
   colleagues,
   selected,
   onChange,
+  onCreate,
 }: {
   colleagues: Colleague[];
   selected: string[];
   onChange: (ids: string[]) => void;
+  /** Adds a new colleague (saved in Impostazioni) and returns its id. */
+  onCreate?: (name: string) => string;
 }) {
-  const byRole = new Map<string, Colleague[]>();
-  for (const c of colleagues) {
-    if (selected.includes(c.id)) continue;
-    const r = c.role || 'Altri';
-    if (!byRole.has(r)) byRole.set(r, []);
-    byRole.get(r)!.push(c);
-  }
+  const [open, setOpen] = useState(false);
   return (
     <div className="picker picker-pills">
       {selected.map((id) => {
@@ -228,18 +226,21 @@ export function ColleaguePicker({
           </button>
         );
       })}
-      <select className="add-pill" value="" onChange={(e) => e.target.value && onChange([...selected, e.target.value])} aria-label="Aggiungi collega">
-        <option value="">+ Aggiungi collega</option>
-        {[...byRole.entries()].map(([role, list]) => (
-          <optgroup key={role} label={role}>
-            {list.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
+      <button type="button" className="add-pill" onClick={() => setOpen(true)}>
+        + Aggiungi collega
+      </button>
+      {open && (
+        <SearchPicker
+          multi
+          title="In turno con"
+          placeholder="Cerca un collega o uno strutturato"
+          items={colleagues.map((c) => ({ id: c.id, label: c.name, sub: c.role, group: c.role || 'Altri' }))}
+          selected={selected}
+          onPick={(id) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id])}
+          onCreate={onCreate && ((name) => onChange([...selected, onCreate(name)]))}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </div>
   );
 }
