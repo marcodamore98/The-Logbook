@@ -4,7 +4,10 @@ import { allFoods, entryFor, FOOD_CATEGORIES, MEALS } from '../../lib/nutrition/
 import { useLibrary } from '../../lib/nutrition/library';
 import { barcodeDetector, hasTorch, openBackCamera, productByBarcode, searchOff, setFocus, setTorch, validBarcode } from '../../lib/nutrition/off';
 import type { Food, FoodEntry, MealId } from '../../lib/types';
-import { GlyphPlus, Sym } from '../icons';
+import { GlyphPlus, IconBreakfast, IconDinner, IconLunch, IconSnack, Sym } from '../icons';
+import { SwipeDelete } from '../SwipeDelete';
+import { useUndo } from '../Undo';
+import { today } from '../../lib/dates';
 import type { SymName } from '../ms';
 import { Field, NumberInput, uid } from '../ui';
 
@@ -47,12 +50,15 @@ function rankOf(name: string, text: string, words: string[]) {
 const usual = (f: Food) => f.portionG ?? 100;
 
 /** A food as a card: name, usual portion with kcal and ♥, macro badges, round + that adds the usual portion. */
-function FoodRow({ food, onPick, fav, onFav, onQuick, picked, children }: { food: Food; onPick: () => void; fav: boolean; onFav: () => void; onQuick: () => void; picked?: boolean; children?: ReactNode }) {
+const MEAL_ICON: Record<MealId, (p: { size?: number }) => ReactNode> = { breakfast: IconBreakfast, lunch: IconLunch, dinner: IconDinner, snack: IconSnack };
+
+function FoodRow({ food, onPick, fav, onFav, onQuick, picked, onSwipe, children }: { food: Food; onPick: () => void; fav: boolean; onFav: () => void; onQuick: () => void; picked?: boolean; /** Swiping the row left removes it from this list. */ onSwipe?: () => void; children?: ReactNode }) {
   const g = usual(food);
   const e = entryFor(food, g, '');
   const portion = food.portionG ? `${(food.portionName ?? '1 porzione').replace(/^1\s+/, '1 ')} (${g} g)` : '100 g';
   return (
     <li className={`food-card${picked ? ' picked' : ''}`}>
+      <Swipeable onSwipe={onSwipe}>
       <div className="fc-row">
       <button type="button" className="fc-main" onClick={onPick} aria-expanded={picked}>
         <span className="fc-name">
@@ -76,9 +82,14 @@ function FoodRow({ food, onPick, fav, onFav, onQuick, picked, children }: { food
         <Icon d="add" size={22} />
       </button>
       </div>
+      </Swipeable>
       {children}
     </li>
   );
+}
+
+function Swipeable({ onSwipe, children }: { onSwipe?: () => void; children: ReactNode }) {
+  return onSwipe ? <SwipeDelete onDelete={onSwipe}>{children}</SwipeDelete> : <>{children}</>;
 }
 
 const fmtG = (n: number) => `${Math.round(n * 10) / 10}`.replace('.', ',') + ' g';
@@ -180,10 +191,16 @@ export function FoodSheet({
   const store = useStore();
   const { settings } = store;
   const custom = settings.foods ?? [];
-  const favs = settings.favoriteFoods ?? [];
+  const legacyFavs = settings.favoriteFoods ?? [];
+  const folders = settings.favoriteFolders ?? {};
+  const hidden = settings.hiddenRecentFoods ?? {};
+  const isFav = (id: string) => legacyFavs.includes(id) || MEALS.some((m) => folders[m.id]?.includes(id));
+  const offerUndo = useUndo();
   const [tab, setTab] = useState<Tab>('recent');
   const [added, setAdded] = useState<string | null>(null);
   const [meal, setMeal] = useState<MealId>(initialMeal);
+  const [folder, setFolder] = useState<MealId>(initialMeal);
+  const [favFor, setFavFor] = useState<Food | null>(null);
   const [q, setQ] = useState('');
   const [picked, setPicked] = useState<Food | null>(null);
   const [online, setOnline] = useState<Food[] | null>(null);
@@ -226,6 +243,7 @@ export function FoodSheet({
       for (const list of Object.values(d.food?.meals ?? {})) {
         for (const e of list ?? []) {
           if (!e.foodId || seen.has(e.foodId)) continue;
+          if (hidden[e.foodId] && d.date <= hidden[e.foodId]) continue;
           const f = foods.find((x) => x.id === e.foodId);
           if (f) {
             seen.add(e.foodId);
@@ -236,14 +254,42 @@ export function FoodSheet({
       if (out.length >= 30) break;
     }
     return out;
-  }, [store.allDays, foods]);
+  }, [store.allDays, foods, hidden]);
 
-  const toggleFav = (id: string) =>
-    store.saveSettings({ ...settings, favoriteFoods: favs.includes(id) ? favs.filter((x) => x !== id) : [...favs, id] });
+  /** Puts a food in (or takes it out of) the favourites folder of a meal; old folder-less favourites move into folders. */
+  const setInFolder = (id: string, m: MealId, on: boolean) => {
+    const cur = folders[m] ?? [];
+    const next = { ...folders, [m]: on ? (cur.includes(id) ? cur : [...cur, id]) : cur.filter((x) => x !== id) };
+    store.saveSettings({ ...settings, favoriteFolders: next, favoriteFoods: legacyFavs.filter((x) => x !== id) });
+  };
+  const unfavourite = (id: string) => {
+    const next = Object.fromEntries(Object.entries(folders).map(([k, v]) => [k, (v ?? []).filter((x) => x !== id)]));
+    store.saveSettings({ ...settings, favoriteFolders: next, favoriteFoods: legacyFavs.filter((x) => x !== id) });
+  };
+  /** Heart: a food that is not a favourite yet goes straight into the folder of the meal being filled; then the folders can be picked. */
+  const onHeart = (f: Food) => {
+    if (!isFav(f.id)) setInFolder(f.id, meal, true);
+    setFavFor(f);
+  };
+  const hideRecent = (f: Food) => {
+    const before = settings;
+    store.saveSettings({ ...settings, hiddenRecentFoods: { ...hidden, [f.id]: today() } });
+    offerUndo(`${f.name} tolto dai recenti`, () => store.saveSettings(before));
+  };
+  const removeFromFolder = (f: Food, m: MealId) => {
+    const before = settings;
+    setInFolder(f.id, m, false);
+    offerUndo(`${f.name} tolto da ${MEALS.find((x) => x.id === m)!.label}`, () => store.saveSettings(before));
+  };
 
-  /** Products from Open Food Facts are saved locally the first time they are used. */
+  /** Products from Open Food Facts are saved locally the first time they are used; a food used again comes back among the recents. */
   const remember = (f: Food) => {
-    if (f.source === 'off' && !custom.some((c) => c.id === f.id)) store.saveSettings({ ...settings, foods: [...custom, f] });
+    const keep = f.source === 'off' && !custom.some((c) => c.id === f.id);
+    const shown = f.id in hidden;
+    if (!keep && !shown) return;
+    const { [f.id]: _gone, ...rest } = hidden;
+    void _gone;
+    store.saveSettings({ ...settings, ...(keep ? { foods: [...custom, f] } : {}), ...(shown ? { hiddenRecentFoods: rest } : {}) });
   };
 
   async function lookup(c: string) {
@@ -353,7 +399,7 @@ export function FoodSheet({
     navigator.vibrate?.(10);
     flash(f.name);
   };
-  const list = (items: Food[], empty: string, title?: string) =>
+  const list = (items: Food[], empty: string, title?: string, onSwipe?: (f: Food) => void) =>
     items.length ? (
       <>
         {title && <h3 className="fs-kicker">{title}</h3>}
@@ -363,7 +409,7 @@ export function FoodSheet({
             if (open) shownInline = true;
             return (
               <Fragment key={f.id}>
-                <FoodRow food={f} picked={open} fav={favs.includes(f.id)} onFav={() => toggleFav(f.id)} onPick={() => setPicked(open ? null : f)} onQuick={() => quickAdd(f)}>
+                <FoodRow food={f} picked={open} fav={isFav(f.id)} onFav={() => onHeart(f)} onPick={() => setPicked(open ? null : f)} onQuick={() => quickAdd(f)} onSwipe={onSwipe && (() => onSwipe(f))}>
                   {open && <Quantity inline food={f} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} />}
                 </FoodRow>
               </Fragment>
@@ -500,8 +546,31 @@ export function FoodSheet({
               </button>
             </>
           )}
-            {tab === 'recent' && list(recent, 'Qui troverai i cibi registrati di recente, per aggiungerli al volo.', 'Recenti')}
-            {tab === 'favorites' && list(foods.filter((f) => favs.includes(f.id)), 'Tocca ♡ su un alimento per averlo qui tra i preferiti.', 'Preferiti')}
+            {tab === 'recent' && list(recent, 'Qui troverai i cibi registrati di recente, per aggiungerli al volo.', 'Recenti', hideRecent)}
+            {tab === 'favorites' && (
+              <>
+                <div className="fav-folders" role="tablist" aria-label="Cartelle dei preferiti">
+                  {MEALS.map((m) => {
+                    const I = MEAL_ICON[m.id];
+                    const n = (folders[m.id] ?? []).length;
+                    return (
+                      <button key={m.id} type="button" role="tab" aria-selected={folder === m.id} className={`fav-folder${folder === m.id ? ' on' : ''}`} onClick={() => { setFolder(m.id); setPicked(null); }}>
+                        <I size={40} />
+                        <span className="ff-name">{m.label}</span>
+                        <span className="ff-count">{n === 1 ? '1 alimento' : `${n} alimenti`}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {list(
+                  (folders[folder] ?? []).map((id) => foods.find((f) => f.id === id)).filter((f): f is Food => !!f),
+                  `Nessun preferito in ${MEALS.find((m) => m.id === folder)!.label}. Tocca ♡ su un alimento e scegli la cartella.`,
+                  MEALS.find((m) => m.id === folder)!.label,
+                  (f) => removeFromFolder(f, folder),
+                )}
+                {legacyFavs.length > 0 && list(foods.filter((f) => legacyFavs.includes(f.id)), '', 'Da mettere in una cartella')}
+              </>
+            )}
 
             {tab === 'barcode' && (
               <div className="barcode scan-page">
@@ -694,6 +763,42 @@ export function FoodSheet({
           </div>
         )}
       </div>
+      {favFor && (
+        <div className="sheet-backdrop fav-pick-bg" onClick={() => setFavFor(null)}>
+          <div className="sheet fav-pick" role="dialog" aria-label="Cartelle dei preferiti" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <h2>Nei preferiti di…</h2>
+              <button type="button" className="icon-btn" aria-label="Chiudi" onClick={() => setFavFor(null)}>
+                <Icon d="close" size={20} />
+              </button>
+            </div>
+            <p className="muted small fav-pick-food">{favFor.name}{favFor.brand ? ` · ${favFor.brand}` : ''}</p>
+            <div className="fav-pick-grid">
+              {MEALS.map((m) => {
+                const I = MEAL_ICON[m.id];
+                const on = !!folders[m.id]?.includes(favFor.id);
+                return (
+                  <button key={m.id} type="button" role="checkbox" aria-checked={on} className={`fav-pick-item${on ? ' on' : ''}`} onClick={() => setInFolder(favFor.id, m.id, !on)}>
+                    <I size={40} />
+                    <span>{m.label}</span>
+                    <span className="fp-check" aria-hidden="true">{on ? <Icon d="check" size={16} /> : null}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="sheet-foot">
+              {isFav(favFor.id) ? (
+                <button type="button" className="btn-ghost small danger" onClick={() => { unfavourite(favFor.id); setFavFor(null); }}>
+                  Togli dai preferiti
+                </button>
+              ) : <span />}
+              <button type="button" className="btn" onClick={() => setFavFor(null)}>
+                Fatto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

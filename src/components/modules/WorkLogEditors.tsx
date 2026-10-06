@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { SwipeDelete } from '../SwipeDelete';
 import { useStore } from '../../lib/store/StoreContext';
 import type { ClinicalCase, ClinicalItem, ClinicalModule, Colleague, Module, ProcedureGroup, SurgeryCase, SurgeryModule, SurgeryProcedure } from '../../lib/types';
 import {
@@ -20,7 +21,6 @@ import { caseTitle, clinicalCases, clinicalLabels, surgeryCases } from '../../li
 import { GlyphPlus, GlyphTrash, Sym } from '../icons';
 import { useUndo } from '../Undo';
 import { useBlockDrag } from '../useBlockDrag';
-import { EDGE_PX } from '../useDrawer';
 import { AutoText, ChipChoice, Chevron, DragGrip, NumField, uid, VocabSelect } from '../ui';
 import { DurationField } from '../WheelPicker';
 
@@ -44,66 +44,6 @@ export function searchVocab(items: VocabItem[], text: string): VocabItem[] {
 
 /** Data attribute names must be plain: one per list, from the card's id. */
 const attrOf = (prefix: string, id: string) => `${prefix}${id.replace(/[^a-z0-9]/gi, '').slice(0, 10).toLowerCase()}`;
-
-/**
- * A row that deletes itself when swiped left: the red "Elimina" grows under the finger and,
- * past about a third of the row, the row goes on release (the caller offers "Annulla").
- */
-function SwipeDelete({ onDelete, children }: { onDelete: () => void; children: ReactNode }) {
-  const [dx, setDx] = useState(0);
-  const [moving, setMoving] = useState(false);
-  const g = useRef<{ x: number; y: number; w: number; t: number; lock: 'x' | 'y' | null } | null>(null);
-  const limit = (w: number) => Math.min(140, w * 0.35);
-  const armed = g.current ? dx < -limit(g.current.w) : false;
-  return (
-    <div
-      className={`swipe-del${dx ? ' open' : ''}`}
-      data-no-swipe
-      onTouchStart={(e) => {
-        const t = e.touches[0];
-        // From the screen edge the swipe opens the day summary instead.
-        if ((e.target as HTMLElement).closest('input, textarea, select') || t.clientX >= window.innerWidth - EDGE_PX) return;
-        g.current = { x: t.clientX, y: t.clientY, w: e.currentTarget.offsetWidth, t: Date.now(), lock: null };
-      }}
-      onTouchMove={(e) => {
-        const c = g.current;
-        if (!c) return;
-        const t = e.touches[0];
-        const mx = t.clientX - c.x;
-        const my = t.clientY - c.y;
-        if (!c.lock) {
-          if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
-          // After a long press the row is being dragged up or down, not swiped.
-          c.lock = Date.now() - c.t < 300 && Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
-          if (c.lock === 'x') setMoving(true);
-        }
-        if (c.lock === 'x') setDx(Math.min(0, mx));
-      }}
-      onTouchEnd={() => {
-        const c = g.current;
-        g.current = null;
-        setMoving(false);
-        if (!c || c.lock !== 'x') return;
-        if (dx < -limit(c.w)) {
-          setDx(-c.w);
-          navigator.vibrate?.(10);
-          window.setTimeout(() => {
-            setDx(0);
-            onDelete();
-          }, 160);
-        } else setDx(0);
-      }}
-    >
-      <span className={`swipe-del-bg${armed ? ' armed' : ''}`} aria-hidden="true" style={{ width: Math.max(0, -dx) }}>
-        <GlyphTrash />
-        Elimina
-      </span>
-      <div className="swipe-del-fg" style={{ transform: dx ? `translate3d(${dx}px,0,0)` : undefined, transition: moving ? 'none' : undefined }}>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 /** One choice among a few, as a full-width segmented control. */
 function Seg({ items, value, onChange, label, className = '' }: { items: VocabItem[]; value: string | undefined; onChange: (id: string) => void; label: string; className?: string }) {

@@ -492,7 +492,11 @@ export interface Settings {
   profile?: { sex?: 'f' | 'm'; heightCm?: number }; // per il calcolo della massa grassa
   mealPlans?: MealPlan[];
   foods?: Food[]; // alimenti personali e salvati da Open Food Facts
-  favoriteFoods?: string[];
+  favoriteFoods?: string[]; // preferiti di prima, senza cartella
+  /** Preferiti divisi per pasto (cartelle Colazione, Pranzo, Cena, Spuntini). */
+  favoriteFolders?: Partial<Record<MealId, string[]>>;
+  /** Alimenti tolti dai recenti, con il giorno: tornano se vengono registrati in un giorno successivo. */
+  hiddenRecentFoods?: Record<string, ISODate>;
   procedureGroups?: ProcedureGroup[]; // gruppi di procedure salvati (attività chirurgica)
   shopping?: ShopItem[]; // lista della spesa: unica, la stessa in tutti i giorni
   dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno

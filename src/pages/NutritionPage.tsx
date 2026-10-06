@@ -1,5 +1,5 @@
 import { useSwipeNav } from '../components/useSwipeNav';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fmt } from '../components/charts';
 import { GlyphCheck, GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconBreakfast, IconDinner, IconLunch, IconSnack, IconWater } from '../components/icons';
@@ -272,6 +272,16 @@ function WeekKcal({ days, goal, current }: { days: { d: string; label: string; v
   );
 }
 
+/** Position of the i-th meal disc on a quarter circle from straight up to straight left of the +, and its label further out. */
+function fanPos(i: number): CSSProperties {
+  const a = ((90 + i * 30) * Math.PI) / 180;
+  const at = (r: number) => [Math.round(Math.cos(a) * r), Math.round(-Math.sin(a) * r)];
+  const [x, y] = at(150);
+  // label just outside the disc: further sideways (labels are wide) than up (labels are short)
+  const lx = Math.round(Math.cos(a) * 78), ly = Math.round(-Math.sin(a) * 46);
+  return { '--i': i, '--x': `${x}px`, '--y': `${y}px`, '--lx': `${lx}px`, '--ly': `${ly}px` } as CSSProperties;
+}
+
 function MealIcon({ id }: { id: MealId }) {
   const I = {
     breakfast: IconBreakfast,
@@ -291,6 +301,7 @@ export default function NutritionPage() {
   const day = store.day(date);
   const log: FoodLog = day.food ?? { meals: {} };
   const [adding, setAdding] = useState<MealId | null>(null);
+  const [fan, setFan] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string> | null>(null);
   const offerUndo = useUndo();
@@ -576,9 +587,35 @@ export default function NutritionPage() {
         </div>
       ) : (
         !adding && (
-          <button className="fab" aria-label="Aggiungi un alimento" onClick={() => setAdding(date === today() ? mealNow() : 'lunch')}>
-            <GlyphPlus />
-          </button>
+          <>
+            {fan && (
+              // Speed dial: one disc per meal fanned out around the + (Android back closes it like any overlay).
+              <div className="fan-backdrop" onClick={() => setFan(false)}>
+                <div className="meal-fan" role="menu" aria-label="Scegli il pasto">
+                  {MEALS.map((x, i) => (
+                    <button
+                      key={x.id}
+                      type="button"
+                      role="menuitem"
+                      className={`fan-item${date === today() && x.id === mealNow() ? ' now' : ''}`}
+                      style={fanPos(i)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFan(false);
+                        setAdding(x.id);
+                      }}
+                    >
+                      <MealIcon id={x.id} />
+                      <span className="fan-label">{x.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button className={`fab${fan ? ' open' : ''}`} aria-label={fan ? 'Chiudi' : 'Aggiungi un alimento'} aria-expanded={fan} onClick={() => setFan((f) => !f)}>
+              <GlyphPlus />
+            </button>
+          </>
         )
       )}
 

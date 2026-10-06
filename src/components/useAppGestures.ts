@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 
 /** Things that sit on top of the page and that "back" should close, topmost last in the DOM. */
-const OVERLAYS = '.sheet-backdrop, .drawer-backdrop, .finish-backdrop, .finish-screen, .rest-big, .run-summary';
+const OVERLAYS = '.sheet-backdrop, .fan-backdrop, .drawer-backdrop, .finish-backdrop, .finish-screen, .rest-big, .run-summary';
 
 /**
  * Android back button / back gesture: closes the open sheet, drawer or full-screen panel

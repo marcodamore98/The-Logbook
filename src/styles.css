@@ -2792,3 +2792,43 @@ a.btn.link-open, a.btn-ghost.link-open { display: inline-flex; padding-block: 0;
 .pct-list p { margin: 0; display: flex; justify-content: space-between; gap: 0.4rem; font-size: 0.86rem; font-weight: 500; color: var(--ink-2); }
 .pct-list p span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pct-list small { color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+
+/* ---- Meal speed dial: the lime + fans out one disc per meal ---- */
+.fab { transition: transform 0.2s ease; }
+.fab.open { transform: rotate(45deg); z-index: 46; }
+.fan-backdrop { position: fixed; inset: 0; z-index: 45; background: rgb(0 0 0 / 0.45); animation: fan-dim 0.15s ease; }
+@keyframes fan-dim { from { opacity: 0; } }
+.meal-fan { position: absolute; right: calc(1.1rem + 29px); bottom: calc(1.2rem + 29px + env(safe-area-inset-bottom)); width: 0; height: 0; }
+/* quarter circle from straight up (Colazione) to straight left (Spuntini) */
+.fan-item {
+  position: absolute; left: 0; top: 0; width: 60px; height: 60px; margin: -30px 0 0 -30px;
+  display: grid; place-items: center; border: none; padding: 0; border-radius: 999px; background: var(--surface);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.3);
+  transform: translate(var(--x), var(--y));
+  animation: fan-out 0.22s cubic-bezier(.2,.9,.3,1.2) both; animation-delay: calc(var(--i) * 30ms);
+}
+.fan-item .art-icon { width: 46px; height: 46px; }
+.fan-item.now { box-shadow: 0 0 0 3px var(--lime), 0 6px 18px rgb(0 0 0 / 0.3); }
+.fan-label { position: absolute; top: 50%; left: 50%; transform: translate(calc(-50% + var(--lx)), calc(-50% + var(--ly))); white-space: nowrap; font-size: 0.74rem; font-weight: 700; color: #fff; background: rgb(29 29 31 / 0.85); padding: 1px 8px; border-radius: 999px; }
+@keyframes fan-out { from { transform: translate(0, 0) scale(0.3); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .fan-item, .fan-backdrop { animation: none; } .fab { transition: none; } }
+
+/* ---- Food page: swipe to remove from recents / a favourites folder ---- */
+.food-card > .swipe-del { margin: -0.4rem -0.6rem -0.4rem -0.2rem; border-radius: 18px; }
+.food-card > .swipe-del > .swipe-del-fg { background: var(--surface); padding: 0.4rem 0.6rem 0.4rem 0.2rem; border-radius: inherit; }
+.food-card.picked > .swipe-del { margin-bottom: 0; }
+
+/* ---- Favourites in four meal folders ---- */
+.fav-folders { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; margin: 0.2rem 0 0.4rem; }
+.fav-folder { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.7rem 0.3rem 0.6rem; border-radius: 18px; background: var(--surface); border: 2px solid transparent; color: var(--ink); font: inherit; min-width: 0; }
+.fav-folder.on { border-color: var(--lime); box-shadow: 0 0 18px rgb(214 242 95 / 0.15); }
+.ff-name { font-weight: 800; font-size: 0.82rem; }
+.ff-count { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+.fav-pick { gap: 0.6rem; }
+.fav-pick-food { margin: -0.4rem 0 0; }
+.fav-pick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.fav-pick-item { position: relative; display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.8rem; border-radius: 16px; background: var(--surface); border: 2px solid transparent; color: var(--ink); font: inherit; font-weight: 700; text-align: left; }
+.fav-pick-item.on { border-color: var(--lime); }
+.fp-check { margin-left: auto; width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; border: 1.5px solid var(--line); }
+.fav-pick-item.on .fp-check { background: var(--lime); border-color: var(--lime); color: #1d1d1f; }
+.btn-ghost.danger { color: var(--error); }
