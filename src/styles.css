@@ -2460,3 +2460,41 @@ a.btn.link-open, a.btn-ghost.link-open { display: inline-flex; padding-block: 0;
 /* Snackbar as a pill */
 .snackbar { border-radius: 999px; padding: 0.55rem 0.6rem 0.55rem 1.1rem; }
 .snackbar .snack-dot { width: 9px; height: 9px; background: #f87171; }
+
+/* Patient row (Stitch, Prompt 2): badge and intervention on one line, complication as a coral pill, procedures on a lime rail */
+.op-badge { grid-row: auto; }
+.op-case-meta { grid-column: 2; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; white-space: normal; }
+.compl-pill { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--coral) 16%, transparent); color: var(--coral); font-weight: 700; font-size: 0.72rem; }
+.op-case-body > .op-procs { border-left: 2px solid color-mix(in srgb, var(--lime) 40%, transparent); padding-left: 0.55rem; }
+:root:not([data-theme='dark']) .op-case-body > .op-procs { border-left-color: color-mix(in srgb, #8fa82a 50%, transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .op-case-body > .op-procs { border-left-color: color-mix(in srgb, var(--lime) 40%, transparent); } }
+
+/* Duration and tutor as two tiles side by side */
+.op-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.op-tile { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 0.2rem; min-width: 0; padding: 0.55rem 0.7rem; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.op-tile-label { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.op-tile-value { font-weight: 700; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 1.2rem; }
+.op-tile-more { position: absolute; right: 0.55rem; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.op-tutor select { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; }
+.op-case-body > .op-tutor { align-self: stretch; }
+
+/* Course card (Stitch, Prompt 2): ECM row, reminder with a bell disc, PDF badges, amber certificate, Google note */
+.ecm-row { display: flex; flex-direction: row; align-items: center; gap: 0.6rem; padding: 0.55rem 0.6rem 0.55rem 0.8rem; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+.ecm-row > svg { flex: none; color: #e9b949; }
+.ecm-row > span:not(.ecm-pill) { flex: 1; font-weight: 600; }
+.ecm-pill { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.7rem 0.15rem 0.3rem; border-radius: 999px; background: rgb(233 185 73 / 0.15); color: #b98a16; }
+:root[data-theme='dark'] .ecm-pill { color: #e9b949; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .ecm-pill { color: #e9b949; } }
+.ecm-pill input { width: 3.2rem; text-align: right; background: none; border: none; padding: 0.25rem 0.1rem; font-weight: 800; color: inherit; }
+.ecm-pill small { font-weight: 800; font-size: 0.78rem; }
+.bell-disc { flex: none; width: 2.1rem; height: 2.1rem; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); }
+.remind-text { display: flex; flex-direction: column; gap: 0.05rem; min-width: 0; }
+.remind-text strong { font-size: 0.9rem; }
+.remind-text small { color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+.pdf-badge { flex: none; width: 38px; height: 38px; border-radius: 8px; display: grid; place-items: center; background: color-mix(in srgb, var(--coral) 16%, transparent); color: var(--coral); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.04em; }
+.cert-slot .file-add, .cert-slot .file-open { border-color: rgb(233 185 73 / 0.45); }
+.cert-slot svg { color: #e9b949; }
+.gcal-note { display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin: 0; font-size: 0.8rem; color: var(--muted); }
+.gcal-note svg { color: #3ccf8e; }
+.remind-box .bell-disc { flex: none; }
+.remind-box .remind-text { flex: 1; }

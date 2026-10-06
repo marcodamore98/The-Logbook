@@ -200,6 +200,8 @@ async function askNotifications() {
 }
 
 function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
+  const store = useStore();
+  const synced = store.gcal.connected && store.settings.gcal.enabled;
   const webinar = m.type === 'webinar';
   const link = m.link?.trim();
   return (
@@ -252,9 +254,16 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
           </div>
         </div>
       )}
-      <Field label="Crediti ECM">
-        <NumberInput value={m.ecm} step={0.5} onChange={(ecm) => onChange({ ...m, ecm })} />
-      </Field>
+      <label className="field field-wide ecm-row">
+        <svg viewBox="0 0 24 24" width={22} height={22} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z" />
+        </svg>
+        <span>Crediti formativi</span>
+        <span className="ecm-pill">
+          <NumberInput value={m.ecm} step={0.5} placeholder="–" onChange={(ecm) => onChange({ ...m, ecm })} />
+          <small>ECM</small>
+        </span>
+      </label>
       <div className={`field field-wide tile-grid${webinar ? ' pair' : ''}`}>
         {webinar ? (
           <TimeTile type="date" label="Giorno" value={m.startDate} onChange={(v) => v && onChange({ ...m, startDate: v, endDate: v })} />
@@ -268,10 +277,15 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
       </div>
       <div className="field field-wide">
         <label className={`switch-row remind-box${m.startTime ? '' : ' disabled'}`}>
-          <svg className="bell" viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" />
-          </svg>
-          <span>{m.startTime ? 'Avvisami 30 e 5 minuti prima' : 'Avvisami 30 e 5 minuti prima (serve l’ora di inizio)'}</span>
+          <span className="bell-disc">
+            <svg className="bell" viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" />
+            </svg>
+          </span>
+          <span className="remind-text">
+            <strong>Promemoria evento</strong>
+            <small>{m.startTime ? 'Avvisami 30 e 5 minuti prima' : 'Avvisami 30 e 5 minuti prima (serve l’ora di inizio)'}</small>
+          </span>
           <input
             type="checkbox"
             role="switch"
@@ -289,8 +303,18 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
         <span className="field-label">Programma</span>
         <ProgramFiles files={programOf(m)} onChange={(programFiles) => onChange({ ...m, program: undefined, programFiles })} />
         <span className="field-label">Attestato (PDF)</span>
-        <FileSlot label="Aggiungi l’attestato (PDF)" doneLabel="Attestato" crown file={m.certificate} onChange={(certificate) => onChange({ ...m, certificate })} />
+        <div className="cert-slot">
+          <FileSlot label="Aggiungi l’attestato di partecipazione (PDF)" doneLabel="Attestato" crown file={m.certificate} onChange={(certificate) => onChange({ ...m, certificate })} />
+        </div>
       </div>
+      {synced && (
+        <p className="field field-wide gcal-note">
+          <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19.5 9A7.5 7.5 0 0 0 6 6.5L4.5 8M4.5 15A7.5 7.5 0 0 0 18 17.5l1.5-1.5M4.5 4v4h4M19.5 20v-4h-4" />
+          </svg>
+          Sincronizzato automaticamente con Google Calendar
+        </p>
+      )}
     </div>
   );
 }

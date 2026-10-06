@@ -150,7 +150,7 @@ export function ProgramFiles({ files, onChange }: { files: FileRef[]; onChange: 
       {files.map((f, i) => (
         <div key={f.id} className="file-slot has-file">
           <button type="button" className="file-open" onClick={() => openFile(repo, f)}>
-            {isImage(f) ? <Thumb f={f} /> : <GlyphClip />}
+            {isImage(f) ? <Thumb f={f} /> : <span className="pdf-badge" aria-hidden="true">PDF</span>}
             <span className="file-text">
               <strong>{files.length > 1 ? `Programma ${i + 1}` : 'Programma'}</strong>
               <span className="muted small">{isImage(f) ? 'Immagine' : f.name}</span>

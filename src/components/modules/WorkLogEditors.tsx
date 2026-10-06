@@ -296,11 +296,17 @@ function useFrequent(collect: (m: Module) => string[], vocab: VocabItem[]) {
   }, [allDays]);
 }
 
-function TutorFold({ colleagues, value, onChange }: { colleagues: Colleague[]; value?: string; onChange: (id: string | undefined) => void }) {
+/** Tutor as a small tile: the name and ›; tapping opens the list of colleagues. */
+function TutorTile({ colleagues, value, onChange }: { colleagues: Colleague[]; value?: string; onChange: (id: string | undefined) => void }) {
   const name = colleagues.find((c) => c.id === value)?.name;
   return (
-    <Fold title="Tutor" summary={name ?? 'Nessuno'}>
-      {colleagues.length ? (
+    <label className="op-tile op-tutor">
+      <span className="op-tile-label">Tutor</span>
+      <span className="op-tile-value">{name ?? (colleagues.length ? 'Nessuno' : 'Aggiungi i colleghi in Impostazioni')}</span>
+      <svg className="op-tile-more" viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9.5 6l6 6-6 6" />
+      </svg>
+      {colleagues.length > 0 && (
         <select value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)} aria-label="Tutor">
           <option value="">Nessuno</option>
           {colleagues.map((c) => (
@@ -309,10 +315,8 @@ function TutorFold({ colleagues, value, onChange }: { colleagues: Colleague[]; v
             </option>
           ))}
         </select>
-      ) : (
-        <p className="muted small">Aggiungi i colleghi in Impostazioni per sceglierli qui.</p>
       )}
-    </Fold>
+    </label>
   );
 }
 
@@ -513,7 +517,6 @@ function CaseView({
     named.length > 1 ? `${named.length} procedure` : named[0] ? labelOf(SURGICAL_ROLES, named[0].role) : '',
     c.setting !== 'elective' ? labelOf(SETTINGS_URGENCY, c.setting) : '',
     c.durationMin ? fmtMin(c.durationMin) : '',
-    compl ? `Clavien ${c.clavien}` : '',
   ].filter(Boolean);
 
   const groups = useStore().settings.procedureGroups ?? [];
@@ -551,7 +554,12 @@ function CaseView({
           <button type="button" className="op-case-title" aria-expanded={open} onClick={onToggle}>
             <span className="op-badge">Paziente {n}</span>
             <span className="op-case-name">{caseTitle(c)}</span>
-            {meta.length > 0 && <span className={`op-case-meta${compl ? ' warn' : ''}`}>{meta.join(' · ')}</span>}
+            {(meta.length > 0 || compl) && (
+              <span className="op-case-meta">
+                {meta.join(' · ')}
+                {compl && <span className="compl-pill">Clavien {c.clavien}</span>}
+              </span>
+            )}
           </button>
           <button type="button" className="icon-btn small chevron-btn" aria-label={open ? 'Riduci' : 'Espandi'} aria-expanded={open} onClick={onToggle}>
             <Chevron open={open} />
@@ -603,12 +611,13 @@ function CaseView({
 
           <span className="op-label">Regime</span>
           <Seg label="Regime" items={SETTINGS_URGENCY} value={c.setting} onChange={(setting) => set({ setting })} />
-          <div className="op-line">
-            <span className="op-line-label">Durata dell’intervento</span>
-            <DurationField unit="min" label="Durata dell’intervento" value={c.durationMin} onChange={(durationMin) => set({ durationMin: durationMin || undefined })} />
+          <div className="op-tiles">
+            <div className="op-tile op-duration">
+              <span className="op-tile-label">Durata intervento</span>
+              <DurationField unit="min" label="Durata dell’intervento" value={c.durationMin} onChange={(durationMin) => set({ durationMin: durationMin || undefined })} />
+            </div>
+            <TutorTile colleagues={colleagues} value={c.tutorId} onChange={(tutorId) => set({ tutorId })} />
           </div>
-
-          <TutorFold colleagues={colleagues} value={c.tutorId} onChange={(tutorId) => set({ tutorId })} />
 
           <label className="field op-notes">
             <span className="op-label">Note (senza dati identificativi)</span>
@@ -821,7 +830,7 @@ function ClinicalCaseView({
             </div>
           </div>
 
-          <TutorFold colleagues={colleagues} value={c.tutorId} onChange={(tutorId) => set({ tutorId })} />
+          <TutorTile colleagues={colleagues} value={c.tutorId} onChange={(tutorId) => set({ tutorId })} />
 
           <label className="field op-notes">
             <span className="op-label">Note (senza dati identificativi)</span>
