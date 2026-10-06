@@ -6,7 +6,7 @@ import { bestsBefore, matchingSet, previousSession, prsOf, SET_TYPES, setTypeOf,
 import { exerciseDef, usesDistance, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
 import { REST_OPTIONS, restLabel, supersetColor, supersetLetters } from '../../lib/training/routines';
 import type { ExerciseDef, ISODate, SetType, WorkoutExercise, WorkoutModule, WorkoutSet } from '../../lib/types';
-import { GlyphCheck, GlyphPlus, IconTimer } from '../icons';
+import { GlyphCheck, GlyphPlus, IconTimer, Sym } from '../icons';
 import { AutoText, NumberInput, uid } from '../ui';
 import { useUndo } from '../Undo';
 import { DurationField } from '../WheelPicker';
@@ -183,10 +183,7 @@ function SetRow({
           </button>
           {prs.length > 0 && (
             <span className="pr-crown" role="img" aria-label={`Record personale: ${prs.join(', ')}`} title={`Record: ${prs.join(', ')}`}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-                <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" />
-                <rect x="5" y="20" width="14" height="2" rx="1" />
-              </svg>
+              <Sym name="crown" size={16} fill />
             </span>
           )}
         </span>

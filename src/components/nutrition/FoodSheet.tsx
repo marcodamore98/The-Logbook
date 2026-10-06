@@ -4,7 +4,8 @@ import { allFoods, entryFor, FOOD_CATEGORIES, MEALS } from '../../lib/nutrition/
 import { useLibrary } from '../../lib/nutrition/library';
 import { barcodeDetector, hasTorch, openBackCamera, productByBarcode, searchOff, setFocus, setTorch, validBarcode } from '../../lib/nutrition/off';
 import type { Food, FoodEntry, MealId } from '../../lib/types';
-import { GlyphPlus } from '../icons';
+import { GlyphPlus, Sym } from '../icons';
+import type { SymName } from '../ms';
 import { Field, NumberInput, uid } from '../ui';
 
 type Tab = 'search' | 'recent' | 'favorites' | 'barcode' | 'create' | 'quick';
@@ -17,21 +18,17 @@ const TABS: [Tab, string][] = [
   ['quick', 'Aggiunta rapida'],
 ];
 
-const ICON: Record<Tab | 'heart' | 'back', string> = {
-  search: 'M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM16 16l4.5 4.5',
-  recent: 'M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v3.2h3.2M12 8v4.2l2.8 1.8',
-  favorites: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z',
-  heart: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z',
-  barcode: 'M3.5 8V4.5H7M17 4.5h3.5V8M20.5 16v3.5H17M7 19.5H3.5V16M7.5 8v8M10 8v8M12.5 8v8M15 8v5M16.8 8v8',
-  create: 'M4 7h11M4 12h11M4 17h7M18 14v6M15 17h6',
-  quick: 'M13 3L5 13.5h6L10 21l8-10.5h-6z',
-  back: 'M19 12H5.5M11 6l-6 6 6 6',
+const ICON: Record<Tab | 'heart' | 'back', SymName> = {
+  search: 'search',
+  recent: 'history',
+  favorites: 'favorite',
+  heart: 'favorite',
+  barcode: 'barcode_scanner',
+  create: 'post_add',
+  quick: 'bolt',
+  back: 'arrow_back',
 };
-const Icon = ({ d, size = 22, fill }: { d: string; size?: number; fill?: boolean }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill={fill ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d={d} />
-  </svg>
-);
+const Icon = ({ d, size = 22, fill }: { d: SymName; size?: number; fill?: boolean }) => <Sym name={d} size={size} fill={fill} />;
 
 /** Lower case without accents, so "ragu" finds "ragù". */
 const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -76,7 +73,7 @@ function FoodRow({ food, onPick, fav, onFav, onQuick, picked, children }: { food
         <Icon d={ICON.heart} size={20} fill={fav} />
       </button>
       <button type="button" className="fc-add" aria-label={`Aggiungi ${food.name} (${g} g)`} onClick={onQuick}>
-        <Icon d="M12 5v14M5 12h14" size={22} />
+        <Icon d="add" size={22} />
       </button>
       </div>
       {children}
@@ -409,7 +406,7 @@ export function FoodSheet({
             </select>
           </label>
           <button type="button" className="icon-btn fs-close" aria-label="Chiudi" onClick={onClose}>
-            <Icon d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+            <Icon d="close" />
           </button>
         </header>
         <div className="fs-search">

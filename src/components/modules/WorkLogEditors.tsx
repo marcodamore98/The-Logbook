@@ -17,7 +17,7 @@ import {
   type VocabItem,
 } from '../../lib/vocab';
 import { caseTitle, clinicalCases, clinicalLabels, surgeryCases } from '../../lib/worklog';
-import { GlyphPlus, GlyphTrash } from '../icons';
+import { GlyphPlus, GlyphTrash, Sym } from '../icons';
 import { useUndo } from '../Undo';
 import { useBlockDrag } from '../useBlockDrag';
 import { EDGE_PX } from '../useDrawer';
@@ -206,10 +206,7 @@ export function VocabSearch({
     <div className="search-pick vocab-search">
       <div className="vs-row">
         <span className="icon-input">
-          <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <circle cx="11" cy="11" r="6.5" />
-            <path d="M16 16l4.5 4.5" />
-          </svg>
+          <Sym name="search" size={18} />
           <input
             ref={input}
             value={text}
@@ -303,9 +300,7 @@ function TutorTile({ colleagues, value, onChange }: { colleagues: Colleague[]; v
     <label className="op-tile op-tutor">
       <span className="op-tile-label">Tutor</span>
       <span className="op-tile-value">{name ?? (colleagues.length ? 'Nessuno' : 'Aggiungi i colleghi in Impostazioni')}</span>
-      <svg className="op-tile-more" viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9.5 6l6 6-6 6" />
-      </svg>
+      <Sym name="chevron_right" size={18} className="op-tile-more" />
       {colleagues.length > 0 && (
         <select value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)} aria-label="Tutor">
           <option value="">Nessuno</option>

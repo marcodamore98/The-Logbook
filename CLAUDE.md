@@ -20,7 +20,7 @@ Tutti i prompt (0–13) sono stati applicati; quando arriva un nuovo HTML di Sti
 
 ## Design
 
-- Palette lime `#D6F25F` / lavanda `#B9B0F5` / antracite, Plus Jakarta Sans, icone disegnate su dischi pastello (non usare Material Symbols).
+- Palette lime `#D6F25F` / lavanda `#B9B0F5` / antracite, Plus Jakarta Sans. Icone: **Material Symbols Rounded** (quelle di Stitch) in inchiostro scuro sui dischi pastello (`Icon*` in `src/components/icons.tsx`) e, senza disco, nei pulsanti (`Sym`). Sono tracciati SVG copiati in `src/components/ms.ts` (niente font, funzionano offline): per una nuova icona copia il `d` da `@material-symbols/svg-400/rounded/<nome>.svg`.
 - Quando arriva un HTML di Stitch: riporta solo ciò che l'app sa già fare o che l'utente approva; escludi dati inventati (FC, HRV, cadenza, ID pazienti, target ECM…) e dillo.
 - **Tutto ciò che si può spostare sopra/sotto si sposta tenendo premuto e trascinando** (schede del giorno, esercizi, serie, fasi della corsa, promemoria, spesa, "Ordina le sezioni"…): usa `useSortableList` / `useBlockDrag` (`src/components/useBlockDrag.ts`) e, sulle righe fatte solo di campi, la maniglia `DragGrip`. Vale anche per ogni nuovo elenco ordinabile. Durante il trascinamento i blocchi grandi (schede, esercizi con le serie) diventano righe di una sola linea (`useBlockDrag(..., { compact: true })` + stile `.is-compacting`).
 - **Scorrere verso sinistra elimina direttamente**: compare il rosso "Elimina" sotto il dito e, oltre la soglia, al rilascio l'elemento sparisce (con "Annulla"), senza dover toccare un pulsante.

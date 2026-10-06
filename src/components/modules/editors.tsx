@@ -17,7 +17,7 @@ import {
   STUDY_AREAS,
   STUDY_TYPES,
 } from '../../lib/vocab';
-import { GlyphPlus, GlyphTrash } from '../icons';
+import { GlyphPlus, GlyphTrash, Sym } from '../icons';
 import { FileSlot, ProgramFiles, programOf } from '../files/FileSlot';
 import { compress } from '../../lib/image';
 import { mapsUrl, webUrl } from '../../lib/links';
@@ -66,10 +66,7 @@ function OutingEditor({ value: m, onChange }: Props<OutingModule>) {
       </Field>
       <Field label="Luogo">
         <span className="icon-input">
-          <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" />
-            <circle cx="12" cy="10" r="2.3" />
-          </svg>
+          <Sym name="location_on" size={18} />
           <input value={m.place ?? ''} onChange={(e) => set({ place: e.target.value })} />
         </span>
       </Field>
@@ -223,9 +220,7 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
           <span className="field-label">Link per accedere</span>
           <div className="link-row">
             <span className="icon-input">
-              <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
-              </svg>
+              <Sym name="link" size={18} />
               <input type="url" inputMode="url" autoComplete="off" value={m.link ?? ''} placeholder="https://… (Zoom, Teams, Meet)" onChange={(e) => onChange({ ...m, link: e.target.value || undefined })} />
             </span>
             {link && (
@@ -240,10 +235,7 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
           <span className="field-label">Luogo</span>
           <div className="link-row">
             <span className="icon-input">
-              <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" />
-                <circle cx="12" cy="10" r="2.3" />
-              </svg>
+              <Sym name="location_on" size={18} />
               <input value={m.place ?? ''} placeholder="es. Centro congressi, Roma" onChange={(e) => onChange({ ...m, place: e.target.value || undefined })} />
             </span>
             {m.place?.trim() && (
@@ -255,9 +247,7 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
         </div>
       )}
       <label className="field field-wide ecm-row">
-        <svg viewBox="0 0 24 24" width={22} height={22} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z" />
-        </svg>
+        <Sym name="star" size={22} />
         <span>Crediti formativi</span>
         <span className="ecm-pill">
           <NumberInput value={m.ecm} step={0.5} placeholder="–" onChange={(ecm) => onChange({ ...m, ecm })} />
@@ -278,9 +268,7 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
       <div className="field field-wide">
         <label className={`switch-row remind-box${m.startTime ? '' : ' disabled'}`}>
           <span className="bell-disc">
-            <svg className="bell" viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" />
-            </svg>
+            <Sym name="notifications" size={20} className="bell" />
           </span>
           <span className="remind-text">
             <strong>Promemoria evento</strong>
@@ -309,9 +297,7 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
       </div>
       {synced && (
         <p className="field field-wide gcal-note">
-          <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19.5 9A7.5 7.5 0 0 0 6 6.5L4.5 8M4.5 15A7.5 7.5 0 0 0 18 17.5l1.5-1.5M4.5 4v4h4M19.5 20v-4h-4" />
-          </svg>
+          <Sym name="sync" size={16} />
           Sincronizzato automaticamente con Google Calendar
         </p>
       )}

@@ -5,7 +5,7 @@ import { routineFromWorkout } from '../../lib/training/routines';
 import { bestsBefore, prsOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import type { ISODate, WorkoutModule } from '../../lib/types';
 import { fmt } from '../charts';
-import { GlyphPrev, IconWorkout } from '../icons';
+import { GlyphPrev, IconWorkout, Sym } from '../icons';
 import { exerciseDef } from '../../lib/training/exercises';
 import { today } from '../../lib/dates';
 import { AutoText, uid } from '../ui';
@@ -221,10 +221,7 @@ export function FinishFlow({
         <section className="done-records">
           <h2>
             <span className="dr-medal" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" />
-                <rect x="5" y="20" width="14" height="2" rx="1" />
-              </svg>
+              <Sym name="crown" size={16} fill />
             </span>
             {records.length === 1 ? '1 nuovo record personale' : `${records.length} nuovi record personali`}
           </h2>

@@ -1,213 +1,99 @@
-// Icon set: a fine ink line over a soft pastel disc (lime, lavender, mint, sky…).
-// Each icon owns a pigment so areas are recognisable at a glance.
+// Icon set: Google Material Symbols (Rounded, the ones used by the Stitch designs) drawn in ink over a soft
+// pastel disc (lime, lavender, mint, sky…). Each icon owns a pigment so areas are recognisable at a glance.
+// Symbols are inlined as SVG paths (src/components/ms.ts), no icon font: they work offline.
 
-import type { ReactNode, SVGProps } from 'react';
-
-// Small decorative dot, placed differently per icon so the set feels hand-made.
-const DOTS: [number, number][] = [[30, 9.5], [10, 9.5], [30.5, 30]];
+import type { ReactNode } from 'react';
+import { MS, type SymName } from './ms';
 
 export type Pigment = 'ochre' | 'rose' | 'sage' | 'indigo' | 'teal' | 'terra' | 'plum' | 'sand' | 'sky';
 
-interface ArtProps extends SVGProps<SVGSVGElement> {
-  size?: number;
-  pigment: Pigment;
-  blot?: 0 | 1 | 2;
-  children: ReactNode;
+/** A Material Symbol on its own (buttons, fields): takes the text colour. `fill` uses the filled variant when there is one. */
+export function Sym({ name, size = 20, fill = false, className }: { name: SymName; size?: number; fill?: boolean; className?: string }) {
+  const filled = `${name}-fill` as SymName;
+  const d = fill && filled in MS ? MS[filled] : MS[name];
+  return (
+    <svg viewBox="0 -960 960 960" width={size} height={size} aria-hidden="true" fill="currentColor" className={`sym${className ? ` ${className}` : ''}`}>
+      <path d={d} />
+    </svg>
+  );
 }
 
-function Art({ size = 36, pigment, blot = 0, children, ...rest }: ArtProps) {
+function Art({ size = 36, pigment, sym, children }: { size?: number; pigment: Pigment; sym: SymName; children?: ReactNode }) {
   return (
-    <svg
-      viewBox="0 0 40 40"
-      width={size}
-      height={size}
-      aria-hidden="true"
-      className={`art-icon pigment-${pigment}`}
-      {...rest}
-    >
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true" className={`art-icon pigment-${pigment}`}>
       <circle cx="20" cy="20" r="18" className="wash" />
-      <circle cx={DOTS[blot][0]} cy={DOTS[blot][1]} r="3.4" className="wash-2" />
-      <g className="ink" fill="none" strokeLinecap="round" strokeLinejoin="round">
-        {children}
-      </g>
+      <path className="ink" d={MS[sym]} transform="translate(9.5 9.5) scale(0.021875) translate(0 960)" />
+      {children}
     </svg>
   );
 }
 
 type P = { size?: number };
 
-export const IconMonth = (p: P) => (
-  <Art pigment="ochre" blot={0} {...p}>
-    <path d="M9.5 12.2c6.8-.4 14.3-.3 21 .1.6 5.6.5 13.2 0 18.6-6.9.4-14.3.4-20.9 0-.5-5.8-.6-12.8-.1-18.7z" />
-    <path d="M9.7 17.4c6.9-.3 13.9-.2 20.8.1M15 9.5v4.7M25 9.4v4.8" />
-    <path d="M14 22h.1M19 22h.1M24 22h.1M14 26.5h.1M19 26.5h.1" strokeWidth="2.2" />
+export const IconMonth = (p: P) => <Art pigment="ochre" sym="calendar_month" {...p} />;
+export const IconWeek = (p: P) => <Art pigment="sky" sym="view_week" {...p} />;
+export const IconDay = (p: P) => <Art pigment="ochre" sym="light_mode" {...p} />;
+export const IconShift = (p: P) => <Art pigment="rose" sym="medical_services" {...p} />;
+export const IconSurgery = (p: P) => <Art pigment="terra" sym="surgical" {...p} />;
+export const IconClinical = (p: P) => <Art pigment="rose" sym="stethoscope" {...p} />;
+export const IconStudy = (p: P) => <Art pigment="indigo" sym="menu_book" {...p} />;
+export const IconPhotos = (p: P) => <Art pigment="teal" sym="photo_library" {...p} />;
+export const IconNote = (p: P) => <Art pigment="sand" sym="edit_note" {...p} />;
+export const IconWorkout = (p: P) => <Art pigment="sage" sym="fitness_center" {...p} />;
+export const IconRun = (p: P) => <Art pigment="terra" sym="directions_run" {...p} />;
+export const IconOuting = (p: P) => <Art pigment="sage" sym="landscape" {...p} />;
+export const IconTodo = (p: P) => <Art pigment="plum" sym="checklist" {...p} />;
+export const IconAppointment = (p: P) => <Art pigment="sky" sym="event" {...p} />;
+export const IconStats = (p: P) => <Art pigment="indigo" sym="bar_chart" {...p} />;
+export const IconSettings = (p: P) => <Art pigment="sand" sym="settings" {...p} />;
+export const IconSync = (p: P) => <Art pigment="teal" sym="sync" {...p} />;
+export const IconPeople = (p: P) => <Art pigment="plum" sym="group" {...p} />;
+export const IconMood = (p: P) => <Art pigment="ochre" sym="mood" {...p} />;
+export const IconFood = (p: P) => <Art pigment="sage" sym="restaurant" {...p} />;
+export const IconHeart = (p: P) => <Art pigment="rose" sym="favorite" {...p} />;
+export const IconSteps = (p: P) => <Art pigment="ochre" sym="footprint" {...p} />;
+export const IconSleep = (p: P) => <Art pigment="indigo" sym="bedtime" {...p} />;
+export const IconWater = (p: P) => <Art pigment="teal" sym="water_drop" {...p} />;
+export const IconScale = (p: P) => <Art pigment="plum" sym="monitor_weight" {...p} />;
+export const IconFlame = (p: P) => <Art pigment="terra" sym="local_fire_department" {...p} />;
+export const IconBolt = (p: P) => <Art pigment="ochre" sym="bolt" {...p} />;
+export const IconTarget = (p: P) => <Art pigment="rose" sym="target" {...p} />;
+export const IconTimer = (p: P) => <Art pigment="sky" sym="timer" {...p} />;
+export const IconTrophy = (p: P) => <Art pigment="ochre" sym="trophy" {...p} />;
+export const IconBreakfast = (p: P) => <Art pigment="ochre" sym="coffee" {...p} />;
+export const IconLunch = (p: P) => <Art pigment="sage" sym="lunch_dining" {...p} />;
+export const IconDinner = (p: P) => <Art pigment="indigo" sym="dinner_dining" {...p} />;
+export const IconSnack = (p: P) => <Art pigment="terra" sym="cookie" {...p} />;
+export const IconBarcode = (p: P) => <Art pigment="sky" sym="barcode_scanner" {...p} />;
+export const IconCourse = (p: P) => <Art pigment="indigo" sym="school" {...p} />;
+export const IconTravel = (p: P) => <Art pigment="sky" sym="luggage" {...p} />;
+
+/** Calendar page showing today's day number. */
+export const IconToday = ({ size = 36, day = new Date().getDate() }: { size?: number; day?: number }) => (
+  <Art pigment="terra" sym="calendar_today" size={size}>
+    <text x="20" y="27" textAnchor="middle" className="today-num">
+      {day}
+    </text>
   </Art>
 );
 
-export const IconWeek = (p: P) => (
-  <Art pigment="sky" blot={1} {...p}>
-    <path d="M8.5 11.5c7.8-.5 15.7-.4 23.2 0 .4 6 .4 11.9 0 17.4-7.6.5-15.5.5-23.1 0-.5-5.8-.5-11.6-.1-17.4z" />
-    <path d="M14.6 11.8v16.9M20.2 11.6v17.2M25.8 11.8v16.9" strokeWidth="1.1" />
-    <path d="M10.8 16h1.6M16.5 20h1.6M22 16h1.6M27.6 23h1.6" strokeWidth="2" />
-  </Art>
-);
+// ---- Plain UI glyphs (no disc) ----
 
-export const IconDay = (p: P) => (
-  <Art pigment="ochre" blot={2} {...p}>
-    <circle cx="20" cy="20" r="5.6" />
-    <path d="M20 7.5v3.4M20 29.2v3.3M7.5 20h3.4M29.1 20h3.4M11.1 11.2l2.4 2.4M26.5 26.6l2.4 2.3M28.9 11.1l-2.4 2.4M13.5 26.5l-2.4 2.4" />
-  </Art>
-);
+export const GlyphPrev = () => <Sym name="chevron_left" size={18} />;
+export const GlyphNext = () => <Sym name="chevron_right" size={18} />;
+export const GlyphPlus = () => <Sym name="add" size={18} />;
+export const GlyphClose = () => <Sym name="close" size={18} />;
+export const GlyphTrash = () => <Sym name="delete" size={18} />;
+export const GlyphCheck = () => <Sym name="check" size={18} />;
+export const GlyphDownload = () => <Sym name="download" size={18} />;
+export const GlyphUpload = () => <Sym name="upload" size={18} />;
+export const GlyphPrint = () => <Sym name="print" size={18} />;
+export const GlyphEdit = () => <Sym name="edit" size={18} />;
+export const GlyphFolder = () => <Sym name="folder" size={18} />;
+export const GlyphMenu = () => <Sym name="menu" size={22} />;
 
-export const IconShift = (p: P) => (
-  <Art pigment="rose" blot={0} {...p}>
-    <path d="M12 12.8c5.3-.4 10.6-.4 16 0 .5 5.8.5 12 0 17.6-5.3.4-10.7.4-16 0-.5-5.8-.5-11.8 0-17.6z" />
-    <path d="M17.2 9.2c1.8-.3 3.8-.3 5.6 0v3.6h-5.6z" />
-    <path d="M20 17.3v7.4M16.3 21h7.4" strokeWidth="2" />
-  </Art>
-);
-
-export const IconSurgery = (p: P) => (
-  <Art pigment="terra" blot={1} {...p}>
-    <path d="M8.6 31.4c4.6-4.9 9.5-9.4 14.3-14" />
-    <path d="M22.4 17.9c2.6-3.8 5.9-7.2 9.8-9.4-1.3 4.6-4.4 8.6-8.3 11.4" />
-    <path d="M22.2 17.6l1.9 2.1" />
-    <path d="M9.8 28.3l2.3 2.2" strokeWidth="1.1" />
-  </Art>
-);
-
-export const IconClinical = (p: P) => (
-  <Art pigment="rose" blot={2} {...p}>
-    <path d="M12 8.6v7.2c0 4.1 2.8 6.8 6 6.8s6-2.7 6-6.8V8.6" />
-    <path d="M10.4 8.6H13.4M22.6 8.6h3" />
-    <path d="M18 22.6v2.8c0 3.6 2.6 6 5.7 6s5.6-2.4 5.6-6v-3.3" />
-    <circle cx="29.3" cy="19.6" r="2.6" />
-  </Art>
-);
-
-export const IconStudy = (p: P) => (
-  <Art pigment="indigo" blot={0} {...p}>
-    <path d="M20 13.2c-3.5-2.4-7.8-3.1-11.7-2.6v18.2c4-.4 8.1.2 11.7 2.6 3.6-2.4 7.7-3 11.7-2.6V10.6c-3.9-.5-8.2.2-11.7 2.6z" />
-    <path d="M20 13.2v18.1" />
-    <path d="M11.6 15.6c1.9 0 3.9.4 5.4 1.2M11.6 19.9c1.9 0 3.9.4 5.4 1.2M23 16.8c1.5-.8 3.5-1.2 5.4-1.2" strokeWidth="1.1" />
-  </Art>
-);
-
-export const IconPhotos = (p: P) => (
-  <Art pigment="teal" blot={1} {...p}>
-    <path d="M8.3 14.6c7.8-.5 15.7-.5 23.4 0 .5 4.9.5 10.2 0 15-7.8.5-15.6.5-23.4 0-.5-4.8-.5-10.1 0-15z" />
-    <path d="M14.6 14.4l1.8-3.3h7.2l1.8 3.3" />
-    <circle cx="20" cy="22" r="4.4" />
-    <path d="M27.8 17.5h.1" strokeWidth="2.2" />
-  </Art>
-);
-
-export const IconNote = (p: P) => (
-  <Art pigment="sand" blot={2} {...p}>
-    <path d="M30.8 8.2c-6.2 2.3-11.6 7.4-15 13.6l2.6 2.6c6.1-3.4 11.2-8.8 12.4-16.2z" />
-    <path d="M15.8 21.8c-1.1 2.3-2.2 4.6-3.2 7l2.3-.9M18.4 24.4l-3.5 3.5" />
-    <path d="M9 32.2c3.6-.8 7.4-1 11.2-.6 2.4.3 4.5.2 6.6-.4" strokeWidth="1.1" />
-  </Art>
-);
-
-export const IconWorkout = (p: P) => (
-  <Art pigment="sage" blot={0} {...p}>
-    <path d="M14.6 20h10.8" strokeWidth="2" />
-    <path d="M11.4 13.4c1-.2 2.2-.2 3.2 0 .3 4.4.3 8.8 0 13.2-1 .2-2.2.2-3.2 0-.3-4.4-.3-8.8 0-13.2zM25.4 13.4c1-.2 2.2-.2 3.2 0 .3 4.4.3 8.8 0 13.2-1 .2-2.2.2-3.2 0-.3-4.4-.3-8.8 0-13.2z" />
-    <path d="M8.3 16.3c.8-.1 1.6-.1 2.4 0 .2 2.5.2 5 0 7.4-.8.1-1.6.1-2.4 0-.2-2.4-.2-4.9 0-7.4zM29.3 16.3c.8-.1 1.6-.1 2.4 0 .2 2.5.2 5 0 7.4-.8.1-1.6.1-2.4 0-.2-2.4-.2-4.9 0-7.4z" />
-  </Art>
-);
-
-export const IconRun = (p: P) => (
-  <Art pigment="terra" blot={1} {...p}>
-    <circle cx="24.5" cy="10.8" r="2.7" />
-    <path d="M22.6 15.2l-4.4 3.3-1.3 4.2 4 2.2.6 5.3M22.6 15.2l4.6 3.4 3.3.4M19.6 19.6l-4.3-.6-2.6 2.6M21 24.9l-4.5 4.4-4 .2" />
-    <path d="M8 31.5h6" strokeWidth="1.1" />
-  </Art>
-);
-
-export const IconOuting = (p: P) => (
-  <Art pigment="sage" blot={1} {...p}>
-    <path d="M6.8 30.6c3.7-6 7-11.7 10.4-17.2 2.3 3.4 4.3 6.8 6.2 10.3 1.3-2.2 2.6-4.1 4-5.8 2.3 4.2 4.4 8.3 5.9 12.7-8.8.4-17.7.4-26.5 0z" />
-    <path d="M14.9 17.4c.9.8 2.1.9 3.1.2.8.8 1.6 1 2.5.6" strokeWidth="1.1" />
-    <circle cx="27.8" cy="11.3" r="2.8" />
-  </Art>
-);
-
-export const IconTodo = (p: P) => (
-  <Art pigment="plum" blot={2} {...p}>
-    <path d="M9.5 11.4c1.9-.2 3.9-.2 5.8 0 .2 1.9.2 3.9 0 5.8-1.9.2-3.9.2-5.8 0-.2-1.9-.2-3.9 0-5.8zM9.5 22.8c1.9-.2 3.9-.2 5.8 0 .2 1.9.2 3.9 0 5.8-1.9.2-3.9.2-5.8 0-.2-1.9-.2-3.9 0-5.8z" />
-    <path d="M10.8 14.4l1.6 1.6 3.8-4.4" strokeWidth="1.6" />
-    <path d="M19.4 14.4c3.7-.2 7.4-.2 11.2 0M19.4 25.8c3.7-.2 7.4-.2 11.2 0" />
-  </Art>
-);
-
-export const IconAppointment = (p: P) => (
-  <Art pigment="sky" blot={0} {...p}>
-    <path d="M20 8.6c6.5 0 11.4 5 11.4 11.4S26.4 31.4 20 31.4 8.6 26.4 8.6 20 13.5 8.6 20 8.6z" />
-    <path d="M20 13.2V20l4.5 3" />
-  </Art>
-);
-
-export const IconStats = (p: P) => (
-  <Art pigment="indigo" blot={1} {...p}>
-    <path d="M8.5 31.2c7.7.3 15.4.3 23 0" />
-    <path d="M12.3 27.8v-6.4M18.3 27.8V14.9M24.3 27.8v-9.2M30.2 27.8V10" strokeWidth="2.2" />
-  </Art>
-);
-
-export const IconSettings = (p: P) => (
-  <Art pigment="sand" blot={2} {...p}>
-    <circle cx="20" cy="20" r="4" />
-    <path d="M20 8.5v3.2M20 28.3v3.2M8.5 20h3.2M28.3 20h3.2M11.9 11.9l2.2 2.2M25.9 25.9l2.2 2.2M28.1 11.9l-2.2 2.2M14.1 25.9l-2.2 2.2" />
-    <path d="M20 12.6c4.1 0 7.4 3.3 7.4 7.4s-3.3 7.4-7.4 7.4-7.4-3.3-7.4-7.4 3.3-7.4 7.4-7.4z" strokeWidth="1.1" />
-  </Art>
-);
-
-export const IconSync = (p: P) => (
-  <Art pigment="teal" blot={0} {...p}>
-    <path d="M29.4 16.6c-1.4-4.2-5.2-7-9.6-7-4.7 0-8.6 3.2-9.7 7.6" />
-    <path d="M29.8 10.8l-.3 5.9-5.8-.6" />
-    <path d="M10.6 23.4c1.4 4.2 5.2 7 9.6 7 4.7 0 8.6-3.2 9.7-7.6" />
-    <path d="M10.2 29.2l.3-5.9 5.8.6" />
-  </Art>
-);
-
-export const IconPeople = (p: P) => (
-  <Art pigment="plum" blot={1} {...p}>
-    <circle cx="15.5" cy="15.2" r="4" />
-    <path d="M8 30.3c.6-4.6 3.8-7.6 7.5-7.6s6.9 3 7.5 7.6" />
-    <circle cx="26.2" cy="14.2" r="3.3" strokeWidth="1.2" />
-    <path d="M24.6 21.4c3.8-.6 7 1.9 7.6 6.8" strokeWidth="1.2" />
-  </Art>
-);
-
-export const IconMood = (p: P) => (
-  <Art pigment="ochre" blot={1} {...p}>
-    <path d="M20 8.6c6.5 0 11.4 5 11.4 11.4S26.4 31.4 20 31.4 8.6 26.4 8.6 20 13.5 8.6 20 8.6z" />
-    <path d="M15.3 23.3c2.6 2.8 6.8 2.8 9.4 0" />
-    <path d="M16 16.8h.1M24 16.8h.1" strokeWidth="2.3" />
-  </Art>
-);
-
-// ---- Plain UI glyphs (no wash) ----
-
-function Glyph({ d, size = 18 }: { d: string; size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d={d} />
-    </svg>
-  );
-}
-
-export const GlyphPrev = () => <Glyph d="M14.5 6l-6 6 6 6" />;
-export const GlyphNext = () => <Glyph d="M9.5 6l6 6-6 6" />;
-export const GlyphPlus = () => <Glyph d="M12 5v14M5 12h14" />;
-export const GlyphClose = () => <Glyph d="M6.5 6.5l11 11M17.5 6.5l-11 11" />;
-export const GlyphTrash = () => <Glyph d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" />;
-export const GlyphCheck = () => <Glyph d="M5.5 12.5l4 4 9-9.5" />;
-export const GlyphDownload = () => <Glyph d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14" />;
-export const GlyphUpload = () => <Glyph d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 19.5h14" />;
+/** Paperclip; with `crown` it marks a certificate (the Stitch "workspace premium" rosette, gold). */
+export const GlyphClip = ({ crown = false }: { crown?: boolean }) => (crown ? <Sym name="workspace_premium" size={22} className="cert-glyph" /> : <Sym name="attach_file" size={22} />);
 
 /** Sheriff's badge: marks staff physicians (strutturati) in the roster. */
 export const GlyphSheriff = ({ size = 14 }: { size?: number }) => (
@@ -228,156 +114,6 @@ export const GlyphSheriff = ({ size = 14 }: { size?: number }) => (
   </svg>
 );
 
-/** Calendar page showing today's day number. */
-export const IconToday = ({ size = 36, day = new Date().getDate() }: { size?: number; day?: number }) => (
-  <Art pigment="terra" blot={2} size={size}>
-    <path d="M9.5 11.2c6.8-.4 14.3-.3 21 .1.6 6 .5 13.6 0 19.6-6.9.4-14.3.4-20.9 0-.5-6.2-.6-13.7-.1-19.7z" />
-    <path d="M9.7 16c6.9-.3 13.9-.2 20.8.1M15 8.6v4.6M25 8.5v4.7" />
-    <text x="20.1" y="27.6" textAnchor="middle" className="today-num" stroke="none">
-      {day}
-    </text>
-  </Art>
-);
-
-export const IconFood = (p: { size?: number }) => (
-  <Art pigment="sage" blot={0} {...p}>
-    <path d="M9 20.5c0 6.2 5 10.6 11 10.6s11-4.4 11-10.6z" />
-    <path d="M8 20.5h24" />
-    <path d="M16.5 17.2c-.3-2.2 1.2-4.3 3.4-4.6M21.3 16.8c.2-3 2.4-5.6 5.4-6.1" strokeWidth="1.2" />
-    <path d="M14 15.3c1.5-.3 2.6.5 2.9 1.8" strokeWidth="1.2" />
-  </Art>
-);
-
-export const GlyphMenu = () => (
-  <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-    <path d="M4 7h16M4 12h16M4 17h10" />
-  </svg>
-);
-
-export const GlyphPrint = () => (
-  <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M7 8V4h10v4M6 17H4.5A1.5 1.5 0 0 1 3 15.5v-5A1.5 1.5 0 0 1 4.5 9h15a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H18M7 14h10v6H7z" />
-  </svg>
-);
-
-
-// ---- Body, nutrition and training icons ----
-
-export const IconHeart = (p: P) => (
-  <Art pigment="rose" blot={1} {...p}>
-    <path d="M20 30.5c-6.6-4.6-10.2-8.3-10.2-12.7 0-3.2 2.4-5.5 5.3-5.5 2 0 3.9 1.1 4.9 3 1-1.9 2.9-3 4.9-3 2.9 0 5.3 2.3 5.3 5.5 0 4.4-3.6 8.1-10.2 12.7z" />
-    <path d="M13 21.2h4l1.8-3.4 2.6 6 1.9-2.6h3.7" strokeWidth="1.2" />
-  </Art>
-);
-
-export const IconSteps = (p: P) => (
-  <Art pigment="ochre" blot={0} {...p}>
-    <path d="M12.6 20.4c1.8-1.3 4.1.4 4.1 3.2 0 2.6-.9 5.2-2.5 6.3-1.4.9-3.1 0-3.3-1.9-.3-2.7.3-6 1.7-7.6z" />
-    <path d="M23.4 11.2c1.8-1.2 4 .4 4 3 0 2.5-.9 4.9-2.5 5.9-1.3.9-3 .1-3.1-1.8-.3-2.4.2-5.6 1.6-7.1z" />
-    <path d="M12.8 18.2h.1M15.6 18.8h.1M23.6 9.3h.1M26.2 9.7h.1" strokeWidth="2" />
-  </Art>
-);
-
-export const IconSleep = (p: P) => (
-  <Art pigment="indigo" blot={2} {...p}>
-    <path d="M26.8 23.6a9.2 9.2 0 1 1-10.1-12.8 7.4 7.4 0 0 0 10.1 12.8z" />
-    <path d="M27.5 10.2v3.6M25.7 12h3.6" strokeWidth="1.3" />
-  </Art>
-);
-
-export const IconWater = (p: P) => (
-  <Art pigment="teal" blot={0} {...p}>
-    <path d="M20 9.5c3.9 4.7 7 8.2 7 12a7 7 0 0 1-14 0c0-3.8 3.1-7.3 7-12z" />
-    <path d="M16.6 23.4a3.5 3.5 0 0 0 2.5 3.1" strokeWidth="1.2" />
-  </Art>
-);
-
-export const IconScale = (p: P) => (
-  <Art pigment="plum" blot={1} {...p}>
-    <path d="M10.5 12.5c6.3-.4 12.7-.4 19 0 .5 5.6.5 11.6 0 16.9-6.3.4-12.7.4-19 0-.4-5.4-.4-11.4 0-16.9z" />
-    <path d="M14.5 21a5.5 5.5 0 0 1 11 0" />
-    <path d="M20 21l2.3-2.8" />
-  </Art>
-);
-
-export const IconFlame = (p: P) => (
-  <Art pigment="terra" blot={2} {...p}>
-    <path d="M20.6 8.6c.5 3.2-1.7 4.8-3.2 6.5-1.5 1.7-2.6 3.4-2.6 5.9 0 3.5 2.4 6.1 5.4 6.1s5.6-2.5 5.6-5.9c0-2.1-.9-3.5-2-4.7.1 1.3-.4 2.3-1.2 2.8.5-3.4-.7-7.9-2-10.7z" />
-    <path d="M20.2 29c-1.5 0-2.6-1.1-2.6-2.7 0-1.6 1.1-2.5 2-3.5.6 1.3 3.2 2.1 3.2 4.3 0 1.2-.9 1.9-2.6 1.9z" strokeWidth="1.2" />
-  </Art>
-);
-
-export const IconBolt = (p: P) => (
-  <Art pigment="ochre" blot={1} {...p}>
-    <path d="M22.6 8.5l-9.2 12.2h5.9l-1.8 10.8 9.3-13h-6.1z" />
-  </Art>
-);
-
-export const IconTarget = (p: P) => (
-  <Art pigment="rose" blot={0} {...p}>
-    <circle cx="19" cy="21" r="9.5" />
-    <circle cx="19" cy="21" r="5.4" />
-    <circle cx="19" cy="21" r="1.6" />
-    <path d="M19.5 20.5l9-9M25.5 10.5h4v4" />
-  </Art>
-);
-
-export const IconTimer = (p: P) => (
-  <Art pigment="sky" blot={2} {...p}>
-    <circle cx="20" cy="22.5" r="9" />
-    <path d="M17 9.5h6M20 9.5v4M20 17.8v5l3.2 2M28 14l1.8-1.8" />
-  </Art>
-);
-
-export const IconTrophy = (p: P) => (
-  <Art pigment="ochre" blot={0} {...p}>
-    <path d="M13.5 10.5h13v5.5a6.5 6.5 0 0 1-13 0z" />
-    <path d="M13.5 12.8h-3c0 3 1.3 4.8 3.7 5.3M26.5 12.8h3c0 3-1.3 4.8-3.7 5.3M20 22.5v4.7M15.5 29.8h9" />
-  </Art>
-);
-
-export const IconBreakfast = (p: P) => (
-  <Art pigment="ochre" blot={1} {...p}>
-    <path d="M10.5 18h14v4.2a7 7 0 0 1-14 0zM24.5 19.4h2.2a2.7 2.7 0 0 1 0 5.4h-2.8" />
-    <path d="M9.5 31.2h16M14.2 14.4c-1-1.3 1-2.2 0-3.7M19 14.4c-1-1.3 1-2.2 0-3.7" strokeWidth="1.2" />
-  </Art>
-);
-
-export const IconLunch = (p: P) => (
-  <Art pigment="sage" blot={0} {...p}>
-    <path d="M13 9.5v6.2c0 1.5 1 2.5 2.4 2.5s2.4-1 2.4-2.5V9.5M15.4 9.5v20.6" />
-    <path d="M25.6 9.5c-2.5 1.7-3.5 4.9-3.3 9.2h3.3v11.4" />
-  </Art>
-);
-
-export const IconDinner = (p: P) => (
-  <Art pigment="indigo" blot={2} {...p}>
-    <circle cx="19.5" cy="22" r="9" />
-    <circle cx="19.5" cy="22" r="4.6" />
-    <path d="M29.5 8.5v3.4M27.8 10.2h3.4" strokeWidth="1.3" />
-  </Art>
-);
-
-export const IconSnack = (p: P) => (
-  <Art pigment="terra" blot={1} {...p}>
-    <path d="M20 14.6c-2-1.6-6.5-1.3-8 2.5-1.6 4 .3 10.8 4.2 12.6 1.4.6 2.5-.2 3.8-.2s2.4.8 3.8.2c3.9-1.8 5.8-8.6 4.2-12.6-1.5-3.8-6-4.1-8-2.5z" />
-    <path d="M20 14.6c0-2.6 1.4-4.5 3.8-5.5" />
-  </Art>
-);
-
-export const IconBarcode = (p: P) => (
-  <Art pigment="sky" blot={0} {...p}>
-    <path d="M10.5 12v16M14.5 12v16M22 12v16M29.5 12v16" />
-    <path d="M18 12v16M26 12v16" strokeWidth="2.6" />
-  </Art>
-);
-
-export const GlyphEdit = () => (
-  <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 20l1-4.2L16.3 4.5a1.8 1.8 0 0 1 2.6 0l.6.6a1.8 1.8 0 0 1 0 2.6L8.2 19z M14.5 6.5l3 3" />
-  </svg>
-);
-
 /** Small front-and-back body, the shortcut to the muscle distribution. */
 export const IconBody = () => (
   <svg viewBox="0 0 28 24" width={28} height={24} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -388,31 +124,3 @@ export const IconBody = () => (
   </svg>
 );
 
-export const IconCourse = (p: P) => (
-  <Art pigment="indigo" blot={0} {...p}>
-    <path d="M20 10.5l11 5-11 5-11-5z" />
-    <path d="M14.5 19v5.2c0 1.6 2.4 3 5.5 3s5.5-1.4 5.5-3V19M31 15.5v7" />
-    <path d="M31 25.5v1.2" strokeWidth="2" />
-  </Art>
-);
-
-export const IconTravel = (p: P) => (
-  <Art pigment="sky" blot={1} {...p}>
-    <rect x="9.5" y="14" width="21" height="14.5" rx="2.5" />
-    <path d="M16 14v-2.2c0-.9.7-1.6 1.6-1.6h4.8c.9 0 1.6.7 1.6 1.6V14M9.5 20.5h21M18.5 20.5v2h3v-2" />
-  </Art>
-);
-
-export const GlyphFolder = () => (
-  <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3.5 7.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.2h8a1.5 1.5 0 0 1 1.5 1.5v8.3a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z" />
-  </svg>
-);
-
-/** Paperclip; with `crown` it marks a certificate. */
-export const GlyphClip = ({ crown = false }: { crown?: boolean }) => (
-  <svg viewBox="0 0 24 24" width={22} height={22} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.5 11.5l-6 6a3.5 3.5 0 0 1-5-5l7-7a2.3 2.3 0 0 1 3.3 3.3l-7 7a1.2 1.2 0 0 1-1.7-1.7l6-6" />
-    {crown && <path d="M14.5 5.5l1.2 1.4 1.3-2 1.3 2 1.2-1.4-.6 3h-3.8z" fill="#e0a800" stroke="#e0a800" strokeWidth="0.6" />}
-  </svg>
-);

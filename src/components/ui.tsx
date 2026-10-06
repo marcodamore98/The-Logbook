@@ -2,6 +2,7 @@ import { TimeField } from './WheelPicker';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Colleague, ShiftType } from '../lib/types';
 import { grouped, type VocabItem } from '../lib/vocab';
+import { Sym } from './icons';
 
 export function uid(): string {
   return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -270,9 +271,7 @@ export function useCollapsible(key: string, defaultOpen = true): [boolean, () =>
 
 export function Chevron({ open }: { open: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" className={`chevron${open ? ' open' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 6l6 6-6 6" />
-    </svg>
+    <Sym name="chevron_right" size={18} className={`chevron${open ? ' open' : ''}`} />
   );
 }
 
@@ -282,9 +281,7 @@ export function Chevron({ open }: { open: boolean }) {
 export function DragGrip() {
   return (
     <span className="drag-hint row-grip no-print" aria-hidden="true" title="Tieni premuto per spostare">
-      <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor">
-        <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-      </svg>
+      <Sym name="drag_indicator" size={18} />
     </span>
   );
 }
@@ -359,9 +356,7 @@ export function Card({
         {actions}
         {decor.handle && (
           <span className="drag-hint no-print" aria-hidden="true" title="Tieni premuto per spostare">
-            <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor">
-              <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-            </svg>
+            <Sym name="drag_indicator" size={18} />
           </span>
         )}
         {collapsible && (

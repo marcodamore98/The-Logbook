@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { FileSlot, openFile, programOf } from '../components/files/FileSlot';
 import { mapsUrl, webUrl } from '../lib/links';
-import { GlyphClip, GlyphFolder, IconCourse } from '../components/icons';
+import { GlyphClip, GlyphFolder, IconCourse, Sym } from '../components/icons';
 import { COURSE_TYPES } from '../components/modules/editors';
 import { Empty, NumberInput, uid } from '../components/ui';
 import { useStore } from '../lib/store/StoreContext';
@@ -40,17 +40,9 @@ const fmtNum = (n: number) => n.toLocaleString('it-IT', { maximumFractionDigits:
 const kb = (n?: number) => (!n ? '' : n > 1024 * 1024 ? `${fmtNum(n / 1024 / 1024)} MB` : `${Math.round(n / 1024)} KB`);
 
 const IconCal = () => (
-  <svg viewBox="0 0 24 24" width={15} height={15} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-    <rect x="3.5" y="5" width="17" height="15" rx="3" />
-    <path d="M3.5 10h17M8 3v4M16 3v4" />
-  </svg>
+  <Sym name="calendar_today" size={15} />
 );
-const IconBell = ({ on }: { on: boolean }) => (
-  <svg viewBox="0 0 24 24" width={14} height={14} aria-hidden="true" fill={on ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" />
-    {!on && <path d="M4 4l16 16" />}
-  </svg>
-);
+const IconBell = ({ on }: { on: boolean }) => (on ? <Sym name="notifications" size={14} fill /> : <Sym name="notifications_off" size={14} />);
 
 /** All courses and congresses attended, newest first, grouped by year. */
 export default function CoursesPage() {
@@ -213,10 +205,7 @@ function Archive({ rows }: { rows: Row[] }) {
       {all.length > 0 && (
         <>
           <span className="icon-input">
-            <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <circle cx="11" cy="11" r="6.5" />
-              <path d="M16 16l4.5 4.5" />
-            </svg>
+            <Sym name="search" size={18} />
             <input type="search" value={q} placeholder="Cerca attestato o corso…" onChange={(e) => setQ(e.target.value)} />
           </span>
           <div className="chips scroll-x">
@@ -266,15 +255,10 @@ function Archive({ rows }: { rows: Row[] }) {
                       <span>PDF{m.certificate!.size ? ` · ${kb(m.certificate!.size)}` : ''}</span>
                       <span className="ct-actions">
                         <button type="button" className="icon-btn small" aria-label="Vedi l’attestato" onClick={() => openFile(store.repo, m.certificate!)}>
-                          <svg viewBox="0 0 24 24" width={17} height={17} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
-                            <circle cx="12" cy="12" r="2.8" />
-                          </svg>
+                          <Sym name="visibility" size={18} />
                         </button>
                         <button type="button" className="icon-btn small" aria-label="Scarica l’attestato" onClick={() => downloadFile(store.repo, m.certificate!, m.title)}>
-                          <svg viewBox="0 0 24 24" width={17} height={17} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14" />
-                          </svg>
+                          <Sym name="download" size={18} />
                         </button>
                       </span>
                     </span>

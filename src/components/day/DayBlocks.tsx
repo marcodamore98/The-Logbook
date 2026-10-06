@@ -9,7 +9,7 @@ import type { DayEntry, ISODate, RunModule, WorkoutModule } from '../../lib/type
 import { fmtDuration, fmtKm, fmtPace } from '../../lib/running/geo';
 import { fmt } from '../charts';
 import { runLine } from '../modules/meta';
-import { IconFood, IconWorkout } from '../icons';
+import { IconFood, IconWorkout, Sym } from '../icons';
 import { Card } from '../ui';
 import { useUndo } from '../Undo';
 
@@ -108,10 +108,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
                 {i.running && <span className="ws-live">In corso</span>}
                 {prs.length > 0 && (
                   <span className="pr-banner">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-                      <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" />
-                      <rect x="5" y="20" width="14" height="2" rx="1" />
-                    </svg>
+                    <Sym name="crown" size={16} fill />
                     {prs.length === 1 ? `Nuovo record · ${prs[0]}` : `${prs.length} nuovi record · ${prs.join(', ')}`}
                   </span>
                 )}

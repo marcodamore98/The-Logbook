@@ -15,6 +15,7 @@ import {
   IconWater,
   IconShift,
   IconTodo,
+  Sym,
 } from '../components/icons';
 import { RosterCard } from '../components/RosterCard';
 import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
@@ -315,9 +316,7 @@ export default function DayPage() {
                     <ColleaguePicker colleagues={settings.colleagues} selected={day.shift.colleagueIds} onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })} />
                   </div>
                   <label className="note-line">
-                    <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 7h10M4 12h7M4 17h6M14.5 18.5l5.2-5.2a1.6 1.6 0 0 0-2.3-2.3l-5.2 5.2-.7 3z" />
-                    </svg>
+                    <Sym name="edit_note" size={18} />
                     <input aria-label="Note sul turno" placeholder="Aggiungi una nota al turno…" value={day.shift.note ?? ''} onChange={(e) => setShift({ ...day.shift!, note: e.target.value })} />
                   </label>
                 </>
@@ -552,9 +551,7 @@ export default function DayPage() {
           <span className="page-sub">{[...dayShifts, `Settimana ${isoWeek(date)}`].join(' · ')}</span>
         </div>
         <button className="icon-btn no-print" aria-label="Ordina le sezioni" title="Ordina le sezioni" onClick={() => setOrdering(true)}>
-          <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M8 4v16M4.5 7.5L8 4l3.5 3.5M16 20V4M12.5 16.5L16 20l3.5-3.5" />
-          </svg>
+          <Sym name="swap_vert" size={20} />
         </button>
         <div className="day-jump no-print" role="group" aria-label="Vai al giorno">
           <button onClick={() => nav(`/giorno/${addDays(today(), -1)}`)} className={date === addDays(today(), -1) ? 'on' : ''}>Ieri</button>

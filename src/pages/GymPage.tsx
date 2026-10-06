@@ -2,7 +2,7 @@ import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarList, Columns, fmt } from '../components/charts';
-import { GlyphPlus, GlyphTrash, IconStats, IconWorkout } from '../components/icons';
+import { GlyphPlus, GlyphTrash, IconStats, IconWorkout, Sym } from '../components/icons';
 import { RoutineEditor } from '../components/training/RoutineEditor';
 import { Empty, uid } from '../components/ui';
 import { addDays, fromISO, isoWeek, startOfWeek, today } from '../lib/dates';
@@ -478,9 +478,7 @@ function Streak() {
   if (n < 1) return null;
   return (
     <span className="streak-badge" title="Settimane consecutive con almeno un allenamento">
-      <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="currentColor">
-        <path d="M12 2c1 3.5-1.5 5-1.5 7.5 0 1.2.8 2 1.8 2 1.4 0 2.2-1.3 1.7-3.3 2.9 1.8 4.5 4.6 4.5 7.3A6.5 6.5 0 0 1 12 22a6.5 6.5 0 0 1-6.5-6.5C5.5 10 12 7 12 2z" />
-      </svg>
+      <Sym name="local_fire_department" size={18} fill />
       {n} {n === 1 ? 'settimana' : 'sett. di fila'}
     </span>
   );
