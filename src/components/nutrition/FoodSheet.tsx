@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import { allFoods, entryFor, FOOD_CATEGORIES, MEALS } from '../../lib/nutrition/foods';
 import { useLibrary } from '../../lib/nutrition/library';
@@ -50,13 +50,14 @@ function rankOf(name: string, text: string, words: string[]) {
 const usual = (f: Food) => f.portionG ?? 100;
 
 /** A food as a card: name, usual portion with kcal and ♥, macro badges, round + that adds the usual portion. */
-function FoodRow({ food, onPick, fav, onFav, onQuick, picked }: { food: Food; onPick: () => void; fav: boolean; onFav: () => void; onQuick: () => void; picked?: boolean }) {
+function FoodRow({ food, onPick, fav, onFav, onQuick, picked, children }: { food: Food; onPick: () => void; fav: boolean; onFav: () => void; onQuick: () => void; picked?: boolean; children?: ReactNode }) {
   const g = usual(food);
   const e = entryFor(food, g, '');
   const portion = food.portionG ? `${(food.portionName ?? '1 porzione').replace(/^1\s+/, '1 ')} (${g} g)` : '100 g';
   return (
     <li className={`food-card${picked ? ' picked' : ''}`}>
-      <button type="button" className="fc-main" onClick={onPick}>
+      <div className="fc-row">
+      <button type="button" className="fc-main" onClick={onPick} aria-expanded={picked}>
         <span className="fc-name">
           {food.name}
           {food.brand && <span className="muted"> · {food.brand}</span>}
@@ -66,12 +67,9 @@ function FoodRow({ food, onPick, fav, onFav, onQuick, picked }: { food: Food; on
           {food.source === 'off' ? <span className="fc-src"> · Open Food Facts</span> : food.origin ? <span className="fc-src"> · {food.origin}</span> : null}
         </span>
         <span className="fc-macros">
-          <span className="mb c">C</span>
-          {fmtG(e.carbs)}
-          <span className="mb p">P</span>
-          {fmtG(e.protein)}
-          <span className="mb g">G</span>
-          {fmtG(e.fat)}
+          <span className="mp c"><b>C</b> {fmtG(e.carbs)}</span>
+          <span className="mp p"><b>P</b> {fmtG(e.protein)}</span>
+          <span className="mp g"><b>G</b> {fmtG(e.fat)}</span>
         </span>
       </button>
       <button type="button" className={`fc-fav${fav ? ' on' : ''}`} aria-label={fav ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'} aria-pressed={fav} onClick={onFav}>
@@ -80,6 +78,8 @@ function FoodRow({ food, onPick, fav, onFav, onQuick, picked }: { food: Food; on
       <button type="button" className="fc-add" aria-label={`Aggiungi ${food.name} (${g} g)`} onClick={onQuick}>
         <Icon d="M12 5v14M5 12h14" size={22} />
       </button>
+      </div>
+      {children}
     </li>
   );
 }
@@ -103,8 +103,10 @@ function Quantity({ food, meal, onMeal, onAdd, onBack, inline }: { food: Food; m
   ];
   const step = (grams ?? 0) >= 100 ? 10 : 5;
   const mealLabel = MEALS.find((m) => m.id === meal)?.label ?? '';
+  const box = useRef<HTMLDivElement>(null);
+  const free = !portions.some(([, g]) => g === grams);
   return (
-    <div className={`quantity${inline ? ' inline' : ''}`}>
+    <div ref={box} className={`quantity${inline ? ' inline' : ''}`}>
       {!inline && (
         <h3 className="q-name">
           {food.name}
@@ -118,6 +120,9 @@ function Quantity({ food, meal, onMeal, onAdd, onBack, inline }: { food: Food; m
             {label}
           </button>
         ))}
+        <button type="button" className={free ? 'on' : ''} onClick={() => box.current?.querySelector<HTMLInputElement>('.q-grams input')?.focus()}>
+          Porzione libera
+        </button>
       </div>
       <div className="q-stepper">
         <span>Grammi</span>
@@ -192,6 +197,8 @@ export function FoodSheet({
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const [torch, setTorchOn] = useState<boolean | null>(null); // null: the camera has no torch
+  const [lastFound, setLastFound] = useState<{ food: Food; code: string } | null>(null);
+  const gallery = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<Food>({ id: '', name: '', kcal: 0, protein: 0, carbs: 0, fat: 0, source: 'custom', category: 'Piatti pronti' });
   const [quick, setQuick] = useState({ name: '', kcal: undefined as number | undefined, protein: undefined as number | undefined, carbs: undefined as number | undefined, fat: undefined as number | undefined });
 
@@ -247,12 +254,33 @@ export function FoodSheet({
     setErr(undefined);
     try {
       const f = custom.find((x) => x.barcode === c) ?? (await productByBarcode(c));
-      if (f) setPicked(f);
-      else setErr('Prodotto non trovato su Open Food Facts: puoi crearlo in “Nuovo alimento”.');
+      if (f) {
+        setPicked(f);
+        setLastFound({ food: f, code: c });
+        window.setTimeout(() => document.querySelector('.fs-body > .quantity')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+      } else setErr('Prodotto non trovato su Open Food Facts: puoi crearlo in “Nuovo alimento”.');
     } catch (e) {
       setErr(String(e instanceof Error ? e.message : e));
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** Reads the code from a photo (for a label the camera can't focus on). */
+  async function fromPhoto(file: File | undefined) {
+    if (gallery.current) gallery.current.value = '';
+    const det = barcodeDetector();
+    if (!file) return;
+    if (!det) return setErr('Questo browser non legge i codici a barre dalle foto: scrivi il numero sotto il codice.');
+    try {
+      const found = await det.detect(await createImageBitmap(file));
+      const hit = found.find((f) => validBarcode(f.rawValue, f.format));
+      if (!hit) return setErr('Nessun codice leggibile nella foto: prova con una foto più vicina e a fuoco.');
+      stopScan();
+      setCode(hit.rawValue);
+      lookup(hit.rawValue);
+    } catch {
+      setErr('Non riesco a leggere questa foto.');
     }
   }
 
@@ -338,12 +366,9 @@ export function FoodSheet({
             if (open) shownInline = true;
             return (
               <Fragment key={f.id}>
-                <FoodRow food={f} picked={open} fav={favs.includes(f.id)} onFav={() => toggleFav(f.id)} onPick={() => setPicked(open ? null : f)} onQuick={() => quickAdd(f)} />
-                {open && (
-                  <li className="q-inline">
-                    <Quantity inline food={f} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} />
-                  </li>
-                )}
+                <FoodRow food={f} picked={open} fav={favs.includes(f.id)} onFav={() => toggleFav(f.id)} onPick={() => setPicked(open ? null : f)} onQuick={() => quickAdd(f)}>
+                  {open && <Quantity inline food={f} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} />}
+                </FoodRow>
               </Fragment>
             );
           })}
@@ -373,7 +398,7 @@ export function FoodSheet({
           <button type="button" className="icon-btn fs-back" aria-label="Indietro" data-back onClick={onClose}>
             <Icon d={ICON.back} />
           </button>
-          <label className="fs-meal">
+          <label className="fs-meal fs-meal-pill">
             <span className="sr-only">Pasto</span>
             <select value={meal} onChange={(e) => setMeal(e.target.value as MealId)}>
               {MEALS.map((m) => (
@@ -383,6 +408,9 @@ export function FoodSheet({
               ))}
             </select>
           </label>
+          <button type="button" className="icon-btn fs-close" aria-label="Chiudi" onClick={onClose}>
+            <Icon d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+          </button>
         </header>
         <div className="fs-search">
           <span className="icon-input food-search">
@@ -404,7 +432,7 @@ export function FoodSheet({
               </button>
             )}
           </span>
-          <button type="button" className={`fs-scan${tab === 'barcode' ? ' on' : ''}`} aria-label="Codice a barre" onClick={() => { setTab('barcode'); setPicked(null); }}>
+          <button type="button" className={`fs-scan${tab === 'barcode' ? ' on' : ''}`} aria-label="Codice a barre" onClick={() => { setTab('barcode'); setPicked(null); if (!scanning) startScan(); }}>
             <Icon d={ICON.barcode} size={28} />
           </button>
         </div>
@@ -413,7 +441,10 @@ export function FoodSheet({
           {!searching && tab !== 'barcode' && (
             <section className="fs-intake">
               <div className="fs-intake-head">
-                <strong>Assunzione giornaliera</strong>
+                <strong>
+                  Assunzione giornaliera
+                  {goals.kcalIn ? <span className="fs-pct">{Math.round((eaten.kcal / goals.kcalIn) * 100)}%</span> : null}
+                </strong>
                 <strong>
                   {Math.round(eaten.kcal)}
                   {goals.kcalIn ? ` / ${goals.kcalIn}` : ''} kcal
@@ -476,49 +507,87 @@ export function FoodSheet({
             {tab === 'favorites' && list(foods.filter((f) => favs.includes(f.id)), 'Tocca ♡ su un alimento per averlo qui tra i preferiti.', 'Preferiti')}
 
             {tab === 'barcode' && (
-              <div className="barcode">
+              <div className="barcode scan-page">
                 <button type="button" className="q-back" onClick={() => { stopScan(); setTab('recent'); }}>
                   ‹ Torna agli alimenti
                 </button>
-                {scanning ? (
-                  <div className="scanner-wrap">
-                    {/* Tapping the preview refocuses, like the camera app. */}
-                    <div className="scanner-box">
-                      <video ref={video} className="scanner" playsInline muted onClick={() => stream.current && setFocus(stream.current, 'single-shot').then(() => window.setTimeout(() => stream.current && setFocus(stream.current, 'continuous'), 1200))} />
-                      <span className="scan-frame" aria-hidden="true" />
-                    </div>
-                    <span className="scan-hint">Avvicina il codice dentro il riquadro · tocca per mettere a fuoco</span>
-                    <div className="scan-actions">
-                      {torch !== null && (
-                        <button
-                          type="button"
-                          className={`btn-ghost small${torch ? ' on' : ''}`}
-                          onClick={() => {
-                            if (!stream.current) return;
-                            setTorch(stream.current, !torch);
-                            setTorchOn(!torch);
-                          }}
-                        >
-                          {torch ? 'Spegni torcia' : 'Torcia'}
-                        </button>
-                      )}
-                      <button type="button" className="btn-ghost small" onClick={stopScan}>
-                        Annulla
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button className="btn" onClick={startScan}>
-                    Scansiona con la fotocamera
-                  </button>
-                )}
-                <div className="picker-tools">
-                  <input inputMode="numeric" placeholder="oppure scrivi il codice (EAN)" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
-                  <button className="btn-ghost small" disabled={code.length < 8 || busy} onClick={() => lookup(code)}>
-                    {busy ? 'Cerco…' : 'Cerca'}
-                  </button>
+                <div className="scan-title">
+                  <h3>Scanner codice</h3>
+                  <p>Inquadra la confezione o scrivi il numero sotto il codice</p>
                 </div>
-                <p className="muted small">I dati dei prodotti confezionati provengono da Open Food Facts, database libero e collaborativo.</p>
+                <div className="scan-view">
+                  {scanning ? (
+                    // Tapping the preview refocuses, like the camera app.
+                    <video ref={video} className="scanner" playsInline muted onClick={() => stream.current && setFocus(stream.current, 'single-shot').then(() => window.setTimeout(() => stream.current && setFocus(stream.current, 'continuous'), 1200))} />
+                  ) : (
+                    <button type="button" className="scan-start" onClick={startScan}>
+                      <Icon d={ICON.barcode} size={30} />
+                      Avvia la fotocamera
+                    </button>
+                  )}
+                  {scanning && (
+                    <span className="scan-guide" aria-hidden="true">
+                      <i className="tl" /><i className="tr" /><i className="bl" /><i className="br" />
+                      <i className="laser" />
+                    </span>
+                  )}
+                  {scanning && <span className="scan-hint2">Avvicina il codice dentro il riquadro · tocca per mettere a fuoco</span>}
+                </div>
+                <div className="scan-actions">
+                  {torch !== null && (
+                    <button
+                      type="button"
+                      className={`btn-ghost small${torch ? ' on' : ''}`}
+                      onClick={() => {
+                        if (!stream.current) return;
+                        setTorch(stream.current, !torch);
+                        setTorchOn(!torch);
+                      }}
+                    >
+                      {torch ? 'Torcia accesa' : 'Torcia'}
+                    </button>
+                  )}
+                  <button type="button" className="btn-ghost small" onClick={() => gallery.current?.click()}>
+                    Galleria
+                  </button>
+                  <input ref={gallery} type="file" accept="image/*" hidden onChange={(e) => fromPhoto(e.target.files?.[0])} />
+                  {scanning && (
+                    <button type="button" className="btn-ghost small" onClick={stopScan}>
+                      Annulla
+                    </button>
+                  )}
+                </div>
+                <section className="scan-manual">
+                  <div className="scan-manual-head">
+                    <span>Oppure scrivi il codice (EAN / UPC)</span>
+                    <small>8–13 cifre</small>
+                  </div>
+                  <div className="scan-manual-row">
+                    <input inputMode="numeric" placeholder="Es. 8001234567890" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+                    <button type="button" className="btn scan-go" disabled={code.length < 8 || busy} onClick={() => lookup(code)}>
+                      {busy ? 'Cerco…' : 'Cerca ›'}
+                    </button>
+                  </div>
+                </section>
+                {lastFound && (
+                  <section className="scan-last">
+                    <div className="scan-last-head">
+                      <span>✓ Ultimo prodotto riconosciuto</span>
+                      <small>EAN {lastFound.code}</small>
+                    </div>
+                    <button type="button" className="scan-last-row" onClick={() => quickAdd(lastFound.food)}>
+                      <span className="fc-name">
+                        {lastFound.food.name}
+                        {lastFound.food.brand && <span className="muted"> · {lastFound.food.brand}</span>}
+                      </span>
+                      <span className="fc-portion">
+                        {usual(lastFound.food)} g · {entryFor(lastFound.food, usual(lastFound.food), '').kcal} kcal · P {fmtG(entryFor(lastFound.food, usual(lastFound.food), '').protein)}
+                      </span>
+                      <b className="scan-last-add">+ Aggiungi</b>
+                    </button>
+                  </section>
+                )}
+                <p className="muted small scan-help">Codice rovinato o illeggibile? Scrivilo qui sopra. I dati dei prodotti confezionati vengono da Open Food Facts, database libero e collaborativo.</p>
               </div>
             )}
 

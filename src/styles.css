@@ -2498,3 +2498,62 @@ a.btn.link-open, a.btn-ghost.link-open { display: inline-flex; padding-block: 0;
 .gcal-note svg { color: #3ccf8e; }
 .remind-box .bell-disc { flex: none; }
 .remind-box .remind-text { flex: 1; }
+
+/* Add foods (Stitch, Prompt 7): meal pill and close, macro pills, portion inside the card */
+.fs-head { justify-content: space-between; }
+.fs-meal-pill { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+.fs-meal-pill select { font-size: 0.95rem; padding: 0.45rem 1.7rem 0.45rem 1rem; }
+.fs-close { border: none; background: none; color: var(--muted); }
+.fs-pct { margin-left: 0.5rem; font-size: 0.7rem; font-weight: 800; padding: 0.1rem 0.45rem; border-radius: 999px; background: color-mix(in srgb, var(--lime) 18%, transparent); vertical-align: 0.1em; }
+.fc-row { display: flex; align-items: center; gap: 0.2rem; width: 100%; }
+.food-card { flex-direction: column; align-items: stretch; }
+.food-card.picked { border-width: 2px; box-shadow: 0 0 22px rgb(214 242 95 / 0.15); }
+.food-card .quantity.inline { margin: 0.2rem 0.6rem 0.6rem; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); padding: 0.8rem; }
+.fc-macros { gap: 0.35rem; flex-wrap: wrap; }
+.mp { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.08rem 0.5rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600; border: 1px solid; }
+.mp b { font-weight: 800; }
+.mp.c { background: color-mix(in srgb, var(--lime) 15%, transparent); border-color: color-mix(in srgb, var(--lime) 25%, transparent); color: #6f8a17; }
+.mp.p { background: color-mix(in srgb, var(--lavender) 15%, transparent); border-color: color-mix(in srgb, var(--lavender) 30%, transparent); color: var(--accent); }
+.mp.g { background: color-mix(in srgb, var(--water) 15%, transparent); border-color: color-mix(in srgb, var(--water) 25%, transparent); color: #2f7fbf; }
+:root[data-theme='dark'] .mp.c { color: var(--lime); } :root[data-theme='dark'] .mp.p { color: var(--lavender); } :root[data-theme='dark'] .mp.g { color: #91cdff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .mp.c { color: var(--lime); } :root:not([data-theme='light']) .mp.p { color: var(--lavender); } :root:not([data-theme='light']) .mp.g { color: #91cdff; } }
+.fc-fav.on { color: #6f8a17; }
+:root[data-theme='dark'] .fc-fav.on { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .fc-fav.on { color: var(--lime); } }
+.q-portions button:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* Barcode scanner page */
+.scan-page { align-items: stretch; gap: 0.8rem; }
+.scan-page .q-back { align-self: flex-start; }
+.scan-title h3 { margin: 0; font-size: 1.35rem; font-weight: 800; }
+.scan-title p { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.85rem; }
+.scan-view { position: relative; width: 100%; aspect-ratio: 1 / 1.05; max-height: 62dvh; border-radius: 24px; overflow: hidden; background: #0e0e0e; border: 1px solid var(--line); display: grid; place-items: center; }
+.scan-view .scanner { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; object-fit: cover; border-radius: 0; }
+.scan-start { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; border: none; background: none; color: var(--lime); font: inherit; font-weight: 700; }
+.scan-guide { position: absolute; left: 11%; right: 11%; top: 22%; bottom: 22%; border-radius: 16px; border: 1px dashed rgb(214 242 95 / 0.45); box-shadow: 0 0 0 999px rgb(0 0 0 / 0.35); pointer-events: none; }
+.scan-guide i { position: absolute; width: 24px; height: 24px; border: 4px solid var(--lime); filter: drop-shadow(0 0 6px rgb(214 242 95 / 0.6)); }
+.scan-guide .tl { top: -6px; left: -6px; border-right: none; border-bottom: none; border-top-left-radius: 10px; }
+.scan-guide .tr { top: -6px; right: -6px; border-left: none; border-bottom: none; border-top-right-radius: 10px; }
+.scan-guide .bl { bottom: -6px; left: -6px; border-right: none; border-top: none; border-bottom-left-radius: 10px; }
+.scan-guide .br { bottom: -6px; right: -6px; border-left: none; border-top: none; border-bottom-right-radius: 10px; }
+.scan-guide .laser { left: 4%; right: 4%; width: auto; height: 2px; border: none; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--lime), transparent); box-shadow: 0 0 12px rgb(214 242 95 / 0.9); animation: laser 2.4s ease-in-out infinite; filter: none; }
+@keyframes laser { 0%, 100% { top: 8%; opacity: 0.35; } 50% { top: 88%; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .scan-guide .laser { animation: none; top: 50%; } }
+.scan-hint2 { position: absolute; left: 0.8rem; right: 0.8rem; bottom: 0.8rem; text-align: center; padding: 0.4rem 0.8rem; border-radius: 999px; background: rgb(28 27 27 / 0.85); color: #e5e2e1; font-size: 0.76rem; font-weight: 600; pointer-events: none; }
+.scan-page .scan-actions { justify-content: stretch; }
+.scan-page .scan-actions > button { flex: 1; min-height: 2.6rem; border-radius: 999px; }
+.scan-manual, .scan-last { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 0.9rem; display: flex; flex-direction: column; gap: 0.55rem; }
+.scan-manual-head, .scan-last-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: 0.84rem; font-weight: 700; color: var(--ink-2); }
+.scan-manual-head small, .scan-last-head small { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.scan-manual-row { display: flex; gap: 0.5rem; }
+.scan-manual-row input { flex: 1; min-width: 0; }
+.scan-go { flex: none; border-radius: 999px; background: var(--lime); color: #1d1d1f; padding-inline: 1.2rem; }
+.scan-last-head span { color: var(--ink); }
+.scan-last-row { display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'name add' 'meta add'; align-items: center; gap: 0.15rem 0.6rem; text-align: left; border: 1px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 0.7rem 0.8rem; font: inherit; color: var(--ink); }
+.scan-last-row .fc-name { grid-area: name; }
+.scan-last-row .fc-portion { grid-area: meta; }
+.scan-last-add { grid-area: add; color: #6f8a17; }
+:root[data-theme='dark'] .scan-last-add { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .scan-last-add { color: var(--lime); } }
+.scan-help { text-align: center; }
+.fs-body > * { flex-shrink: 0; }
