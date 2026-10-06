@@ -1,8 +1,61 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { useLocation, useNavigationType } from 'react-router-dom';
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
+import { today } from '../lib/dates';
+import { consumeSilentPop, pushGuard, setBackHandler, silenceNextPop } from '../lib/backNav';
 
 /** Things that sit on top of the page and that "back" should close, topmost last in the DOM. */
-const OVERLAYS = '.sheet-backdrop, .fan-backdrop, .drawer-backdrop, .finish-backdrop, .finish-screen, .rest-big, .run-summary';
+export const OVERLAYS = '.sheet-backdrop, .fan-backdrop, .drawer-backdrop, .finish-backdrop, .finish-screen, .rest-big, .run-summary';
+
+/** Parent page for the back button: a workout goes to Palestra, a section page to the day page, another day to today. */
+export function parentOf(path: string, lastDay: string): string | null {
+  const [top, sub] = path.split('/').filter(Boolean);
+  switch (top) {
+    case 'palestra':
+      return sub === 'allenamento' ? '/palestra' : lastDay;
+    case 'corsi':
+      return sub ? '/corsi' : lastDay;
+    case 'alimentazione':
+    case 'diario':
+      return sub ? `/giorno/${sub}` : lastDay;
+    case 'giorno':
+    case undefined:
+      return sub && sub !== today() ? `/giorno/${today()}` : null;
+    default:
+      return lastDay; // mese, settimana, corsa, statistiche, impostazioni
+  }
+}
+
+/**
+ * Android back by hierarchy (see lib/backNav): when back lands below the page entry and no sheet or
+ * drawer is open, go to the parent page; from today's page, leave the app.
+ */
+export function useHierarchicalBack() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const path = useRef(location.pathname);
+  const lastDay = useRef(`/giorno/${today()}`);
+  path.current = location.pathname;
+  if (location.pathname.startsWith('/giorno/')) lastDay.current = location.pathname;
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      if (consumeSilentPop()) return; // the app dropping a closed sheet's entry
+      const st = (e.state ?? {}) as { lbBase?: boolean; lbGuard?: boolean; overlay?: boolean };
+      if (document.querySelector(OVERLAYS)) return; // back closes the open sheet or drawer first
+      if (!st.lbBase && !st.lbGuard && !st.overlay) return; // an entry we do not manage
+      // Entries left by sheets closed while navigating keep an old URL: the router must not show it.
+      e.stopImmediatePropagation();
+      const parent = parentOf(path.current, lastDay.current === path.current ? `/giorno/${today()}` : lastDay.current);
+      if (!parent) {
+        history.back(); // top page: keep going back until the app is left
+        return;
+      }
+      if (st.lbBase) pushGuard(parent);
+      navigate(parent, { replace: true });
+    };
+    setBackHandler(onPop);
+    return () => setBackHandler(null);
+  }, [navigate]);
+}
 
 /**
  * Android back button / back gesture: closes the open sheet, drawer or full-screen panel
@@ -31,6 +84,7 @@ export function useBackClosesOverlays() {
         // Closed by hand: drop the entries we added, unless the user navigated away meanwhile.
         if (location.hash === hashAtOpen && history.state?.overlay) {
           skip++;
+          silenceNextPop();
           history.go(-extra);
         }
       }

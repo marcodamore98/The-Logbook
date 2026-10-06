@@ -15,7 +15,7 @@ import { StoreProvider, useStore } from './lib/store/StoreContext';
 import { isoWeek, today } from './lib/dates';
 import { runningWorkout } from './lib/training/analytics';
 import DayPage from './pages/DayPage';
-import { ScrollMemory, useBackClosesOverlays, useSheetSwipeDown } from './components/useAppGestures';
+import { ScrollMemory, useBackClosesOverlays, useHierarchicalBack, useSheetSwipeDown } from './components/useAppGestures';
 
 // The day page loads with the app; the other pages load the first time they are opened.
 const MonthPage = lazy(() => import('./pages/CalendarPages').then((m) => ({ default: m.MonthPage })));
@@ -207,6 +207,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
           <div className="layout">
             <main>
               <ScrollMemory />
+              <HierarchicalBack />
               <BackToDay />
               <Suspense fallback={<div className="page-loading" aria-label="Caricamento" />}>
               <Routes>
@@ -248,6 +249,12 @@ function Shell({ userEmail }: { userEmail?: string }) {
       </RestTimerProvider>
     </HashRouter>
   );
+}
+
+/** Lives inside the router: Android back goes to the parent page (see lib/backNav). */
+function HierarchicalBack() {
+  useHierarchicalBack();
+  return null;
 }
 
 function Login() {
