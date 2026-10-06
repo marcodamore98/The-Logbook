@@ -270,9 +270,11 @@ textarea { resize: vertical; }
 .agenda-row.gcal .time { width: 5rem; }
 .todo.done input.grow { text-decoration: line-through; color: var(--muted); }
 .list-edit input:not(.grow):not([type='time']):not([type='color']):not([type='checkbox']) { width: 9rem; }
+/* An appointment is always two lines (title, then times and place), so the text box never shrinks to nothing in a narrow card. */
+.agenda-row { flex-wrap: wrap; }
+.agenda-row .grow { flex-basis: 100%; order: -1; }
 @media (max-width: 520px) {
-  .agenda-row, .todo { flex-wrap: wrap; }
-  .agenda-row .grow { flex-basis: 100%; order: -1; }
+  .todo { flex-wrap: wrap; }
   .todo .grow { flex-basis: calc(100% - 30px); }
   .todo input[type='time'] { margin-left: 26px; }
   .mood-card .card-head { flex-wrap: wrap; }
@@ -443,7 +445,6 @@ textarea { resize: vertical; }
 /* ---- Topbar extras ---- */
 .body-toggle { margin-left: auto; white-space: nowrap; }
 .reconnect + .body-toggle { margin-left: 0.5rem; }
-@media (max-width: 1100px) { .brand-name { display: none; } }
 @media (max-width: 760px) {
   .brand-name { display: inline; }
   .nav-link { padding: 0.2rem 0.15rem; font-size: 0.64rem; }
@@ -2869,3 +2870,16 @@ button.op-tutor:disabled { opacity: 0.7; cursor: default; }
 .agenda-row:has(.appt-place) { flex-wrap: wrap; }
 .reconnect-count { display: inline-grid; place-items: center; min-width: 1.35rem; height: 1.35rem; padding: 0 0.35rem; border-radius: 999px; background: var(--coral); color: #fff; font-size: 0.72rem; font-weight: 800; margin-left: 0.2rem; }
 .reconnect { white-space: nowrap; }
+
+.appt-place { flex-basis: 100%; }
+
+/* ---- Desktop: use the room well, at full screen and when the window is narrowed ---- */
+.brief-tile small { letter-spacing: 0.03em; font-size: 0.58rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 900px) {
+  /* Agenda and Da ricordare side by side: an open card does not stretch its neighbour into an empty box. */
+  .day-page:not(.is-dragging) > .blk[data-block='agenda'], .day-page:not(.is-dragging) > .blk[data-block='todos'] { align-self: flex-start; }
+  .day-page:not(.is-dragging) > .blk[data-block='agenda']:has(> .card.collapsed):has(+ .blk[data-block='todos'] > .card.collapsed),
+  .day-page:not(.is-dragging) > .blk[data-block='agenda']:has(> .card.collapsed) + .blk[data-block='todos']:has(> .card.collapsed),
+  .day-page:not(.is-dragging) > .blk[data-block='todos']:has(> .card.collapsed):has(+ .blk[data-block='agenda'] > .card.collapsed),
+  .day-page:not(.is-dragging) > .blk[data-block='todos']:has(> .card.collapsed) + .blk[data-block='agenda']:has(> .card.collapsed) { align-self: stretch; }
+}

@@ -220,7 +220,7 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
           <div className="brief-tile">
             <IconWorkout size={28} />
             <span>
-              <small>Allenamento</small>
+              <small>Sport</small>
               <strong>
                 {workouts.length
                   ? workouts.map((w) => (w.kind === 'workout' ? `${w.title ?? 'Allenamento'} · ${fmt(workoutVolume(w))} kg` : '')).join(' / ')

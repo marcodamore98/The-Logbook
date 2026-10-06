@@ -12,7 +12,7 @@ import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
 import { cloudRepo } from './lib/store/cloud';
 import { localRepo } from './lib/store/local';
 import { StoreProvider, useStore } from './lib/store/StoreContext';
-import { isoWeek, today } from './lib/dates';
+import { addDays, isoWeek, today } from './lib/dates';
 import { runningWorkout } from './lib/training/analytics';
 import DayPage from './pages/DayPage';
 import { ScrollMemory, useBackClosesOverlays, useHierarchicalBack, useSheetSwipeDown } from './components/useAppGestures';
@@ -42,9 +42,24 @@ const NAV = [
   { to: '/impostazioni', label: 'Impostazioni', Icon: IconSettings },
 ];
 
+/** "Ieri", "Oggi", "Domani" or the date of the day being looked at. */
+function dayLabel(date: string): string {
+  const t = today();
+  if (date === t) return 'Oggi';
+  if (date === addDays(t, -1)) return 'Ieri';
+  if (date === addDays(t, 1)) return 'Domani';
+  return new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 function useCurrentTitle() {
   const loc = useLocation();
-  return NAV.find((n) => loc.pathname.startsWith(n.to))?.label ?? '';
+  const nav = NAV.find((n) => loc.pathname.startsWith(n.to));
+  if (!nav) return '';
+  const date = loc.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+  if (nav.to === '/giorno') return dayLabel(date ?? today());
+  // Pages of a single day say which one: "Alimentazione · Domani".
+  if ((nav.to === '/alimentazione' || nav.to === '/diario') && date) return `${nav.label} · ${dayLabel(date)}`;
+  return nav.label;
 }
 
 /** Small facts shown at the right of some menu items. */
