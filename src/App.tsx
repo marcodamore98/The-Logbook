@@ -124,7 +124,7 @@ function Topbar({ onMenu, onSummary }: { onMenu: () => void; onSummary: () => vo
     <header className="topbar">
       <button className="brand brand-btn" onClick={onMenu} aria-label="Apri il menu">
         <GlyphMenu />
-        <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={28} height={28} />
+        <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={30} height={30} />
         <span className="brand-name">The Logbook</span>
       </button>
       {title && <span className="topbar-title">{title}</span>}

@@ -12,7 +12,7 @@ async function notify(title: string, body: string) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     // On Android only the service worker can show notifications.
     const reg = await navigator.serviceWorker?.getRegistration();
-    if (reg) await reg.showNotification(title, { body, tag: title, icon: `${import.meta.env.BASE_URL}icon.svg` });
+    if (reg) await reg.showNotification(title, { body, tag: title, icon: `${import.meta.env.BASE_URL}icon-192.png` });
     else new Notification(title, { body });
   } catch {
     /* notifications not available */
