@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { rangeDays } from '../dates';
 import { authorize, disconnect, gcalConfigured, getEvent, hasToken, listEvents, eventLocal, type GEvent } from '../google/calendar';
-import { linkedIds, pullFromGoogle, pushDay, trashRemoved } from '../google/sync';
+import { linkedIds, pendingCount, pullFromGoogle, pushDay, trashRemoved } from '../google/sync';
 import { emptyDay, type DayEntry, type ISODate, type Settings } from '../types';
 import type { ImportedWorkout } from '../hevy';
 import { buildHistory, type History } from '../training/analytics';
@@ -19,7 +19,7 @@ interface Store {
   loadRange(from: ISODate, to: ISODate): Promise<void>;
   /** Google events for a date that are not already logbook items. */
   eventsOn(date: ISODate): GEvent[];
-  gcal: { configured: boolean; connected: boolean; syncing: boolean; error?: string };
+  gcal: { configured: boolean; connected: boolean; syncing: boolean; error?: string; /** Items of the loaded days still to send to Google. */ pending: number };
   connectGoogle(): Promise<void>;
   disconnectGoogle(): void;
   /** Pushes every stored day to Google Calendar (items not yet linked, pending deletions). */
@@ -236,20 +236,43 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     let n = 0;
     for (const d of all) {
       daysRef.current = { ...daysRef.current, [d.date]: daysRef.current[d.date] ?? d };
-      const needs =
-        (d.gcalTrash?.length ?? 0) > 0 ||
-        (d.shift && !d.shift.gcalEventId && !d.shift.gcalSkip) ||
-        (d.guardia && !d.guardia.gcalEventId && !d.guardia.gcalSkip) ||
-        d.appointments.some((a) => !a.gcalEventId) ||
-        d.todos.some((t) => t.time && !t.gcalEventId) ||
-        d.modules.some((m) => (m.kind === 'course' || m.kind === 'travel' || m.kind === 'outing') && !m.gcalEventId);
-      if (needs) {
+      if (pendingCount(daysRef.current[d.date]) > 0) {
         await push(d.date);
         n++;
       }
     }
     return n;
   }, [repo, push]);
+
+  // The Google token lasts about an hour and cannot be renewed without a tap: notice when it expires.
+  useEffect(() => {
+    const check = () => setConnected(hasToken());
+    const id = window.setInterval(check, 60_000);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, []);
+
+  // Whenever Google is (re)connected, send what was added or changed while it was not:
+  // appointments, courses and congresses, shifts, timed reminders, trips and outings.
+  const catchingUp = useRef(false);
+  useEffect(() => {
+    if (!connected || !settings.gcal.enabled || catchingUp.current) return;
+    catchingUp.current = true;
+    const t = window.setTimeout(() => {
+      syncAll()
+        .catch(() => {})
+        .finally(() => {
+          catchingUp.current = false;
+        });
+    }, 1500);
+    return () => {
+      window.clearTimeout(t);
+      catchingUp.current = false;
+    };
+  }, [connected, settings.gcal.enabled, syncAll]);
 
   const importRoster = useCallback(async () => {
     const mine = myRosterDays();
@@ -328,6 +351,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
   const history = useMemo(() => buildHistory(allDays), [allDays]);
 
   const linked = useMemo(() => linkedIds(Object.values(days)), [days]);
+  const toSend = useMemo(() => Object.values(days).reduce((n, d) => n + pendingCount(d), 0), [days]);
 
   const store: Store = {
     repo,
@@ -338,7 +362,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     loadRange,
     eventsOn: (date) =>
       (events[date] ?? []).filter((e) => !linked.has(e.id) && e.extendedProperties?.private?.logbook !== '1'),
-    gcal: { configured: gcalConfigured, connected, syncing, error },
+    gcal: { configured: gcalConfigured, connected, syncing, error, pending: toSend },
     connectGoogle,
     disconnectGoogle,
     syncAll,

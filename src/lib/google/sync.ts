@@ -20,6 +20,16 @@ const plusMinutes = (t: string, min: number) => {
 
 export const SHIFT_KEYS = ['shift', 'guardia'] as const;
 
+/** Items of a day that are not on Google Calendar yet (or deletions not done yet): made while Google was disconnected. */
+export function pendingCount(d: DayEntry): number {
+  let n = d.gcalTrash?.length ?? 0;
+  for (const k of SHIFT_KEYS) if (d[k] && !d[k]!.gcalEventId && !d[k]!.gcalSkip) n++;
+  n += d.appointments.filter((a) => !a.gcalEventId).length;
+  n += d.todos.filter((t) => t.time && !t.gcalEventId).length;
+  n += d.modules.filter((m) => (m.kind === 'course' || m.kind === 'travel' || m.kind === 'outing') && !m.gcalEventId).length;
+  return n;
+}
+
 function shiftInput(day: DayEntry, s: ShiftAssignment, settings: Settings): EventInput {
   const type = settings.shiftTypes.find((t) => t.id === s.shiftTypeId);
   const names = s.colleagueIds

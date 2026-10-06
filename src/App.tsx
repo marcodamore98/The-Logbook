@@ -143,8 +143,9 @@ function GoogleStatus() {
     return gcal.syncing ? <span className="sync-dot" title="Sincronizzazione con Google Calendar" /> : null;
   }
   return (
-    <button className="btn-ghost small reconnect" onClick={connectGoogle} title="La sessione Google è scaduta">
+    <button className="btn-ghost small reconnect" onClick={connectGoogle} title="La sessione Google è scaduta: ricollegati per inviare a Calendar quello che hai aggiunto">
       <IconSync size={20} /> Ricollega Google
+      {gcal.pending > 0 && <span className="reconnect-count" aria-label={`${gcal.pending} da inviare a Calendar`}>{gcal.pending}</span>}
     </button>
   );
 }
