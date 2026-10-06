@@ -8,15 +8,21 @@ import { GlyphClose, GlyphPrint } from './icons';
 export function PrintButton({ sections, title }: { sections: { id: string; label: string }[]; title: string }) {
   const [open, setOpen] = useState(false);
   const [sel, setSel] = useState<string[]>(sections.map((s) => s.id));
+  const [landscape, setLandscape] = useState(false);
 
   function print() {
     setOpen(false);
     document.body.dataset.print = sel.join(' ');
     const prev = document.title;
     document.title = title;
+    // Page orientation for this print only.
+    const page = document.createElement('style');
+    page.textContent = `@page { size: A4 ${landscape ? 'landscape' : 'portrait'}; }`;
+    document.head.appendChild(page);
     const done = () => {
       delete document.body.dataset.print;
       document.title = prev;
+      page.remove();
       window.removeEventListener('afterprint', done);
     };
     window.addEventListener('afterprint', done);
@@ -48,6 +54,14 @@ export function PrintButton({ sections, title }: { sections: { id: string; label
                 </li>
               ))}
             </ul>
+            <span className="field-label">Formato del foglio</span>
+            <div className="segmented print-orient" role="radiogroup" aria-label="Orientamento">
+              {[false, true].map((l) => (
+                <button key={String(l)} type="button" role="radio" aria-checked={landscape === l} className={landscape === l ? 'on' : ''} onClick={() => setLandscape(l)}>
+                  {l ? 'A4 orizzontale' : 'A4 verticale'}
+                </button>
+              ))}
+            </div>
             <div className="sheet-foot">
               <div className="row">
                 <button className="btn-ghost small" onClick={() => setSel(sections.map((s) => s.id))}>

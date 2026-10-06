@@ -5,20 +5,22 @@ import { Empty } from './ui';
 export const fmt = (n: number, d = 0) => n.toLocaleString('it-IT', { maximumFractionDigits: d });
 
 /** Horizontal bar list: magnitude by category, single hue, value labels in ink. */
-export function BarList({ data, unit = '', max = 8 }: { data: Count[]; unit?: string; max?: number }) {
+export function BarList({ data, unit = '', max = 8, plain = false }: { data: Count[]; unit?: string; max?: number; /** Rows "name … value" without bars (long names, rankings read as a list). */ plain?: boolean }) {
   if (!data.length) return <Empty>Nessun dato nel periodo.</Empty>;
   const shown = data.slice(0, max);
   const rest = data.slice(max).reduce((n, c) => n + c.value, 0);
   const rows = rest ? [...shown, { label: 'Altro', value: rest }] : shown;
   const top = Math.max(...rows.map((r) => r.value));
   return (
-    <ul className="barlist">
+    <ul className={`barlist${plain ? ' plain' : ''}`}>
       {rows.map((r) => (
         <li key={r.label} title={`${r.label}: ${fmt(r.value, 1)}${unit}`}>
           <span className="barlist-label">{r.label}</span>
-          <span className="barlist-track">
-            <span className="barlist-bar" style={{ width: `${(r.value / top) * 100}%` }} />
-          </span>
+          {!plain && (
+            <span className="barlist-track">
+              <span className="barlist-bar" style={{ width: `${(r.value / top) * 100}%` }} />
+            </span>
+          )}
           <span className="barlist-value">
             {fmt(r.value, 1)}
             {unit}
@@ -40,7 +42,7 @@ export interface Bucket {
 export function Columns({ buckets, unit, title = 'Andamento nel periodo', digits = 1 }: { buckets: Bucket[]; unit: string; title?: string; digits?: number }) {
   const [hover, setHover] = useState<number | null>(null);
   if (!buckets.some((b) => b.value > 0)) return <Empty>Nessun dato nel periodo.</Empty>;
-  const W = 360, H = 150, pad = { l: 30, r: 4, t: 10, b: 20 };
+  const W = 360, H = 150, pad = { l: 30, r: 4, t: 16, b: 20 };
   const max = Math.max(1, ...buckets.map((b) => b.value));
   const niceMax = max <= 5 ? (digits === 0 ? Math.ceil(max / 2) * 2 : Math.ceil(max)) : max <= 20 ? Math.ceil(max / 2) * 2 : Math.ceil(max / 10) * 10;
   const bw = (W - pad.l - pad.r) / buckets.length;
@@ -66,6 +68,11 @@ export function Columns({ buckets, unit, title = 'Andamento nel periodo', digits
           return (
             <g key={i} onMouseEnter={() => setHover(i)} onClick={() => setHover(i)}>
               <rect x={pad.l + i * bw} y={pad.t} width={bw} height={H - pad.t - pad.b} fill="transparent" />
+              {b.value > 0 && buckets.length <= 12 && (
+                <text x={x + w / 2} y={y(b.value) - 4} className="col-value" textAnchor="middle">
+                  {fmt(b.value, digits)}
+                </text>
+              )}
               {b.value > 0 && (
                 <path
                   className={`col${hover === i ? ' col-hover' : ''}`}
@@ -125,6 +132,7 @@ export function Trend({
   noun = 'corse',
   worseWord,
   minSpan = 0,
+  target,
 }: {
   points: { label: string; value: number }[];
   format: (v: number) => string;
@@ -134,12 +142,14 @@ export function Trend({
   worseWord?: string;
   /** Smallest vertical range (in value units), so small wobbles (±0.2 kg) don't look like big swings. */
   minSpan?: number;
+  /** Goal drawn as a dashed reference line (e.g. target weight). */
+  target?: number;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   if (points.length < 2) return <Empty>Servono almeno due {noun} per vedere l’andamento.</Empty>;
   const W = 360, H = 150, pad = { l: 44, r: 10, t: 10, b: 24 };
   const vals = points.map((p) => p.value);
-  const vMin = Math.min(...vals), vMax = Math.max(...vals);
+  const vMin = Math.min(...vals, target ?? Infinity), vMax = Math.max(...vals, target ?? -Infinity);
   const pad2 = Math.max(0, minSpan - (vMax - vMin)) / 2;
   const lo = vMin - pad2, hi = vMax + pad2;
   const span = hi - lo || 1;
@@ -164,6 +174,14 @@ export function Trend({
             </text>
           </g>
         ))}
+        {target !== undefined && (
+          <g>
+            <line x1={pad.l} x2={W - pad.r} y1={y(target)} y2={y(target)} className="target-line" />
+            <text x={W - pad.r} y={y(target) - 4} className="axis-label" textAnchor="end">
+              obiettivo {format(target)}
+            </text>
+          </g>
+        )}
         <path d={d} fill="none" stroke="var(--series-1)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         {points.map((p, i) => (
           <g key={i} onMouseEnter={() => setHover(i)} onClick={() => setHover(i)}>

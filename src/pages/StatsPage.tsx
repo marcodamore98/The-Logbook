@@ -104,7 +104,25 @@ export default function StatsPage() {
   /** Sum of a metric per day (week, month) or per month (year). */
   const series = useMemo(() => {
     const byDate = new Map(days.map((d) => [d.date, d]));
-    return (metric: Metric): Bucket[] => {
+    return (metric: Metric, weeks = false): Bucket[] => {
+      if (period === 'month' && weeks) {
+        // Calendar weeks (Monday–Sunday) inside the month: sparse counts read better than 30 columns.
+        const out: Bucket[] = [];
+        let cur: ISODate[] = [];
+        const flush = () => {
+          if (!cur.length) return;
+          const a = fromISO(cur[0]).getDate(), z = fromISO(cur[cur.length - 1]).getDate();
+          const mon = fromISO(cur[0]).toLocaleDateString('it-IT', { month: 'short' });
+          out.push({ label: `Sett ${out.length + 1}`, full: a === z ? `${a} ${mon}` : `${a}–${z} ${mon}`, value: cur.reduce((n, d) => n + metricOf(byDate.get(d), metric, settings), 0) });
+          cur = [];
+        };
+        for (const d of rangeDays(from, to)) {
+          if (cur.length && fromISO(d).getDay() === 1) flush();
+          cur.push(d);
+        }
+        flush();
+        return out;
+      }
       if (period === 'year') {
         return MONTHS.map((m, i) => {
           const mStart = `${from.slice(0, 4)}-${String(i + 1).padStart(2, '0')}-01`;
@@ -143,7 +161,7 @@ export default function StatsPage() {
 
   const swipeRef = useSwipeNav<HTMLDivElement>(() => setAnchor(shift(period, anchor, -1)), () => setAnchor(shift(period, anchor, 1)), `${period}:${from}`);
   const chartTitle = period === 'year' ? 'mese per mese' : 'giorno per giorno';
-  const ctx: Ctx = { s: stats, p: prev, settings, series, monthly, chartTitle };
+  const ctx: Ctx = { s: stats, p: prev, settings, series, monthly, chartTitle, weekTitle: period === 'month' ? 'settimana per settimana' : chartTitle };
 
   return (
     <div ref={swipeRef} className="page stats-page swipe-page">
@@ -188,9 +206,11 @@ interface Ctx {
   s: Stats;
   p: Stats;
   settings: Settings;
-  series: (m: Metric) => Bucket[];
+  series: (m: Metric, weeks?: boolean) => Bucket[];
   monthly: { label: string; stats: Stats }[];
   chartTitle: string;
+  /** Title of the charts grouped by week in the month view. */
+  weekTitle: string;
 }
 
 function Section({ id, kicker, icon, title, summary, print, actions, children }: { id: string; kicker: string; icon: ReactNode; title: string; summary: string; print: string; actions?: ReactNode; children: ReactNode }) {
@@ -200,6 +220,27 @@ function Section({ id, kicker, icon, title, summary, print, actions, children }:
     </Card>
   );
 }
+
+/** Short list "name  75%" with a small heading, two side by side (access route, setting). */
+function PctList({ title, data }: { title: string; data: Count[] }) {
+  const total = data.reduce((n, x) => n + x.value, 0);
+  return (
+    <div className="pct-list">
+      <span className="stat-label">{title}</span>
+      {data.slice(0, 5).map((x) => (
+        <p key={x.label}>
+          <span>{x.label}</span> <small>{pct(x.value, total)}%</small>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** 73 → "1h 13m". */
+const durationText = (min: number) => {
+  const m = Math.round(min);
+  return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`;
+};
 
 function Sub({ children }: { children: ReactNode }) {
   return <h3 className="sub">{children}</h3>;
@@ -229,7 +270,7 @@ function ShiftsCard({ s, p, series, chartTitle }: Ctx) {
           {w.colleagues.length > 0 && (
             <>
               <Sub>Colleghi con cui hai lavorato di più</Sub>
-              <BarList data={w.colleagues} max={5} />
+              <BarList data={w.colleagues} max={5} unit=" turni" plain />
             </>
           )}
         </>
@@ -238,7 +279,7 @@ function ShiftsCard({ s, p, series, chartTitle }: Ctx) {
   );
 }
 
-function SurgeryCard({ s, p, series, monthly, chartTitle, onCsv }: Ctx & { onCsv: () => void }) {
+function SurgeryCard({ s, p, series, monthly, weekTitle, onCsv }: Ctx & { onCsv: () => void }) {
   const g = s.surgery;
   const firstPct = pct(g.firstOp, g.total);
   const prevFirstPct = p.surgery.total ? pct(p.surgery.firstOp, p.surgery.total) : undefined;
@@ -265,12 +306,12 @@ function SurgeryCard({ s, p, series, monthly, chartTitle, onCsv }: Ctx & { onCsv
             items={[
               { label: 'Interventi', value: fmt(g.patients), hi: true, note: plural(g.total, 'procedura', 'procedure'), delta: { cur: g.patients, prev: p.surgery.patients } },
               { label: 'Da primo operatore', value: `${firstPct}`, unit: '%', note: `${g.firstOp} proc., ${g.firstSolo} senza tutor`, delta: { cur: firstPct, prev: prevFirstPct, fmtv: (v) => `${fmt(v)} pt` } },
-              { label: 'Tempo operatorio', value: fmt(g.minutes / 60, 1), unit: 'h' },
+              { label: 'Tempo operatorio', value: fmt(g.minutes / 60, 1), unit: 'h', note: g.timed ? `media ${durationText(g.minutes / g.timed)} per intervento` : undefined, delta: { cur: g.minutes / 60, prev: p.surgery.minutes / 60, better: 'none', fmtv: (v) => `${fmt(v, 1)} h` } },
               { label: 'Complicanze', value: fmt(g.complications), note: `${fmt((g.complications / Math.max(1, g.patients)) * 100, 1)}% dei pazienti` },
             ]}
           />
-          <Sub>Interventi, {chartTitle}</Sub>
-          <Columns buckets={series('surgery')} unit="" title="Interventi" digits={0} />
+          <Sub>Interventi, {weekTitle}</Sub>
+          <Columns buckets={series('surgery', true)} unit="" title="Interventi" digits={0} />
           <Sub>Ruolo nelle procedure</Sub>
           <Stack data={ordered(SURGICAL_ROLES, g.byRole)} ordinal label="Ruolo nelle procedure, dal più autonomo" />
           {autonomy.length >= 2 && (
@@ -280,24 +321,20 @@ function SurgeryCard({ s, p, series, monthly, chartTitle, onCsv }: Ctx & { onCsv
             </>
           )}
           <Sub>Per area</Sub>
-          <BarList data={g.byGroup} max={6} />
+          <BarList data={g.byGroup} max={6} plain />
           <Sub>Procedure più frequenti</Sub>
-          <BarList data={g.byProcedure} max={8} />
-          <Sub>Via d’accesso</Sub>
-          <BarList data={g.byApproach} max={6} />
-          {g.bySetting.length > 1 && (
-            <>
-              <Sub>Regime (pazienti)</Sub>
-              <BarList data={g.bySetting} />
-            </>
-          )}
+          <BarList data={g.byProcedure} max={8} plain />
+          <div className="pct-cols">
+            <PctList title="Via d’accesso" data={g.byApproach} />
+            {g.bySetting.length > 0 && <PctList title="Regime" data={g.bySetting} />}
+          </div>
         </>
       )}
     </Section>
   );
 }
 
-function ClinicalCard({ s, p, series, chartTitle }: Ctx) {
+function ClinicalCard({ s, p, series, weekTitle }: Ctx) {
   const c = s.clinical;
   return (
     <Section id="clinica" kicker="Lavoro" icon={<IconClinical />} title="Attività clinica" print="lavoro" summary={c.patients ? `${plural(c.patients, 'paziente', 'pazienti')} · ${plural(c.total, 'prestazione', 'prestazioni')}` : 'Nessuna prestazione'}>
@@ -308,11 +345,11 @@ function ClinicalCard({ s, p, series, chartTitle }: Ctx) {
           <Kpis
             items={[
               { label: 'Pazienti', value: fmt(c.patients), hi: true, delta: { cur: c.patients, prev: p.clinical.patients } },
-              { label: 'Prestazioni', value: fmt(c.total), delta: { cur: c.total, prev: p.clinical.total } },
+              { label: 'Prestazioni', value: fmt(c.total), note: c.patients ? `${fmt(c.total / c.patients, 2)} per paziente` : undefined, delta: { cur: c.total, prev: p.clinical.total } },
             ]}
           />
-          <Sub>Pazienti, {chartTitle}</Sub>
-          <Columns buckets={series('clinical')} unit="" title="Pazienti visti" digits={0} />
+          <Sub>Pazienti, {weekTitle}</Sub>
+          <Columns buckets={series('clinical', true)} unit="" title="Pazienti visti" digits={0} />
           {c.byRole.length > 0 && (
             <>
               <Sub>Ruolo</Sub>
@@ -342,7 +379,7 @@ function TrainingCard({ s, p, series, chartTitle }: Ctx) {
           <Kpis
             items={[
               { label: 'Studio', value: fmt(h, 1), unit: 'h', hi: true, delta: { cur: h, prev: p.study.minutes / 60, fmtv: (v) => `${fmt(v, 1)} h` } },
-              { label: 'Corsi e congressi', value: fmt(events), note: events ? [c.course && plural(c.course, 'corso', 'corsi'), c.congress && plural(c.congress, 'congresso', 'congressi'), c.webinar && plural(c.webinar, 'webinar', 'webinar')].filter(Boolean).join(' · ') : undefined },
+              { label: 'Corsi e congressi', value: fmt(events), note: !events ? undefined : events <= 2 && c.titles.length ? c.titles.join(' · ') : [c.course && plural(c.course, 'corso', 'corsi'), c.congress && plural(c.congress, 'congresso', 'congressi'), c.webinar && plural(c.webinar, 'webinar', 'webinar')].filter(Boolean).join(' · ') },
               { label: 'Crediti ECM', value: fmt(c.ecm, 1) },
             ]}
           />
@@ -351,7 +388,7 @@ function TrainingCard({ s, p, series, chartTitle }: Ctx) {
               <Sub>Ore di studio, {chartTitle}</Sub>
               <Columns buckets={series('study')} unit=" h" title="Ore di studio" />
               <Sub>Per area</Sub>
-              <BarList data={s.study.byArea.map((x) => ({ ...x, value: x.value / 60 }))} unit=" h" max={6} />
+              <BarList data={s.study.byArea.map((x) => ({ ...x, value: x.value / 60 }))} unit=" h" max={6} plain />
               <Sub>Per tipo</Sub>
               <BarList data={s.study.byType.map((x) => ({ ...x, value: x.value / 60 }))} unit=" h" max={6} />
             </>
@@ -521,8 +558,10 @@ function BodyCard({ s, p, settings }: Ctx) {
           />
           {b.weights.length >= 2 && (
             <>
-              <Sub>Andamento del peso</Sub>
-              <Trend title="Peso" better="none" minSpan={2} noun="pesate" format={(v) => `${fmt(v, 1)} kg`} points={b.weights.map((w) => ({ label: shortDate(w.date), value: w.kg }))} />
+              <Sub>
+                Andamento del peso <span className="sub-aside">min {fmt(Math.min(...b.weights.map((w) => w.kg)), 1)} · max {fmt(Math.max(...b.weights.map((w) => w.kg)), 1)}</span>
+              </Sub>
+              <Trend title="Peso" better="none" minSpan={2} target={goal} noun="pesate" format={(v) => `${fmt(v, 1)} kg`} points={b.weights.map((w) => ({ label: shortDate(w.date), value: w.kg }))} />
             </>
           )}
         </>

@@ -30,11 +30,11 @@ export interface Count {
 export interface Stats {
   days: number;
   work: { shifts: number; hours: number; nights: number; byType: Count[]; colleagues: Count[] };
-  surgery: { total: number; patients: number; byGroup: Count[]; byProcedure: Count[]; byRole: Count[]; byApproach: Count[]; bySetting: Count[]; complications: number; minutes: number; firstOp: number; firstSolo: number };
+  surgery: { total: number; patients: number; byGroup: Count[]; byProcedure: Count[]; byRole: Count[]; byApproach: Count[]; bySetting: Count[]; complications: number; minutes: number; firstOp: number; firstSolo: number; /** Patients with a recorded duration (for the average). */ timed: number };
   clinical: { total: number; patients: number; byActivity: Count[]; byRole: Count[] };
   study: { minutes: number; byArea: Count[]; byType: Count[] };
   /** Courses, congresses and webinars starting in the period (each counted once). */
-  courses: { course: number; congress: number; webinar: number; ecm: number };
+  courses: { course: number; congress: number; webinar: number; ecm: number; titles: string[] };
   workout: { sessions: number; minutes: number; volumeKg: number; km: number; sets: number; byType: Count[]; byExercise: Count[] };
   outings: { total: number; byType: Count[] };
   run: {
@@ -77,10 +77,10 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   const s: Stats = {
     days: days.length,
     work: { shifts: 0, hours: 0, nights: 0, byType: [], colleagues: [] },
-    surgery: { total: 0, patients: 0, byGroup: [], byProcedure: [], byRole: [], byApproach: [], bySetting: [], complications: 0, minutes: 0, firstOp: 0, firstSolo: 0 },
+    surgery: { total: 0, patients: 0, byGroup: [], byProcedure: [], byRole: [], byApproach: [], bySetting: [], complications: 0, minutes: 0, firstOp: 0, firstSolo: 0, timed: 0 },
     clinical: { total: 0, patients: 0, byActivity: [], byRole: [] },
     study: { minutes: 0, byArea: [], byType: [] },
-    courses: { course: 0, congress: 0, webinar: 0, ecm: 0 },
+    courses: { course: 0, congress: 0, webinar: 0, ecm: 0, titles: [] },
     workout: { sessions: 0, minutes: 0, volumeKg: 0, km: 0, sets: 0, byType: [], byExercise: [] },
     outings: { total: 0, byType: [] },
     run: { sessions: 0, km: 0, minutes: 0, byMode: [], longestKm: 0, runs: [] },
@@ -150,6 +150,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
             const ps = c.procedures.filter((p) => p.procedureId);
             if (!ps.length) continue;
             sSet.add(c.setting);
+            if (c.durationMin) s.surgery.timed++;
             for (const p of ps) {
               s.surgery.total++;
               sGroup.add(PROCEDURES.find((x) => x.id === p.procedureId)?.group ?? 'Altro');
@@ -183,6 +184,7 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
           seenCourses.add(m.id);
           s.courses[m.type ?? 'course']++;
           s.courses.ecm += m.ecm ?? 0;
+          if (m.title) s.courses.titles.push(m.title);
           break;
         case 'study':
           s.study.minutes += m.durationMin;
