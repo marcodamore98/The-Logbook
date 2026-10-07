@@ -258,7 +258,7 @@ function NotesArchive({ folder }: { folder?: string }) {
             <FolderTile key={f.id} f={f} n={counts.get(f.id) ?? 0} onOpen={() => nav(`/archivio/appunti/${f.id}`, { replace: !!current })} onHold={() => setSheet({ edit: f })} />
           ))}
           <button type="button" className="folder-tile new" onClick={() => setSheet('new')}>
-            <Sym name="create_new_folder" size={26} />
+            <Sym name="create_new_folder" size={20} />
             <span className="ft-name">{current ? 'Sottocartella' : 'Nuova cartella'}</span>
           </button>
         </div>
@@ -534,10 +534,9 @@ function FolderTile({ f, n, onOpen, onHold }: { f: NoteFolder; n: number; onOpen
   const { held, ...hold } = useHold(onHold);
   return (
     <button type="button" className="folder-tile" style={{ '--tile': toneColor(f.tone) } as CSSProperties} {...hold} onClick={() => !held() && onOpen()}>
-      <span className="ft-tab" aria-hidden="true" />
-      <span className="ft-paper" aria-hidden="true" />
-      <span className="ft-count">{n}</span>
+      <Sym name="folder" fill size={22} className="ft-ico" />
       <span className="ft-name">{f.name}</span>
+      <span className="ft-count">{n}</span>
     </button>
   );
 }
