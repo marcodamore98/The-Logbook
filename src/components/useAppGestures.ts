@@ -1,3 +1,4 @@
+import { folderParentOf, noteReturn } from '../lib/notes';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { today } from '../lib/dates';
@@ -8,8 +9,16 @@ export const OVERLAYS = '.sheet-backdrop, .fan-backdrop, .drawer-backdrop, .fini
 
 /** Parent page for the back button: a workout goes to Palestra, a section page to the day page, another day to today. */
 export function parentOf(path: string, lastDay: string): string | null {
-  const [top, sub] = path.split('/').filter(Boolean);
+  const [top, sub, third] = path.split('/').filter(Boolean);
   switch (top) {
+    case 'appunti':
+      return noteReturn() ?? '/archivio/appunti';
+    case 'archivio': {
+      // A folder goes back to the folder above, then to the first page of the archive.
+      if (sub !== 'appunti' || !third) return lastDay;
+      const up = folderParentOf(decodeURIComponent(third));
+      return up ? `/archivio/appunti/${up}` : '/archivio/appunti';
+    }
     case 'palestra':
       return sub === 'allenamento' ? '/palestra' : lastDay;
     case 'corsi':

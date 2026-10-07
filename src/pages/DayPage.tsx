@@ -1,3 +1,4 @@
+import { hasContent } from '../lib/notes';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MODULES, metaOf, summarize } from '../components/modules/meta';
@@ -137,6 +138,14 @@ export default function DayPage() {
   /** Removes a card; "Annulla" in the snackbar puts it back. Attached files go only once that chance is over. */
   const removeModule = (m: Module) => {
     const index = dayRef.current.modules.findIndex((x) => x.id === m.id);
+    // A study session with notes: the notes go to the Cestino of the Archivio instead of being lost.
+    if (m.kind === 'study' && hasContent(m)) {
+      update((d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id), looseNotes: [...(d.looseNotes ?? []), { ...m, trashedAt: Date.now() }] }));
+      offerUndo('Studio eliminato · gli appunti sono nel Cestino', () =>
+        update((d) => ({ ...d, looseNotes: (d.looseNotes ?? []).filter((x) => x.id !== m.id), modules: [...d.modules.slice(0, index), m, ...d.modules.slice(index)] })),
+      );
+      return;
+    }
     update((d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }));
     let undone = false;
     offerUndo(`Eliminata: ${metaOf(m.kind).label}`, () => {

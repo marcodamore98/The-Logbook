@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { FileSlot, openFile, programOf } from '../components/files/FileSlot';
 import { mapsUrl, webUrl } from '../lib/links';
 import { GlyphClip, GlyphFolder, IconCourse, Sym } from '../components/icons';
@@ -14,7 +14,7 @@ interface Row {
   m: CourseModule;
 }
 
-function useCourses(): Row[] {
+export function useCourses(): Row[] {
   const store = useStore();
   useEffect(() => {
     store.ensureAllLoaded();
@@ -49,7 +49,7 @@ export default function CoursesPage() {
   const rows = useCourses();
   const store = useStore();
   const { sub } = useParams();
-  if (sub === 'attestati') return <Archive rows={rows} />;
+  if (sub === 'attestati') return <Navigate to="/archivio/corsi" replace />;
   const certs = rows.filter((r) => r.m.certificate).length;
   const years = [...new Set(rows.map((r) => r.m.startDate.slice(0, 4)))];
 
@@ -63,7 +63,7 @@ export default function CoursesPage() {
         </div>
       </header>
 
-      <Link className="folder-banner2" to="/corsi/attestati">
+      <Link className="folder-banner2" to="/archivio/corsi">
         <span className="fb-ico" aria-hidden="true">
           <GlyphFolder />
         </span>
@@ -170,8 +170,8 @@ export default function CoursesPage() {
 
 const TILE_TONES = ['lime', 'lav', 'sage', 'sky', 'terra', 'plum'];
 
-/** Only the certificate PDFs: search, filter by year, tiles grouped by year. */
-function Archive({ rows }: { rows: Row[] }) {
+/** Only the certificate PDFs: search, filter by year, tiles grouped by year (tab of the Archivio). */
+export function CertArchive({ rows }: { rows: Row[] }) {
   const store = useStore();
   const [q, setQ] = useState('');
   const [year, setYear] = useState<string | null>(null);
@@ -183,16 +183,7 @@ function Archive({ rows }: { rows: Row[] }) {
   const [adding, setAdding] = useState(false);
   const toneOf = (id: string) => TILE_TONES[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % TILE_TONES.length];
   return (
-    <div className="page courses-page archive-page">
-      <Link className="link-quiet" to="/corsi">
-        ‹ Corsi e congressi
-      </Link>
-      <header className="archive-head">
-        <div>
-          <h1>Archivio attestati</h1>
-          <span className="page-sub">Attestati di corsi, congressi e webinar</span>
-        </div>
-      </header>
+    <div className="cert-archive">
       <div className="arch-summary">
         <span className="folder-ico">
           <GlyphFolder />

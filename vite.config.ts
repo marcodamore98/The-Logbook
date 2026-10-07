@@ -49,6 +49,8 @@ export default defineConfig({
         // The main app must not answer for the test copy and the previous copy published next to it.
         navigateFallbackDenylist: isTest ? [] : [/\/prova\//, /\/precedente\//],
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Optional parts of the PDF library the app never uses.
+        globIgnores: ['**/html2canvas*.js', '**/purify*.js'],
       },
     }),
   ],

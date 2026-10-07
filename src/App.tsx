@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
-import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
+import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconStudy, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
 import { UndoProvider } from './components/Undo';
@@ -21,6 +21,8 @@ import { ScrollMemory, useBackClosesOverlays, useHierarchicalBack, useSheetSwipe
 const MonthPage = lazy(() => import('./pages/CalendarPages').then((m) => ({ default: m.MonthPage })));
 const WeekPage = lazy(() => import('./pages/CalendarPages').then((m) => ({ default: m.WeekPage })));
 const CoursesPage = lazy(() => import('./pages/CoursesPage'));
+const ArchivePage = lazy(() => import('./pages/ArchivePage'));
+const NotePage = lazy(() => import('./pages/NotePage'));
 const DiaryPage = lazy(() => import('./pages/DiaryPage'));
 const GymPage = lazy(() => import('./pages/GymPage'));
 const NutritionPage = lazy(() => import('./pages/NutritionPage'));
@@ -38,6 +40,7 @@ const NAV = [
   { to: '/corsa', label: 'Corsa', Icon: IconRun },
   { to: '/alimentazione', label: 'Alimentazione', Icon: IconFood },
   { to: '/corsi', label: 'Corsi e congressi', Icon: IconCourse },
+  { to: '/archivio', label: 'Archivio', Icon: IconStudy },
   { to: '/statistiche', label: 'Statistiche', Icon: IconStats },
   { to: '/impostazioni', label: 'Impostazioni', Icon: IconSettings },
 ];
@@ -53,6 +56,7 @@ function dayLabel(date: string): string {
 
 function useCurrentTitle() {
   const loc = useLocation();
+  if (loc.pathname.startsWith('/appunti/')) return 'Appunti';
   const nav = NAV.find((n) => loc.pathname.startsWith(n.to));
   if (!nav) return '';
   const date = loc.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0];
@@ -69,6 +73,7 @@ function useNavInfo(): Record<string, string | undefined> {
   const running = runningWorkout(store.day(d));
   const year = d.slice(0, 4);
   const ecm = store.allDays.reduce((n, day) => n + day.modules.reduce((a, m) => a + (m.kind === 'course' && m.endDate.startsWith(year) ? m.ecm ?? 0 : 0), 0), 0);
+  const notes = store.allDays.reduce((n, day) => n + day.modules.filter((m) => m.kind === 'study').length + (day.looseNotes ?? []).filter((m) => !m.trashedAt).length, 0);
   const date = new Date(`${d}T12:00:00`);
   return {
     '/mese': date.toLocaleDateString('it-IT', { month: 'short' }).replace('.', ''),
@@ -76,6 +81,7 @@ function useNavInfo(): Record<string, string | undefined> {
     '/giorno': date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }),
     '/palestra': running ? running.title || 'In corso' : undefined,
     '/corsi': ecm ? `${ecm.toLocaleString('it-IT')} ECM ${year}` : undefined,
+    '/archivio': notes ? `${notes} appunti` : undefined,
   };
 }
 
@@ -124,7 +130,8 @@ function NavDrawer({ onClose, p, dragging }: { onClose: () => void; p: number; d
 /** Small banner under the title bar: back to the day page (of the day being viewed, else today). */
 function BackToDay() {
   const { pathname } = useLocation();
-  if (pathname === '/' || pathname.startsWith('/giorno')) return null;
+  // A note has its own back arrow.
+  if (pathname === '/' || pathname.startsWith('/giorno') || pathname.startsWith('/appunti/')) return null;
   const date = pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? today();
   return (
     <Link to={`/giorno/${date}`} className="back-day no-print">
@@ -237,6 +244,8 @@ function Shell({ userEmail }: { userEmail?: string }) {
                 <Route path="/corsa" element={<RunPage />} />
                 <Route path="/alimentazione/:date?" element={<NutritionPage />} />
                 <Route path="/corsi/:sub?" element={<CoursesPage />} />
+                <Route path="/archivio/:tab?/:folder?" element={<ArchivePage />} />
+                <Route path="/appunti/:date/:id" element={<NotePage />} />
                 <Route path="/statistiche" element={<StatsPage />} />
                 <Route path="/impostazioni" element={<SettingsPage userEmail={userEmail} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

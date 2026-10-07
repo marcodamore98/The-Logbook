@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../lib/store/StoreContext';
+import { allFoldersOf, areaFor, bodyOf, folderOfNote, folderPath, plainOf, setNoteReturn } from '../../lib/notes';
+import { FolderPicker, toneColor } from '../notes/NoteParts';
 import { WorkoutLogger } from '../training/WorkoutLogger';
 import type {
   Module,
@@ -14,7 +17,6 @@ import type {
 import {
   CATEGORIES,
   OUTING_TYPES,
-  STUDY_AREAS,
   STUDY_TYPES,
 } from '../../lib/vocab';
 import { GlyphPlus, GlyphTrash, Sym } from '../icons';
@@ -31,8 +33,21 @@ import { DurationField } from '../WheelPicker';
 
 type Props<M> = { value: M; onChange: (m: M) => void };
 
-function StudyEditor({ value: m, onChange }: Props<StudyModule>) {
+function StudyEditor({ value: m, onChange, date }: Props<StudyModule> & { date: ISODate }) {
   const set = (p: Partial<StudyModule>) => onChange({ ...m, ...p });
+  const store = useStore();
+  const nav = useNavigate();
+  const all = allFoldersOf(store.settings);
+  const folderId = folderOfNote(all, m);
+  const path = folderPath(all, folderId);
+  const [picking, setPicking] = useState(false);
+  const open = () => {
+    setNoteReturn(`/giorno/${date}`);
+    nav(`/appunti/${date}/${m.id}`);
+  };
+  const text = plainOf(bodyOf(m));
+  const files = m.attachments ?? [];
+  const count = (k: string) => files.filter((f) => f.kind === k).length;
   return (
     <div className="grid">
       <Field label="Titolo / argomento" wide>
@@ -41,15 +56,35 @@ function StudyEditor({ value: m, onChange }: Props<StudyModule>) {
       <Field label="Tipo">
         <VocabSelect items={STUDY_TYPES.filter((t) => !['course', 'congress', 'webinar'].includes(t.id))} value={m.type} onChange={(type) => set({ type })} />
       </Field>
-      <Field label="Area">
-        <VocabSelect items={STUDY_AREAS} value={m.area} onChange={(area) => set({ area })} />
+      <Field label="Cartella">
+        <button type="button" className="folder-field" onClick={() => setPicking(true)}>
+          <span className="nm-dot" style={{ background: toneColor(path.at(-1)?.tone) }} aria-hidden="true" />
+          <span className="ff-path">{path.length ? path.map((f) => f.name).join(' › ') : 'Nessuna cartella'}</span>
+          <Sym name="chevron_right" size={18} />
+        </button>
       </Field>
       <Field label="Durata">
         <DurationField unit="min" label="Durata dello studio" value={m.durationMin} onChange={(n) => set({ durationMin: n })} />
       </Field>
       <Field label="Appunti" wide>
-        <textarea rows={3} value={m.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
+        <button type="button" className="note-peek" onClick={open}>
+          <span className={`np-text${text ? '' : ' muted'}`}>{text ? text.slice(0, 220) : 'Scrivi gli appunti di questa sessione: testo formattato, foto, scansioni, PDF e registrazioni vocali.'}</span>
+          {(files.length > 0 || (m.tags?.length ?? 0) > 0) && (
+            <span className="np-meta">
+              {count('image') > 0 && <span><Sym name="image" size={15} /> {count('image')}</span>}
+              {count('pdf') > 0 && <span><Sym name="picture_as_pdf" size={15} /> {count('pdf')}</span>}
+              {count('audio') > 0 && <span><Sym name="mic" size={15} /> {count('audio')}</span>}
+              {(m.tags ?? []).slice(0, 4).map((t) => (
+                <span key={t} className="np-tag">#{t}</span>
+              ))}
+            </span>
+          )}
+          <span className="np-go">
+            <Sym name="edit_note" size={18} /> {text || files.length ? 'Apri gli appunti' : 'Scrivi gli appunti'} ›
+          </span>
+        </button>
       </Field>
+      {picking && <FolderPicker selected={folderId} onPick={(id) => set({ folderId: id ?? '', area: areaFor(all, id) })} onClose={() => setPicking(false)} />}
     </div>
   );
 }
@@ -365,7 +400,7 @@ function KindEditor({ value, onChange, date }: Props<Module> & { date: ISODate }
     case 'clinical':
       return <ClinicalEditor value={value} onChange={onChange} />;
     case 'study':
-      return <StudyEditor value={value} onChange={onChange} />;
+      return <StudyEditor value={value} onChange={onChange} date={date} />;
     case 'workout':
       return <WorkoutLogger value={value} onChange={onChange} date={date} />;
     case 'course':

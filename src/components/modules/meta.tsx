@@ -47,7 +47,7 @@ export const MODULES: ModuleMeta[] = [
     hint: 'Articoli, corsi, congressi',
     area: 'lavoro',
     Icon: IconStudy,
-    create: () => ({ kind: 'study', id: uid(), type: 'article', area: 'gynecology', title: '', durationMin: 30 }),
+    create: () => ({ kind: 'study', id: uid(), type: 'article', area: 'gynecology', title: '', durationMin: 30, createdAt: Date.now() }),
   },
   {
     kind: 'workout',

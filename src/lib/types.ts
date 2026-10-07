@@ -135,7 +135,39 @@ export interface StudyModule {
   area: string; // vocab.STUDY_AREAS
   title: string;
   durationMin: number;
+  /** Appunti di prima, solo testo: alla prima modifica passano in `body`. */
   notes?: string;
+  // ---- Appunti (ogni sessione di studio è anche una nota) ----
+  /** Cartella degli appunti (vedi Settings.noteFolders); senza, quella dell'area. */
+  folderId?: string;
+  /** Testo formattato della nota (HTML ripulito; immagini, PDF e audio come segnaposto data-att). */
+  body?: string;
+  attachments?: NoteFile[];
+  tags?: string[];
+  favorite?: boolean;
+  /** Nota libera, creata dall'archivio senza una sessione di studio. */
+  free?: boolean;
+  createdAt?: number;
+  editedAt?: number;
+  /** Nel Cestino da questo momento (eliminata definitivamente dopo 30 giorni). */
+  trashedAt?: number;
+}
+
+/** Image, PDF or recording inside a note. */
+export interface NoteFile extends FileRef {
+  kind: 'image' | 'pdf' | 'audio';
+  /** Durata della registrazione, in secondi. */
+  sec?: number;
+}
+
+/** Folder of the notes archive; folders nest through parentId. */
+export interface NoteFolder {
+  id: string;
+  name: string;
+  parentId?: string;
+  tone?: string; // lime, lav, sage, sky, terra, plum, sun, rose
+  /** Eliminata: le sue note e sottocartelle passano alla cartella superiore. */
+  deleted?: boolean;
 }
 
 /** One step of a running session: by time (seconds) or by distance (metres). */
@@ -475,6 +507,8 @@ export interface DayEntry {
   food?: FoodLog;
   diary?: DiaryEntry; // diario del giorno: solo testo libero e foto
   gcalTrash?: string[]; // eventi Google da eliminare alla prossima sincronizzazione
+  /** Appunti che non sono una sessione di studio del giorno: note libere e note nel Cestino. */
+  looseNotes?: StudyModule[];
   updatedAt: number;
 }
 
@@ -503,6 +537,11 @@ export interface Settings {
   runPlans?: RunPlan[]; // sessioni a intervalli salvate
   hiddenBlocks?: string[]; // blocchi eliminati dalla pagina del giorno (es. il tabellone)
   seed?: number; // versione dei dati predefiniti già applicata (vedi migrateSettings)
+  /** Cartelle degli appunti, in ordine; senza, quelle delle aree di studio. */
+  noteFolders?: NoteFolder[];
+  /** Tag creati a mano (oltre a quelli già usati nelle note). */
+  noteTags?: string[];
+  notesView?: { layout?: 'grid' | 'list'; sort?: 'edited' | 'created' | 'title'; favTop?: boolean };
   updatedAt: number;
 }
 
