@@ -2883,3 +2883,13 @@ button.op-tutor:disabled { opacity: 0.7; cursor: default; }
   .day-page:not(.is-dragging) > .blk[data-block='todos']:has(> .card.collapsed):has(+ .blk[data-block='agenda'] > .card.collapsed),
   .day-page:not(.is-dragging) > .blk[data-block='todos']:has(> .card.collapsed) + .blk[data-block='agenda']:has(> .card.collapsed) { align-self: stretch; }
 }
+
+/* Registro alimentare: each meal folds shut like a drop-down */
+.meal-fold { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.75rem; background: none; border: none; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.meal-fold .chevron { flex: none; }
+.meal-count { display: inline-grid; place-items: center; min-width: 1.35rem; height: 1.35rem; padding: 0 0.35rem; margin-left: 0.45rem; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 0.72rem; font-weight: 700; vertical-align: 0.15em; }
+.scan-last-line { display: flex; align-items: center; gap: 0.5rem; }
+.scan-last-line .scan-last-row { flex: 1; min-width: 0; }
+.q-head { display: flex; align-items: flex-start; gap: 0.5rem; }
+.q-head .q-name { flex: 1; min-width: 0; margin: 0; }
+.q-head .fc-fav { margin: -0.4rem -0.4rem 0 0; }

@@ -95,7 +95,7 @@ function Swipeable({ onSwipe, children }: { onSwipe?: () => void; children: Reac
 const fmtG = (n: number) => `${Math.round(n * 10) / 10}`.replace('.', ',') + ' g';
 
 /** Quantity step: quick portions, grams with − / +, live macros, meal choice. */
-function Quantity({ food, meal, onMeal, onAdd, onBack, inline }: { food: Food; meal: MealId; onMeal: (m: MealId) => void; onAdd: (e: FoodEntry) => void; onBack: () => void; inline?: boolean }) {
+function Quantity({ food, meal, onMeal, onAdd, onBack, inline, fav, onFav }: { food: Food; meal: MealId; onMeal: (m: MealId) => void; onAdd: (e: FoodEntry) => void; onBack: () => void; inline?: boolean; fav?: boolean; onFav?: () => void }) {
   const [grams, setGrams] = useState<number | undefined>(food.portionG ?? 100);
   const e = entryFor(food, grams ?? 0, uid());
   const unit = (food.portionName ?? 'porzione').replace(/^1\s+/, '');
@@ -116,10 +116,17 @@ function Quantity({ food, meal, onMeal, onAdd, onBack, inline }: { food: Food; m
   return (
     <div ref={box} className={`quantity${inline ? ' inline' : ''}`}>
       {!inline && (
-        <h3 className="q-name">
-          {food.name}
-          {food.brand && <span className="muted"> · {food.brand}</span>}
-        </h3>
+        <div className="q-head">
+          <h3 className="q-name">
+            {food.name}
+            {food.brand && <span className="muted"> · {food.brand}</span>}
+          </h3>
+          {onFav && (
+            <button type="button" className={`fc-fav${fav ? ' on' : ''}`} aria-label={fav ? 'Preferiti: scegli i pasti' : 'Aggiungi ai preferiti'} aria-pressed={!!fav} onClick={onFav}>
+              <Icon d={ICON.heart} size={22} fill={!!fav} />
+            </button>
+          )}
+        </div>
       )}
       <span className="q-label">Porzione rapida</span>
       <div className="q-portions">
@@ -268,7 +275,17 @@ export function FoodSheet({
   };
   /** Heart: a food that is not a favourite yet goes straight into the folder of the meal being filled; then the folders can be picked. */
   const onHeart = (f: Food) => {
-    if (!isFav(f.id)) setInFolder(f.id, meal, true);
+    if (!isFav(f.id)) {
+      // A scanned product (Open Food Facts) is saved locally too, so it stays among the favourites.
+      const keep = f.source === 'off' && !custom.some((c) => c.id === f.id);
+      const cur = folders[meal] ?? [];
+      store.saveSettings({
+        ...settings,
+        ...(keep ? { foods: [...custom, f] } : {}),
+        favoriteFolders: { ...folders, [meal]: [...cur, f.id] },
+        favoriteFoods: legacyFavs.filter((x) => x !== f.id),
+      });
+    }
     setFavFor(f);
   };
   const hideRecent = (f: Food) => {
@@ -641,6 +658,7 @@ export function FoodSheet({
                       <span>✓ Ultimo prodotto riconosciuto</span>
                       <small>EAN {lastFound.code}</small>
                     </div>
+                    <div className="scan-last-line">
                     <button type="button" className="scan-last-row" onClick={() => quickAdd(lastFound.food)}>
                       <span className="fc-name">
                         {lastFound.food.name}
@@ -651,6 +669,10 @@ export function FoodSheet({
                       </span>
                       <b className="scan-last-add">+ Aggiungi</b>
                     </button>
+                    <button type="button" className={`fc-fav${isFav(lastFound.food.id) ? ' on' : ''}`} aria-label={isFav(lastFound.food.id) ? 'Preferiti: scegli i pasti' : 'Aggiungi ai preferiti'} aria-pressed={isFav(lastFound.food.id)} onClick={() => onHeart(lastFound.food)}>
+                      <Icon d={ICON.heart} size={22} fill={isFav(lastFound.food.id)} />
+                    </button>
+                    </div>
                   </section>
                 )}
                 <p className="muted small scan-help">Codice rovinato o illeggibile? Scrivilo qui sopra. I dati dei prodotti confezionati vengono da Open Food Facts, database libero e collaborativo.</p>
@@ -755,7 +777,7 @@ export function FoodSheet({
                 </div>
               </div>
             )}
-          {picked && !shownInline && <Quantity food={picked} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} />}
+          {picked && !shownInline && <Quantity food={picked} meal={meal} onMeal={setMeal} onBack={() => setPicked(null)} onAdd={add} fav={isFav(picked.id)} onFav={() => onHeart(picked)} />}
         </div>
         {added && (
           <div className="fs-added" role="status">

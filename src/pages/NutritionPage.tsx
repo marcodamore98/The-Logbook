@@ -5,7 +5,7 @@ import { fmt } from '../components/charts';
 import { GlyphCheck, GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconBreakfast, IconDinner, IconLunch, IconSnack, IconWater } from '../components/icons';
 import { FoodSheet } from '../components/nutrition/FoodSheet';
 import { useUndo } from '../components/Undo';
-import { NumberInput } from '../components/ui';
+import { Chevron, NumberInput } from '../components/ui';
 import { addDays, fromISO, today } from '../lib/dates';
 import { dayIntake, MEALS, totalsOf } from '../lib/nutrition/foods';
 import { useStore } from '../lib/store/StoreContext';
@@ -292,6 +292,8 @@ function MealIcon({ id }: { id: MealId }) {
   return <I size={34} />;
 }
 
+const MEALS_CLOSED_KEY = 'logbook.mealsClosed';
+
 export default function NutritionPage() {
   const params = useParams();
   const date = params.date ?? today();
@@ -304,6 +306,24 @@ export default function NutritionPage() {
   const [fan, setFan] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string> | null>(null);
+  // Meals folded shut in the food log (remembered on this device).
+  const [closedMeals, setClosedMeals] = useState<Partial<Record<MealId, boolean>>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(MEALS_CLOSED_KEY) ?? '{}');
+    } catch {
+      return {};
+    }
+  });
+  const toggleMeal = (id: MealId) =>
+    setClosedMeals((c) => {
+      const next = { ...c, [id]: !c[id] };
+      try {
+        localStorage.setItem(MEALS_CLOSED_KEY, JSON.stringify(next));
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
   const offerUndo = useUndo();
 
   useEffect(() => {
@@ -392,25 +412,38 @@ export default function NutritionPage() {
         const mt = totalsOf(entries);
         const yesterday = store.day(addDays(date, -1)).food?.meals[m.id] ?? [];
         const [lo, hi] = SHARE[m.id];
+        const shut = !!closedMeals[m.id] && entries.length > 0;
         return (
-          <section key={m.id} className="card meal-card">
+          <section key={m.id} className={`card meal-card${shut ? ' collapsed' : ''}`}>
             <div className="meal-head">
-              <MealIcon id={m.id} />
-              <div className="meal-title">
-                <h2>{m.label}</h2>
-                <span className="meal-sub">
+              <button
+                type="button"
+                className="meal-fold"
+                aria-expanded={!shut}
+                aria-label={shut ? `Apri ${m.label}` : `Riduci ${m.label}`}
+                onClick={() => toggleMeal(m.id)}
+              >
+                <MealIcon id={m.id} />
+                <div className="meal-title">
+                  <h2>
+                    {m.label}
+                    {shut && entries.length > 0 && <span className="meal-count">{entries.length}</span>}
+                  </h2>
+                  <span className="meal-sub">
                   {entries.length > 0
                     ? `${fmt(mt.kcal)} kcal · P ${fmt(mt.protein)} · C ${fmt(mt.carbs)} · G ${fmt(mt.fat)}`
                     : goals.kcalIn
                       ? `Consigliato ${fmt(Math.round(goals.kcalIn * lo))} - ${fmt(Math.round(goals.kcalIn * hi))} kcal`
                       : 'Niente registrato'}
-                </span>
-              </div>
+                  </span>
+                </div>
+                {entries.length > 0 && <Chevron open={!shut} />}
+              </button>
               <button className="meal-add" aria-label={`Aggiungi a ${m.label}`} onClick={() => setAdding(m.id)}>
                 <GlyphPlus />
               </button>
             </div>
-            {entries.length === 0 && yesterday.length > 0 && (
+            {!shut && entries.length === 0 && yesterday.length > 0 && (
               <button
                 className="btn-ghost small meal-copy"
                 onClick={() =>
@@ -429,7 +462,7 @@ export default function NutritionPage() {
                 Copia da ieri ({yesterday.length})
               </button>
             )}
-            {entries.length > 0 && (
+            {!shut && entries.length > 0 && (
               <ul className="food-list">
                 {entries.map((e) => (
                   <FoodRow
