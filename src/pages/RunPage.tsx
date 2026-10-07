@@ -1,3 +1,4 @@
+import { confirmDelete } from '../components/Confirm';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fmt } from '../components/charts';
@@ -144,7 +145,7 @@ export default function RunPage() {
                 Salva questa sessione
               </button>
               {plans.filter((p) => isSaved(p.id) && p.name === planName).map((p) => (
-                <button key={p.id} className="btn-ghost small" onClick={() => window.confirm(`Eliminare “${p.name}”?`) && store.saveSettings({ ...settings, runPlans: (settings.runPlans ?? []).filter((x) => x.id !== p.id) })}>
+                <button key={p.id} className="btn-ghost small" onClick={async () => (await confirmDelete(`“${p.name}”`)) && store.saveSettings({ ...settings, runPlans: (settings.runPlans ?? []).filter((x) => x.id !== p.id) })}>
                   <GlyphTrash /> Elimina “{p.name}”
                 </button>
               ))}
@@ -279,7 +280,7 @@ export default function RunPage() {
                   </span>
                   <span className="run-item-go" aria-hidden="true">›</span>
                 </Link>
-                <button className="icon-btn small" aria-label="Elimina corsa" onClick={() => window.confirm('Eliminare questa corsa?') && store.updateDay(date, (d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }))}>
+                <button className="icon-btn small" aria-label="Elimina corsa" onClick={async () => (await confirmDelete('questa corsa')) && store.updateDay(date, (d) => ({ ...d, modules: d.modules.filter((x) => x.id !== m.id) }))}>
                   <GlyphTrash />
                 </button>
               </li>

@@ -1,3 +1,4 @@
+import { confirmDelete } from '../components/Confirm';
 import { useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSettings, IconShift, IconSync } from '../components/icons';
@@ -282,7 +283,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
                   <li key={c.id}>
                     <input className="grow" value={c.name} placeholder="Cognome Nome" onChange={(e) => setColleague({ ...c, name: e.target.value })} />
                     <input value={c.role ?? ''} placeholder="Ruolo" onChange={(e) => setColleague({ ...c, role: e.target.value })} />
-                    <button className="icon-btn small" aria-label="Elimina collega" onClick={() => save({ colleagues: settings.colleagues.filter((x) => x.id !== c.id) })}>
+                    <button className="icon-btn small" aria-label="Elimina collega" onClick={async () => (await confirmDelete(`“${c.name || 'questo collega'}”`)) && save({ colleagues: settings.colleagues.filter((x) => x.id !== c.id) })}>
                       <GlyphTrash />
                     </button>
                   </li>
@@ -336,7 +337,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
                     <label className="check">
                       <input type="checkbox" checked={t.countsAsWork} onChange={(e) => setShiftType({ ...t, countsAsWork: e.target.checked })} /> lavoro
                     </label>
-                    <button className="icon-btn small" aria-label="Elimina tipo di turno" onClick={() => save({ shiftTypes: settings.shiftTypes.filter((x) => x.id !== t.id) })}>
+                    <button className="icon-btn small" aria-label="Elimina tipo di turno" onClick={async () => (await confirmDelete(`il tipo di turno “${t.name}”`)) && save({ shiftTypes: settings.shiftTypes.filter((x) => x.id !== t.id) })}>
                       <GlyphTrash />
                     </button>
                   </ShiftTypeRow>

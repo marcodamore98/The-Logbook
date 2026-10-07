@@ -1,3 +1,4 @@
+import { confirmDelete } from '../components/Confirm';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -134,8 +135,9 @@ export default function NotePage() {
     }
   }
 
-  const trash = () => {
+  const trash = async () => {
     setMenu(null);
+    if (!(await confirmDelete('questa nota', { detail: 'Resta nel Cestino dell’Archivio per 30 giorni.' }))) return;
     editor.current?.flush();
     const r = rowRef.current!;
     void notes.trash(r).then(() => {
@@ -354,7 +356,8 @@ export default function NotePage() {
               <button
                 type="button"
                 className="btn-ghost danger"
-                onClick={() => {
+                onClick={async () => {
+                  if (!(await confirmDelete('questa immagine dalla nota'))) return;
                   viewer.remove();
                   setViewer(null);
                 }}

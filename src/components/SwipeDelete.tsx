@@ -1,12 +1,13 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { GlyphTrash } from './icons';
 import { EDGE_PX } from './useDrawer';
+import { confirmDelete } from './Confirm';
 
 /**
  * A row that deletes itself when swiped left: the red "Elimina" grows under the finger and,
  * past about a third of the row, the row goes on release (the caller offers "Annulla").
  */
-export function SwipeDelete({ onDelete, children }: { onDelete: () => void; children: ReactNode }) {
+export function SwipeDelete({ onDelete, children, what }: { onDelete: () => void; children: ReactNode; /** "questa nota", "il collega"… for the question. */ what?: string }) {
   const [dx, setDx] = useState(0);
   const [moving, setMoving] = useState(false);
   const g = useRef<{ x: number; y: number; w: number; t: number; lock: 'x' | 'y' | null } | null>(null);
@@ -42,12 +43,16 @@ export function SwipeDelete({ onDelete, children }: { onDelete: () => void; chil
         setMoving(false);
         if (!c || c.lock !== 'x') return;
         if (dx < -limit(c.w)) {
-          setDx(-c.w);
           navigator.vibrate?.(10);
-          window.setTimeout(() => {
-            setDx(0);
-            onDelete();
-          }, 160);
+          // Asks first; the row stays open on the red "Elimina" meanwhile.
+          void confirmDelete(what).then((ok) => {
+            if (!ok) return setDx(0);
+            setDx(-c.w);
+            window.setTimeout(() => {
+              setDx(0);
+              onDelete();
+            }, 160);
+          });
         } else setDx(0);
       }}
     >

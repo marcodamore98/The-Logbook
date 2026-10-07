@@ -1,3 +1,4 @@
+import { confirmDelete } from '../components/Confirm';
 import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -171,7 +172,7 @@ function Routines() {
                     <div className="menu">
                       <button className="menu-item" onClick={() => setEditing(r.id)}>Modifica</button>
                       <button className="menu-item" onClick={() => save([...routines, { ...structuredClone(r), id: uid(), name: `${r.name} (copia)`, updatedAt: Date.now() }])}>Duplica</button>
-                      <button className="menu-item danger" onClick={() => window.confirm(`Eliminare la routine “${r.name}”?`) && save(routines.filter((x) => x.id !== r.id))}>Elimina</button>
+                      <button className="menu-item danger" onClick={async () => (await confirmDelete(`la routine “${r.name}”`)) && save(routines.filter((x) => x.id !== r.id))}>Elimina</button>
                     </div>
                   </details>
                 </div>
@@ -259,8 +260,8 @@ function Exercises() {
                 <button
                   className="icon-btn small"
                   aria-label="Elimina esercizio personale"
-                  onClick={() => {
-                    if (!window.confirm('Eliminare questo esercizio personale? Lo storico resta negli allenamenti.')) return;
+                  onClick={async () => {
+                    if (!(await confirmDelete('questo esercizio personale', { detail: 'Lo storico resta negli allenamenti.' }))) return;
                     store.saveSettings({ ...store.settings, exercises: custom.filter((x) => x.id !== def.id) });
                     setSel(null);
                   }}

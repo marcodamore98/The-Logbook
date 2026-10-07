@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { compress } from '../../lib/image';
 import { sanitizeHtml } from '../../lib/notes';
@@ -560,7 +561,11 @@ export function RichText({
           if (media) {
             const r = media.getBoundingClientRect();
             const corner = e.clientX > r.right - 40 && e.clientY < r.top + 40;
-            if (corner && !readOnly) return removeMedia(media);
+            if (corner && !readOnly) {
+              const kind = media.dataset.kind === 'image' ? 'questa immagine' : media.dataset.kind === 'audio' ? 'questa registrazione' : 'questo allegato';
+              void confirmDelete(`${kind} dalla nota`).then((ok) => ok && removeMedia(media));
+              return;
+            }
             const f = filesRef.current.find((x) => x.id === media.dataset.att);
             if (media.classList.contains('n-img')) {
               const u = media.querySelector('img')?.getAttribute('src');
@@ -597,7 +602,7 @@ export function RichText({
               <button type="button" className="rec-stop" onClick={() => stopRecording(false)}>
                 <Sym name="stop-fill" size={18} /> Salva
               </button>
-              <button type="button" className="icon-btn small" aria-label="Annulla la registrazione" onClick={() => window.confirm('Eliminare questa registrazione?') && stopRecording(true)}>
+              <button type="button" className="icon-btn small" aria-label="Annulla la registrazione" onClick={async () => (await confirmDelete('questa registrazione')) && stopRecording(true)}>
                 <Sym name="close" size={18} />
               </button>
             </div>
@@ -608,7 +613,13 @@ export function RichText({
               <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => tableOp('col')}>+ Colonna</button>
               <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => tableOp('delRow')}>− Riga</button>
               <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => tableOp('delCol')}>− Colonna</button>
-              <button type="button" className="danger" onPointerDown={(e) => e.preventDefault()} onClick={() => tableOp('del')}>Elimina tabella</button>
+              <button type="button" className="danger" onPointerDown={(e) => e.preventDefault()} onClick={async () => {
+                const table = at()?.closest('table');
+                if (!table || !(await confirmDelete('questa tabella'))) return;
+                table.remove();
+                changed();
+                document.dispatchEvent(new Event('selectionchange'));
+              }}>Elimina tabella</button>
             </div>
           )}
           {pop && (

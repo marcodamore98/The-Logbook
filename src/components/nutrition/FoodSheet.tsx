@@ -89,7 +89,7 @@ function FoodRow({ food, onPick, fav, onFav, onQuick, picked, onSwipe, children 
 }
 
 function Swipeable({ onSwipe, children }: { onSwipe?: () => void; children: ReactNode }) {
-  return onSwipe ? <SwipeDelete onDelete={onSwipe}>{children}</SwipeDelete> : <>{children}</>;
+  return onSwipe ? <SwipeDelete onDelete={onSwipe} what="questo alimento dall’elenco">{children}</SwipeDelete> : <>{children}</>;
 }
 
 const fmtG = (n: number) => `${Math.round(n * 10) / 10}`.replace('.', ',') + ' g';

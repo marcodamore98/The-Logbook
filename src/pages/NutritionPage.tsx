@@ -1,3 +1,4 @@
+import { confirmDelete } from '../components/Confirm';
 import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -183,9 +184,12 @@ function FoodRow({
           if (!c || c.lock !== 'x' || selecting) return;
           // Past the threshold the food is deleted on release (with "Annulla"), otherwise it springs back.
           if (dx < -Math.min(DELETE_AT, c.w * 0.35)) {
-            setDx(-c.w);
             navigator.vibrate?.(10);
-            window.setTimeout(onDelete, 160);
+            void confirmDelete(`“${e.name}”`).then((ok) => {
+              if (!ok) return setDx(0);
+              setDx(-c.w);
+              window.setTimeout(onDelete, 160);
+            });
           } else setDx(0);
         }}
       >
@@ -520,7 +524,7 @@ export default function NutritionPage() {
                             </option>
                           ))}
                         </select>
-                        <button className="icon-btn small" aria-label="Elimina" onClick={() => remove(new Set([e.id]))}>
+                        <button className="icon-btn small" aria-label="Elimina" onClick={async () => (await confirmDelete(`“${e.name}”`)) && remove(new Set([e.id]))}>
                           <GlyphTrash />
                         </button>
                       </div>
@@ -609,7 +613,8 @@ export default function NutritionPage() {
           </select>
           <button
             className="select-delete"
-            onClick={() => {
+            onClick={async () => {
+              if (!(await confirmDelete(picked.size === 1 ? 'l’alimento selezionato' : `i ${picked.size} alimenti selezionati`))) return;
               remove(picked);
               setPicked(null);
             }}

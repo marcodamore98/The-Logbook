@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import type { ShopItem } from '../../lib/types';
@@ -105,7 +106,8 @@ export function ShoppingList({ addSignal }: { addSignal: number }) {
         </li>
       </ul>
       {done.length > 0 && (
-        <button type="button" className="shop-clear no-print" onClick={() => {
+        <button type="button" className="shop-clear no-print" onClick={async () => {
+            if (!(await confirmDelete(done.length === 1 ? 'l’articolo spuntato' : `i ${done.length} articoli spuntati`))) return;
             save(open);
             offerUndo(done.length === 1 ? 'Articolo tolto' : `${done.length} articoli tolti`, () => store.saveSettings({ ...store.settings, shopping: items }));
           }}>

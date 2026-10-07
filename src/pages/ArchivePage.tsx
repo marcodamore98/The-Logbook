@@ -1,3 +1,4 @@
+import { confirmDelete } from '../components/Confirm';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -278,7 +279,7 @@ function NotesArchive({ folder }: { folder?: string }) {
         <p className="na-trash-info">
           Il Cestino mostra le note eliminate. Restano qui {TRASH_DAYS} giorni, poi vengono eliminate definitivamente con i loro allegati.
           {trashed.length > 0 && (
-            <button type="button" className="btn-ghost small danger" onClick={() => window.confirm(`Eliminare definitivamente ${trashed.length === 1 ? 'la nota' : `le ${trashed.length} note`} del Cestino?`) && forever(trashed)}>
+            <button type="button" className="btn-ghost small danger" onClick={async () => (await confirmDelete(`definitivamente ${trashed.length === 1 ? 'la nota' : `le ${trashed.length} note`} del Cestino`, { detail: 'Con i loro allegati: non si potranno più recuperare.' })) && forever(trashed)}>
               Svuota il Cestino
             </button>
           )}
@@ -324,7 +325,7 @@ function NotesArchive({ folder }: { folder?: string }) {
             <ul className="note-list">
               {rs.map((r) => (
                 <li key={r.m.id}>
-                  <SwipeDelete onDelete={() => (r.m.trashedAt ? forever([r]) : toTrash([r]))}>
+                  <SwipeDelete what={r.m.trashedAt ? 'definitivamente questa nota' : 'questa nota'} onDelete={() => (r.m.trashedAt ? forever([r]) : toTrash([r]))}>
                     <NoteRowItem
                       r={r}
                       all={all}
@@ -355,7 +356,7 @@ function NotesArchive({ folder }: { folder?: string }) {
               <button type="button" className="sb-btn" onClick={() => (selected.forEach((r) => void notes.restore(r)), setSel(null))}>
                 <Sym name="restore_from_trash" size={20} /> Ripristina
               </button>
-              <button type="button" className="sb-btn danger" onClick={() => (forever(selected), setSel(null))}>
+              <button type="button" className="sb-btn danger" onClick={async () => { if (!(await confirmDelete(`definitivamente ${selected.length === 1 ? 'la nota selezionata' : `le ${selected.length} note selezionate`}`))) return; forever(selected); setSel(null); }}>
                 <Sym name="delete_forever" size={20} />
               </button>
             </>
@@ -378,7 +379,7 @@ function NotesArchive({ folder }: { folder?: string }) {
               <button type="button" className="icon-btn" aria-label="Copia delle note selezionate" onClick={() => backup(selected)}>
                 <Sym name="download" size={22} />
               </button>
-              <button type="button" className="icon-btn danger" aria-label="Sposta nel Cestino" onClick={() => (toTrash(selected), setSel(null))}>
+              <button type="button" className="icon-btn danger" aria-label="Sposta nel Cestino" onClick={async () => { if (!(await confirmDelete(selected.length === 1 ? 'la nota selezionata' : `le ${selected.length} note selezionate`, { detail: 'Restano nel Cestino per 30 giorni.' }))) return; toTrash(selected); setSel(null); }}>
                 <Sym name="delete" size={22} />
               </button>
             </>
@@ -459,7 +460,7 @@ function NotesArchive({ folder }: { folder?: string }) {
         <Sheet title={noteTitle(sheet.bin)} onClose={() => setSheet(null)}>
           <p className="muted small">Nel Cestino · eliminata definitivamente tra {daysLeft(sheet.bin.m.trashedAt!)} giorni.</p>
           <div className="sheet-foot">
-            <button type="button" className="btn-ghost danger" onClick={() => (forever([sheet.bin]), setSheet(null))}>
+            <button type="button" className="btn-ghost danger" onClick={async () => { if (!(await confirmDelete('definitivamente questa nota'))) return; forever([sheet.bin]); setSheet(null); }}>
               Elimina definitivamente
             </button>
             <button type="button" className="btn" onClick={() => (void notes.restore(sheet.bin), setSheet(null), flash('Nota ripristinata'))}>
@@ -702,7 +703,8 @@ function FolderSheet({ f, onClose, onDeleted }: { f: NoteFolder; onClose: () => 
       <button
         type="button"
         className="fs-row danger"
-        onClick={() => {
+        onClick={async () => {
+          if (!(await confirmDelete(`la cartella “${me.name}”`, { detail: 'Le note e le sottocartelle passano alla cartella superiore.' }))) return;
           const before = store.settings;
           set({ deleted: true });
           onDeleted(me);
@@ -763,6 +765,7 @@ function FolderManager({ start, counts, onClose, onEdit }: { start?: string; cou
           return (
             <li key={f.id} {...sort.item(i)}>
               <SwipeDelete
+                what={`la cartella “${f.name}”`}
                 onDelete={() => {
                   const before = store.settings;
                   store.saveSettings({ ...store.settings, noteFolders: all.map((x) => (x.id === f.id ? { ...x, deleted: true } : x)) });

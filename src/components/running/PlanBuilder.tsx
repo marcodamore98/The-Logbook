@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useState } from 'react';
 import { GlyphPlus, GlyphTrash } from '../icons';
 import { DragGrip, NumField } from '../ui';
@@ -32,7 +33,7 @@ function StepRow({ s, onChange, onRemove, sortProps }: { s: RunStep; onChange: (
           <NumField value={s.value} label="Metri" onChange={(n) => onChange({ ...s, value: Math.round(n) })} /> m
         </span>
       )}
-      <button type="button" className="icon-btn small" aria-label="Elimina fase" onClick={onRemove}>
+      <button type="button" className="icon-btn small" aria-label="Elimina fase" onClick={async () => (await confirmDelete('questa fase')) && onRemove()}>
         <GlyphTrash />
       </button>
     </li>

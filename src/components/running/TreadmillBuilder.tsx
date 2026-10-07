@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { GlyphPlus, GlyphTrash } from '../icons';
 import { DragGrip, NumField } from '../ui';
 import { useSortableList } from '../useBlockDrag';
@@ -15,7 +16,7 @@ function SeriesRow({ s, n, onChange, onRemove, sortProps }: { s: RunStep; n: num
         <DragGrip />
         <strong className="tm-series">Serie {n}</strong>
         <span className="tm-pace">{paceFromKmh(kmh)} /km</span>
-        <button type="button" className="icon-btn small" aria-label={`Elimina la serie ${n}`} onClick={onRemove}>
+        <button type="button" className="icon-btn small" aria-label={`Elimina la serie ${n}`} onClick={async () => (await confirmDelete(`la serie ${n}`)) && onRemove()}>
           <GlyphTrash />
         </button>
       </div>

@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { SwipeDelete } from '../SwipeDelete';
 import { SearchPicker } from '../SearchPicker';
@@ -344,7 +345,7 @@ function GroupsManager() {
           const r = drag.row(g.id);
           return (
             <div key={g.id} {...r} className={`op-proc${r.className}`}>
-              <SwipeDelete
+              <SwipeDelete what="questo gruppo"
                 onDelete={() => {
                   save(groups.filter((x) => x.id !== g.id));
                   offerUndo(`Gruppo “${g.name}” eliminato`, () => save(groups));
@@ -496,7 +497,7 @@ function CaseView({
 
   return (
     <>
-      <SwipeDelete onDelete={onRemove}>
+      <SwipeDelete onDelete={onRemove} what="questo paziente">
         <div className="op-case-head">
           <button type="button" className="op-case-title" aria-expanded={open} onClick={onToggle}>
             <span className="op-badge">Paziente {n}</span>
@@ -580,7 +581,7 @@ function CaseView({
             <button type="button" className="btn-ghost small" onClick={onDuplicate}>
               Duplica paziente
             </button>
-            <button type="button" className="btn-ghost small danger" onClick={onRemove}>
+            <button type="button" className="btn-ghost small danger" onClick={async () => (await confirmDelete('questo paziente')) && onRemove()}>
               <GlyphTrash /> Elimina
             </button>
           </div>
@@ -596,7 +597,7 @@ function ProcView({ p, open, onToggle, onChange, onRemove }: { p: SurgeryProcedu
   const shownApproaches = approaches.some((a) => a.id === p.approach) ? approaches : [...approaches, ...APPROACHES.filter((a) => a.id === p.approach)];
   return (
     <>
-      <SwipeDelete onDelete={onRemove}>
+      <SwipeDelete onDelete={onRemove} what="questa procedura">
         <div className="op-proc-head">
           <DragGrip />
           <button type="button" className="op-proc-title" aria-expanded={open} onClick={onToggle}>
@@ -736,7 +737,7 @@ function ClinicalCaseView({
   };
   return (
     <>
-      <SwipeDelete onDelete={onRemove}>
+      <SwipeDelete onDelete={onRemove} what="questo paziente">
         <div className="op-case-head">
           <button type="button" className="op-case-title" aria-expanded={open} onClick={onToggle}>
             <span className="op-badge">{label}</span>
@@ -788,7 +789,7 @@ function ClinicalCaseView({
             <button type="button" className="btn-ghost small" onClick={onDuplicate}>
               Duplica paziente
             </button>
-            <button type="button" className="btn-ghost small danger" onClick={onRemove}>
+            <button type="button" className="btn-ghost small danger" onClick={async () => (await confirmDelete('questo paziente')) && onRemove()}>
               <GlyphTrash /> Elimina
             </button>
           </div>
@@ -800,7 +801,7 @@ function ClinicalCaseView({
 
 function ClinicalItemView({ it, onChange, onRemove }: { it: ClinicalItem; onChange: (it: ClinicalItem) => void; onRemove: () => void }) {
   return (
-    <SwipeDelete onDelete={onRemove}>
+    <SwipeDelete onDelete={onRemove} what="questa prestazione">
       <div className="cl-item-head">
         <DragGrip />
         <div className="cl-item-main">

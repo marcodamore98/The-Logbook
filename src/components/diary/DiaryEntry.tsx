@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useEffect, useRef, useState } from 'react';
 import { GlyphClose, GlyphEdit, GlyphPlus, GlyphTrash } from '../icons';
 import { compress, StoredImage } from '../modules/editors';
@@ -67,8 +68,8 @@ export function DiaryEntryView({ day, onSave, placeholder = 'Come è andata oggi
     }
   }
 
-  const removePhoto = (p: PhotoItem) => {
-    if (!window.confirm('Togliere questa foto dal diario?')) return;
+  const removePhoto = async (p: PhotoItem) => {
+    if (!(await confirmDelete('questa foto dal diario'))) return;
     if (added.current.some((a) => a.id === p.id)) {
       repo.deletePhoto(p.path);
       added.current = added.current.filter((a) => a.id !== p.id);

@@ -5,6 +5,7 @@ import { deleteEvent, listEvents, type GEvent } from '../lib/google/calendar';
 import { linkedIds } from '../lib/google/sync';
 import { useStore } from '../lib/store/StoreContext';
 import { Sym } from './icons';
+import { confirmDelete } from './Confirm';
 
 interface Group {
   key: string;
@@ -82,7 +83,7 @@ export function DuplicateCleaner({ onClose }: { onClose: () => void }) {
   const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('it-IT', { month: 'short', year: 'numeric' });
 
   async function run() {
-    if (!window.confirm(`Eliminare ${copies === 1 ? '1 copia doppia' : `${copies} copie doppie`} da Google Calendar? Per ogni evento ne resta una.`)) return;
+    if (!(await confirmDelete(copies === 1 ? '1 copia doppia da Google Calendar' : `${copies} copie doppie da Google Calendar`, { detail: 'Per ogni evento ne resta una. Da Google non si possono recuperare.' }))) return;
     const list = chosen.flatMap((g) => g.extra);
     setProgress({ done: 0, all: list.length });
     let n = 0;

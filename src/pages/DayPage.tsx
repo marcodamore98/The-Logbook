@@ -1,3 +1,4 @@
+import { confirmDelete } from '../components/Confirm';
 import { hasContent } from '../lib/notes';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -133,7 +134,16 @@ export default function DayPage() {
     if (k === 'workout') nav(`/palestra/allenamento/${date}/${m.id}`);
     else setOpenId(m.id);
   };
-  const setModule = (m: Module) => update((d) => ({ ...d, modules: d.modules.map((x) => (x.id === m.id ? m : x)) }));
+  const setModule = (m: Module) =>
+    update((d) => {
+      const prev = d.modules.find((x) => x.id === m.id);
+      let loose = d.looseNotes;
+      // A study card turned into another kind keeps its notes in the Cestino; turned back, they leave it.
+      // (Its own id: the card keeps the old one.)
+      if (prev?.kind === 'study' && m.kind !== 'study' && hasContent(prev)) loose = [...(loose ?? []).filter((x) => x.id !== `${prev.id}-cestino`), { ...prev, id: `${prev.id}-cestino`, trashedAt: Date.now() }];
+      if (m.kind === 'study') loose = loose?.filter((x) => x.id !== `${m.id}-cestino`);
+      return { ...d, modules: d.modules.map((x) => (x.id === m.id ? m : x)), looseNotes: loose };
+    });
   const offerUndo = useUndo();
   /** Removes a card; "Annulla" in the snackbar puts it back. Attached files go only once that chance is over. */
   const removeModule = (m: Module) => {
@@ -266,7 +276,7 @@ export default function DayPage() {
             onToggle={() => setOpenId(open ? null : m.id)}
             actions={
               <>
-                <button className="icon-btn small no-print" aria-label="Elimina scheda" onClick={() => removeModule(m)}>
+                <button className="icon-btn small no-print" aria-label="Elimina scheda" onClick={async () => (await confirmDelete(`la scheda ${metaOf(m.kind).label}`, m.kind === 'study' && hasContent(m) ? { detail: 'Gli appunti restano nel Cestino dell’Archivio per 30 giorni.' } : {})) && removeModule(m)}>
                   <GlyphTrash />
                 </button>
               </>
@@ -293,7 +303,7 @@ export default function DayPage() {
             summary={shiftSummary}
             actions={
               day.shift && (
-                <button type="button" className="icon-btn small no-print" aria-label="Elimina il turno" onClick={() => removeShift('shift')}>
+                <button type="button" className="icon-btn small no-print" aria-label="Elimina il turno" onClick={async () => (await confirmDelete('il turno')) && removeShift('shift')}>
                   <GlyphTrash />
                 </button>
               )
@@ -354,7 +364,7 @@ export default function DayPage() {
             title="Guardia medica"
             summary={`${day.guardia.start}–${day.guardia.end}`}
             actions={
-              <button type="button" className="icon-btn small no-print" aria-label="Elimina la guardia medica" onClick={() => removeShift('guardia')}>
+              <button type="button" className="icon-btn small no-print" aria-label="Elimina la guardia medica" onClick={async () => (await confirmDelete('la guardia medica')) && removeShift('guardia')}>
                 <GlyphTrash />
               </button>
             }
@@ -409,7 +419,7 @@ export default function DayPage() {
                         <Sym name="location_on" size={18} />
                       </button>
                     )}
-                    <button className="icon-btn small no-print" aria-label="Elimina impegno" onClick={() => update((d) => ({ ...d, appointments: d.appointments.filter((x) => x.id !== item.a!.id) }))}>
+                    <button className="icon-btn small no-print" aria-label="Elimina impegno" onClick={async () => (await confirmDelete('questo impegno')) && update((d) => ({ ...d, appointments: d.appointments.filter((x) => x.id !== item.a!.id) }))}>
                       <GlyphTrash />
                     </button>
                     {item.a.location !== undefined && (
@@ -507,7 +517,7 @@ export default function DayPage() {
                     value={t.time}
                     onChange={(v) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: v, end: undefined } : x)) }))}
                   />
-                  <button className="icon-btn small no-print" aria-label="Elimina" onClick={() => update((d) => ({ ...d, todos: d.todos.filter((x) => x.id !== t.id) }))}>
+                  <button className="icon-btn small no-print" aria-label="Elimina" onClick={async () => (await confirmDelete('questo promemoria')) && update((d) => ({ ...d, todos: d.todos.filter((x) => x.id !== t.id) }))}>
                     <GlyphTrash />
                   </button>
                 </li>

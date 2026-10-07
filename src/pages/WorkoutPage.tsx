@@ -1,3 +1,4 @@
+import { confirmDelete } from '../components/Confirm';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GlyphCheck, GlyphPrev, GlyphTrash } from '../components/icons';
@@ -69,8 +70,8 @@ export default function WorkoutPage() {
           <button
             className="icon-btn"
             aria-label="Elimina allenamento"
-            onClick={() => {
-              if (!window.confirm('Eliminare questo allenamento?')) return;
+            onClick={async () => {
+              if (!(await confirmDelete('questo allenamento'))) return;
               store.updateDay(date, (d) => ({ ...d, modules: d.modules.filter((m) => m.id !== id) }));
               nav(`/giorno/${date}`);
             }}

@@ -1,7 +1,8 @@
+import { confirmDelete } from '../Confirm';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../lib/store/StoreContext';
-import { allFoldersOf, areaFor, bodyOf, folderOfNote, folderPath, plainOf, setNoteReturn } from '../../lib/notes';
+import { allFoldersOf, areaFor, bodyOf, folderOfNote, folderPath, hasContent, plainOf, setNoteReturn } from '../../lib/notes';
 import { FolderPicker, toneColor } from '../notes/NoteParts';
 import { WorkoutLogger } from '../training/WorkoutLogger';
 import type {
@@ -169,7 +170,8 @@ function PhotoEditor({ value: m, onChange }: Props<PhotoModule>) {
                 type="button"
                 className="icon-btn small"
                 aria-label="Rimuovi foto"
-                onClick={() => {
+                onClick={async () => {
+                  if (!(await confirmDelete('questa foto'))) return;
                   repo.deletePhoto(p.path);
                   onChange({ ...m, items: m.items.filter((x) => x.id !== p.id) });
                 }}
@@ -378,8 +380,13 @@ export function ModuleEditor({ value, onChange, date }: Props<Module> & { date: 
             role="tab"
             aria-selected={value.kind === k}
             className={value.kind === k ? 'on' : ''}
-            onClick={() => {
+            onClick={async () => {
               if (value.kind === k) return;
+              // Changing what the card is throws away what was written in it: ask first.
+              const strip = (x: object) => JSON.stringify({ ...x, id: undefined, createdAt: undefined });
+              const filled = strip(value) !== strip(metaOf(value.kind).create(date));
+              const from = group.labels[group.kinds.indexOf(value.kind)];
+              if (filled && !(await confirmDelete(`la scheda ${from}`, { detail: value.kind === 'study' && hasContent(value) ? `Diventa una scheda ${group.labels[i]} vuota; gli appunti vanno nel Cestino dell’Archivio.` : `Diventa una scheda ${group.labels[i]} vuota e quello che c’era scritto si perde.` }))) return;
               onChange({ ...metaOf(k).create(date), id: value.id } as Module);
               offerUndo(`Scheda cambiata in ${group.labels[i]}`, () => onChange(value));
             }}

@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useEffect, useRef, useState } from 'react';
 import { GlyphClip, GlyphTrash } from '../icons';
 import { uid } from '../ui';
@@ -71,8 +72,8 @@ export function FileSlot({ label, doneLabel, crown, file, onChange }: { label: s
             type="button"
             className="icon-btn small"
             aria-label={`Rimuovi: ${doneLabel ?? label}`}
-            onClick={() => {
-              if (!window.confirm(`Rimuovere “${doneLabel ?? label}”?`)) return;
+            onClick={async () => {
+              if (!(await confirmDelete(`“${doneLabel ?? label}”`))) return;
               repo.deleteFile(file.path);
               onChange(undefined);
             }}
@@ -160,8 +161,8 @@ export function ProgramFiles({ files, onChange }: { files: FileRef[]; onChange: 
             type="button"
             className="icon-btn small"
             aria-label="Rimuovi dal programma"
-            onClick={() => {
-              if (!window.confirm('Rimuovere questo file del programma?')) return;
+            onClick={async () => {
+              if (!(await confirmDelete('questo file del programma'))) return;
               repo.deleteFile(f.path);
               onChange(files.filter((x) => x.id !== f.id));
             }}

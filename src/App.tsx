@@ -6,6 +6,7 @@ import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconMonth, IconNote, IconR
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
 import { UndoProvider } from './components/Undo';
+import { ConfirmProvider } from './components/Confirm';
 import { useCourseReminders } from './components/useCourseReminders';
 import { RestTimerProvider } from './components/training/RestTimer';
 import { firebaseConfigured, signIn, watchUser } from './lib/firebase';
@@ -225,6 +226,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
     <HashRouter>
       <RestTimerProvider>
         <UndoProvider>
+        <ConfirmProvider>
         <div className="app">
           <Topbar onMenu={menu.open} onSummary={summary.open} />
           <div className="layout">
@@ -270,6 +272,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
             </div>
           )}
         </div>
+        </ConfirmProvider>
         </UndoProvider>
       </RestTimerProvider>
     </HashRouter>

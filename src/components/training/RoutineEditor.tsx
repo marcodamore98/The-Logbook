@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useState } from 'react';
 import { useStore } from '../../lib/store/StoreContext';
 import { exerciseDef, usesReps, usesTime, usesWeight } from '../../lib/training/exercises';
@@ -60,7 +61,7 @@ function PlannedBlock({
         <button type="button" className="icon-btn small" aria-label="Sostituisci esercizio" title="Sostituisci esercizio" onClick={onReplace}>
           ⇄
         </button>
-        <button type="button" className="icon-btn small" aria-label="Rimuovi esercizio" onClick={onRemove}>
+        <button type="button" className="icon-btn small" aria-label="Rimuovi esercizio" onClick={async () => (await confirmDelete('questo esercizio dalla routine')) && onRemove()}>
           <GlyphTrash />
         </button>
       </div>
@@ -125,7 +126,7 @@ function PlannedBlock({
                   <NumberInput value={s.rpe} step={0.5} placeholder="–" onChange={(rpe) => setAt(k, { ...s, rpe })} />
                 </td>
                 <td>
-                  <button type="button" className="icon-btn small" aria-label="Rimuovi serie" onClick={() => onChange({ ...ex, sets: warmupsFirst(ex.sets.filter((_, i) => i !== k)) })}>
+                  <button type="button" className="icon-btn small" aria-label="Rimuovi serie" onClick={async () => (await confirmDelete('questa serie')) && onChange({ ...ex, sets: warmupsFirst(ex.sets.filter((_, i) => i !== k)) })}>
                     <GlyphClose />
                   </button>
                 </td>

@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { dayIntake } from '../../lib/nutrition/foods';
@@ -174,7 +175,8 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             <h2 className="sheet-title">{picked.title || 'Allenamento'}</h2>
             <button
               className="danger-banner"
-              onClick={() => {
+              onClick={async () => {
+                if (!(await confirmDelete('questo allenamento'))) return;
                 remove(picked, 'Allenamento eliminato');
                 setPicked(null);
               }}
@@ -194,7 +196,8 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             <h2 className="sheet-title">{pickedRun.title || 'Corsa'}</h2>
             <button
               className="danger-banner"
-              onClick={() => {
+              onClick={async () => {
+                if (!(await confirmDelete('questa corsa'))) return;
                 remove(pickedRun, 'Corsa eliminata');
                 setPickedRun(null);
               }}

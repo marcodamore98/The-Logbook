@@ -1,3 +1,4 @@
+import { confirmDelete } from './Confirm';
 import { byCode, codeLabel, codeShort, IDLE_CODES, rosterFor, ROSTER_SELF } from '../lib/roster';
 import type { ISODate } from '../lib/types';
 import { GlyphPlus, GlyphSheriff, GlyphTrash, IconPeople } from './icons';
@@ -56,7 +57,7 @@ export function RosterCard({ date, onJoin, onDelete }: { date: ISODate; onJoin?:
       title="Tabellone"
       actions={
         onDelete && (
-          <button className="icon-btn small no-print" aria-label="Elimina il tabellone" onClick={onDelete}>
+          <button className="icon-btn small no-print" aria-label="Elimina il tabellone" onClick={async () => (await confirmDelete('il tabellone')) && onDelete()}>
             <GlyphTrash />
           </button>
         )

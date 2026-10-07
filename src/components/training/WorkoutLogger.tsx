@@ -1,3 +1,4 @@
+import { confirmDelete } from '../Confirm';
 import { useEffect, useRef, useState } from 'react';
 import { today } from '../../lib/dates';
 import { chime } from '../../lib/sound';
@@ -146,9 +147,12 @@ function SetRow({
     setDragging(false);
     if (!t?.lock) return;
     if (armed(t.w)) {
-      setDx(-t.w);
       navigator.vibrate?.(10);
-      window.setTimeout(onRemove, 170);
+      void confirmDelete('questa serie').then((ok) => {
+        if (!ok) return setDx(0);
+        setDx(-t.w);
+        window.setTimeout(onRemove, 170);
+      });
     } else setDx(0);
   };
   const cols = [usesWeight(def.kind), usesDistance(def.kind), usesReps(def.kind), usesTime(def.kind)].filter(Boolean).length;
@@ -275,7 +279,7 @@ function ExerciseBlock({
                   )
                 )}
                 <li>
-                  <button role="menuitem" className="danger" onClick={() => { setMenu(false); onRemove(); }}>Rimuovi esercizio</button>
+                  <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await confirmDelete('questo esercizio', { detail: 'Con tutte le sue serie.' })) onRemove(); }}>Rimuovi esercizio</button>
                 </li>
               </ul>
             </>
