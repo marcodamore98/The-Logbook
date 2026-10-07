@@ -5,6 +5,8 @@ import { Card, Chevron, Empty, Field, uid, useCollapsible } from '../components/
 import { listCalendars, type GCalendar } from '../lib/google/calendar';
 import { firebaseConfigured, logOut } from '../lib/firebase';
 import { CoachCard } from '../components/coach/CoachCard';
+import { DuplicateCleaner } from '../components/DuplicateCleaner';
+import { Sym } from '../components/icons';
 import { myRosterDays, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
 import { TimeField } from '../components/WheelPicker';
@@ -61,6 +63,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
   const save = (p: Partial<Settings>) => store.saveSettings({ ...settings, ...p });
   const [calendars, setCalendars] = useState<GCalendar[]>([]);
   const [msg, setMsg] = useState<string>();
+  const [dups, setDups] = useState(false);
   const [bulk, setBulk] = useState('');
   const [importing, setImporting] = useState(false);
   const myDays = myRosterDays().length;
@@ -213,6 +216,10 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
                 Scollega
               </button>
             </div>
+            <button className="btn-ghost field-wide dup-open" onClick={() => setDups(true)}>
+              <Sym name="search" size={20} /> Cerca e togli i doppioni
+            </button>
+            {dups && <DuplicateCleaner onClose={() => setDups(false)} />}
           </div>
         )}
         {gcal.error && <p className="error small">{gcal.error}</p>}

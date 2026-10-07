@@ -28,6 +28,9 @@ export interface GEvent {
   htmlLink?: string;
   /** Google Meet link, when the event has one. */
   hangoutLink?: string;
+  /** Set on each occurrence of a repeating event. */
+  recurringEventId?: string;
+  created?: string;
 }
 
 export interface GCalendar {
