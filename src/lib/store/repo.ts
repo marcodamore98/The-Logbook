@@ -9,6 +9,11 @@ export interface Repo {
   getAll(): Promise<DayEntry[]>;
   /** The saved copy of one day (on the cloud: the latest one, from another device too). */
   getDay(date: ISODate): Promise<DayEntry | null>;
+  /**
+   * Live changes made on other devices (cloud only): days saved since `since` and the settings.
+   * Returns the function that stops listening.
+   */
+  watch?(since: number, onDay: (d: DayEntry) => void, onSettings: (s: Settings) => void): () => void;
   saveDay(d: DayEntry): Promise<void>;
   /** Stores a JPEG blob and returns what the PhotoItem should keep. */
   uploadPhoto(id: string, blob: Blob): Promise<{ src: string; path?: string }>;

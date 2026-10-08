@@ -86,6 +86,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
   /** The version of each day last read from or written to storage: what this device's edits start from. */
   const savedBase = useRef<Record<ISODate, DayEntry>>({});
   const chains = useRef<Record<ISODate, Promise<void>>>({});
+  const settingsPending = useRef(false);
   const sources = useRef<Record<ISODate, 'app' | 'google'>>({});
 
   /**
@@ -174,7 +175,11 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
       const next = { ...s, updatedAt: Date.now() };
       setSettings(next);
       window.clearTimeout(timers.current.settings);
-      timers.current.settings = window.setTimeout(() => persist(repo, repo.saveSettings(next)), 400);
+      settingsPending.current = true;
+      timers.current.settings = window.setTimeout(() => {
+        settingsPending.current = false;
+        persist(repo, repo.saveSettings(next));
+      }, 400);
     },
     [repo],
   );
@@ -414,6 +419,36 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     },
     [loadRange, saveDay],
   );
+
+  // Changes made on the other device arrive within a second or two and are merged in, without
+  // reloading (cloud only). What was being written here in the meantime is kept.
+  useEffect(() => {
+    if (!repo.watch) return;
+    const stop = repo.watch(
+      Date.now() - 10 * 60_000,
+      (d) => {
+        const base = savedBase.current[d.date];
+        if (base && JSON.stringify(base) === JSON.stringify(d)) return; // our own save coming back
+        const local = daysRef.current[d.date];
+        const merged = local ? mergeDay(base, local, d) : d;
+        savedBase.current[d.date] = d;
+        pushedBase.current[d.date] = merged; // the other device already sent its changes to Google
+        if (pending.current[d.date]) pending.current[d.date] = merged;
+        daysRef.current = { ...daysRef.current, [d.date]: merged };
+        setDays(daysRef.current);
+        void record(d, 'cloud').then((lost) => {
+          if (lost.length) window.dispatchEvent(new CustomEvent('logbook-lost', { detail: { date: d.date, lost, source: 'cloud' } }));
+        });
+      },
+      (remote) => {
+        // A setting changed here and not saved yet wins; otherwise the newer copy is taken.
+        if (settingsPending.current || (remote.updatedAt ?? 0) <= (settingsRef.current.updatedAt ?? 0)) return;
+        const migrated = migrateSettings(remote);
+        setSettings({ ...defaultSettings(), ...migrated, gcal: { ...defaultSettings().gcal, ...migrated.gcal } });
+      },
+    );
+    return stop;
+  }, [repo]);
 
   const allDays = useMemo(() => Object.values(days), [days]);
   const history = useMemo(() => buildHistory(allDays), [allDays]);

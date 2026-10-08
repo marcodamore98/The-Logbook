@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { DayEntry, Settings } from '../types';
 import { blobToDataURL, type Repo } from './repo';
@@ -32,6 +32,23 @@ export function cloudRepo(uid: string): Repo {
       return snap.exists() ? (snap.data() as DayEntry) : null;
     },
     saveDay: (d) => setDoc(doc(days(), d.date), d),
+    watch(since, onDay, onSettings) {
+      // Only days saved from now on (minus a margin for clocks a little apart): one read each.
+      const stopDays = onSnapshot(query(days(), where('updatedAt', '>', since)), (snap) => {
+        for (const ch of snap.docChanges()) {
+          // Our own writes come back first as "pending": they are already here.
+          if (ch.type === 'removed' || ch.doc.metadata.hasPendingWrites) continue;
+          onDay(ch.doc.data() as DayEntry);
+        }
+      }, (e) => console.error('ascolto delle giornate interrotto', e));
+      const stopSettings = onSnapshot(doc(db(), 'users', uid, 'meta', 'settings'), (snap) => {
+        if (snap.exists() && !snap.metadata.hasPendingWrites) onSettings(snap.data() as Settings);
+      }, (e) => console.error('ascolto delle impostazioni interrotto', e));
+      return () => {
+        stopDays();
+        stopSettings();
+      };
+    },
     async uploadPhoto(id, blob) {
       const data = await blobToDataURL(blob);
       cache.set(id, data);
