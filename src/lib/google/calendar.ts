@@ -183,6 +183,8 @@ export interface EventInput {
   colorId?: string;
   /** Popup reminders, minutes before the start. */
   reminders?: number[];
+  /** The logbook item the event stands for: lets the app find its own event again instead of making a copy. */
+  itemId?: string;
 }
 
 function toBody(e: EventInput) {
@@ -196,7 +198,7 @@ function toBody(e: EventInput) {
     end: timed
       ? { dateTime: localDateTime(e.endDate ?? e.date, e.end!), timeZone: TIME_ZONE }
       : { date: addDays(e.endDate ?? e.date, 1) },
-    extendedProperties: { private: { logbook: '1', lbKind: e.kind, lbDate: e.date } },
+    extendedProperties: { private: { logbook: '1', lbKind: e.kind, lbDate: e.date, ...(e.itemId ? { lbId: e.itemId } : {}) } },
     ...(e.reminders ? { reminders: { useDefault: !e.reminders.length, overrides: e.reminders.map((minutes) => ({ method: 'popup', minutes })) } } : {}),
   };
 }
@@ -211,8 +213,44 @@ export async function upsertEvent(calendarId: string, id: string | undefined, e:
       if (!String(err).includes(' 404') && !String(err).includes(' 410')) throw err;
     }
   }
+  // Before making a new event, look for the one the app already made for this item (its id may
+  // have been lost): it is updated, and identical extra copies made earlier are removed.
+  const own = await findOwnEvents(calendarId, e).catch(() => [] as GEvent[]);
+  if (own.length) {
+    const [keep, ...extra] = own;
+    for (const x of extra) await deleteEvent(calendarId, x.id).catch(() => undefined);
+    try {
+      const r = await api<GEvent>(`/calendars/${enc(calendarId)}/events/${enc(keep.id)}`, { method: 'PATCH', body });
+      if (r.status !== 'cancelled') return r.id;
+    } catch (err) {
+      if (!String(err).includes(' 404') && !String(err).includes(' 410')) throw err;
+    }
+  }
   const r = await api<GEvent>(`/calendars/${enc(calendarId)}/events`, { method: 'POST', body });
   return r.id;
+}
+
+/** Events the app made for this item: same item id, or (older events) same kind, day, title, start and end. Oldest first. */
+async function findOwnEvents(calendarId: string, e: EventInput): Promise<GEvent[]> {
+  const body = toBody(e);
+  const q = [`logbook=1`, `lbKind=${e.kind}`, `lbDate=${e.date}`].map((p) => `privateExtendedProperty=${enc(p)}`).join('&');
+  const out: GEvent[] = [];
+  let pageToken: string | undefined;
+  do {
+    const r = await api<{ items: GEvent[]; nextPageToken?: string }>(`/calendars/${enc(calendarId)}/events?${q}&maxResults=250${pageToken ? `&pageToken=${enc(pageToken)}` : ''}`);
+    out.push(...r.items.filter((x) => x.status !== 'cancelled'));
+    pageToken = r.nextPageToken;
+  } while (pageToken);
+  const when = (b: GEvent['start']) => (b.dateTime ? new Date(b.dateTime).getTime().toString() : b.date ?? '');
+  const bodyStart = body.start.dateTime ? new Date(body.start.dateTime).getTime().toString() : body.start.date;
+  const bodyEnd = body.end.dateTime ? new Date(body.end.dateTime).getTime().toString() : body.end.date;
+  return out
+    .filter((x) => {
+      const id = x.extendedProperties?.private?.lbId;
+      if (id && e.itemId) return id === e.itemId;
+      return (x.summary ?? '').trim() === e.summary.trim() && when(x.start) === bodyStart && when(x.end) === bodyEnd;
+    })
+    .sort((a, b) => (a.created ?? '').localeCompare(b.created ?? ''));
 }
 
 /** One event by id, also when deleted (status "cancelled"); null when Google no longer knows it. */

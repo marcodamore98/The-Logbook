@@ -65,6 +65,12 @@ function mergeIds(latest: DayEntry, pushed: DayEntry, trashed: string[]): DayEnt
     if (p && t.time) t.gcalEventId ??= p.gcalEventId;
     if (p && !p.time && !t.time) t.gcalEventId = undefined;
   }
+  // Courses, trips and outings too: without their event id every save would make a new event.
+  for (const m of out.modules) {
+    if (m.kind !== 'course' && m.kind !== 'travel' && m.kind !== 'outing') continue;
+    const p = pushed.modules.find((x) => x.id === m.id) as { gcalEventId?: string } | undefined;
+    if (p?.gcalEventId) m.gcalEventId ??= p.gcalEventId;
+  }
   out.gcalTrash = (out.gcalTrash ?? []).filter((id) => !trashed.includes(id));
   return out;
 }

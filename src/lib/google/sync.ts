@@ -154,7 +154,7 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
     if (!cur || cur.gcalSkip) continue;
     const input = shiftInput(out, cur, settings);
     if (force || !cur.gcalEventId || !same(input, old && shiftInput(prev!, old, settings))) {
-      cur.gcalEventId = await upsertEvent(cal, cur.gcalEventId, input);
+      cur.gcalEventId = await upsertEvent(cal, cur.gcalEventId, { ...input, itemId: `${out.date}:${key}` });
     }
   }
 
@@ -163,7 +163,7 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
     const input = apptInput(out, a);
     const old = prev?.appointments.find((x) => x.id === a.id);
     if (force || !a.gcalEventId || !old || !same(input, apptInput(prev!, old))) {
-      a.gcalEventId = await upsertEvent(cal, a.gcalEventId, input);
+      a.gcalEventId = await upsertEvent(cal, a.gcalEventId, { ...input, itemId: a.id });
     }
   }
 
@@ -179,7 +179,7 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
     }
     const input = todoInput(out, t);
     if (force || !t.gcalEventId || !old || !old.time || !same(input, todoInput(prev!, old))) {
-      t.gcalEventId = await upsertEvent(cal, t.gcalEventId, input);
+      t.gcalEventId = await upsertEvent(cal, t.gcalEventId, { ...input, itemId: t.id });
     }
   }
   // Courses, congresses and webinars: timed (with their reminders) or all-day over their dates
@@ -187,7 +187,7 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
     const old = prev && courses(prev).find((x) => x.id === m.id);
     const input = courseInput(m);
     if (force || !m.gcalEventId || !old || !same(input, courseInput(old))) {
-      m.gcalEventId = await upsertEvent(cal, m.gcalEventId, input);
+      m.gcalEventId = await upsertEvent(cal, m.gcalEventId, { ...input, itemId: m.id });
     }
   }
   // Trips (all-day, over their dates) and outings (all-day on their day)
@@ -195,14 +195,14 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
     const old = prev && travels(prev).find((x) => x.id === m.id);
     const input = travelInput(m);
     if (force || !m.gcalEventId || !old || !same(input, travelInput(old))) {
-      m.gcalEventId = await upsertEvent(cal, m.gcalEventId, input);
+      m.gcalEventId = await upsertEvent(cal, m.gcalEventId, { ...input, itemId: m.id });
     }
   }
   for (const m of outings(out)) {
     const old = prev && outings(prev).find((x) => x.id === m.id);
     const input = outingInput(out, m);
     if (force || !m.gcalEventId || !old || !same(input, outingInput(prev!, old))) {
-      m.gcalEventId = await upsertEvent(cal, m.gcalEventId, input);
+      m.gcalEventId = await upsertEvent(cal, m.gcalEventId, { ...input, itemId: m.id });
     }
   }
   return out;
