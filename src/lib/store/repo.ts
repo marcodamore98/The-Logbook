@@ -7,6 +7,8 @@ export interface Repo {
   saveSettings(s: Settings): Promise<void>;
   getRange(from: ISODate, to: ISODate): Promise<DayEntry[]>;
   getAll(): Promise<DayEntry[]>;
+  /** The saved copy of one day (on the cloud: the latest one, from another device too). */
+  getDay(date: ISODate): Promise<DayEntry | null>;
   saveDay(d: DayEntry): Promise<void>;
   /** Stores a JPEG blob and returns what the PhotoItem should keep. */
   uploadPhoto(id: string, blob: Blob): Promise<{ src: string; path?: string }>;

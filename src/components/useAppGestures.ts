@@ -13,6 +13,8 @@ export function parentOf(path: string, lastDay: string): string | null {
   switch (top) {
     case 'appunti':
       return noteReturn() ?? '/archivio/appunti';
+    case 'cronologia':
+      return sub ? `/giorno/${sub}` : '/impostazioni';
     case 'archivio': {
       // A folder goes back to the folder above, then to the first page of the archive.
       if (sub !== 'appunti' || !third) return lastDay;

@@ -27,6 +27,10 @@ export function cloudRepo(uid: string): Repo {
       const snap = await getDocs(days());
       return snap.docs.map((d) => d.data() as DayEntry);
     },
+    async getDay(date) {
+      const snap = await getDoc(doc(days(), date));
+      return snap.exists() ? (snap.data() as DayEntry) : null;
+    },
     saveDay: (d) => setDoc(doc(days(), d.date), d),
     async uploadPhoto(id, blob) {
       const data = await blobToDataURL(blob);

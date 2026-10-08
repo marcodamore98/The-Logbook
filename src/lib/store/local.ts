@@ -18,6 +18,7 @@ export const localRepo: Repo = {
     const all = await entries<string, unknown>(db);
     return all.filter(([k]) => k.startsWith('day:')).map(([, v]) => v as DayEntry);
   },
+  getDay: (date) => get<DayEntry>(`day:${date}`, db).then((d) => d ?? null),
   saveDay: (d) => set(`day:${d.date}`, d, db),
   async uploadPhoto(_id, blob) {
     return { src: await blobToDataURL(blob) };

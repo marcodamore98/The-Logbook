@@ -5,7 +5,9 @@ import { BodySidebar } from './components/BodySidebar';
 import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconStudy, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
-import { UndoProvider } from './components/Undo';
+import { UndoProvider, useUndo } from './components/Undo';
+import { versionsOf } from './lib/store/history';
+import { restoreMissing } from './lib/store/restore';
 import { ConfirmProvider } from './components/Confirm';
 import { useCourseReminders } from './components/useCourseReminders';
 import { RestTimerProvider } from './components/training/RestTimer';
@@ -24,6 +26,7 @@ const WeekPage = lazy(() => import('./pages/CalendarPages').then((m) => ({ defau
 const CoursesPage = lazy(() => import('./pages/CoursesPage'));
 const ArchivePage = lazy(() => import('./pages/ArchivePage'));
 const NotePage = lazy(() => import('./pages/NotePage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const DiaryPage = lazy(() => import('./pages/DiaryPage'));
 const GymPage = lazy(() => import('./pages/GymPage'));
 const NutritionPage = lazy(() => import('./pages/NutritionPage'));
@@ -58,6 +61,7 @@ function dayLabel(date: string): string {
 function useCurrentTitle() {
   const loc = useLocation();
   if (loc.pathname.startsWith('/appunti/')) return 'Appunti';
+  if (loc.pathname.startsWith('/cronologia')) return 'Cronologia';
   const nav = NAV.find((n) => loc.pathname.startsWith(n.to));
   if (!nav) return '';
   const date = loc.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0];
@@ -233,6 +237,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
             <main>
               <ScrollMemory />
               <HierarchicalBack />
+              <LossWatcher />
               <BackToDay />
               <Suspense fallback={<div className="page-loading" aria-label="Caricamento" />}>
               <Routes>
@@ -248,6 +253,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
                 <Route path="/corsi/:sub?" element={<CoursesPage />} />
                 <Route path="/archivio/:tab?/:folder?" element={<ArchivePage />} />
                 <Route path="/appunti/:date/:id" element={<NotePage />} />
+                <Route path="/cronologia/:date?" element={<HistoryPage />} />
                 <Route path="/statistiche" element={<StatsPage />} />
                 <Route path="/impostazioni" element={<SettingsPage userEmail={userEmail} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
@@ -280,6 +286,28 @@ function Shell({ userEmail }: { userEmail?: string }) {
 }
 
 /** Lives inside the router: Android back goes to the parent page (see lib/backNav). */
+/**
+ * When Google Calendar or another device takes something away from a day, a snackbar says what
+ * and "Annulla" puts it back from the version kept on this device.
+ */
+function LossWatcher() {
+  const offerUndo = useUndo();
+  const { updateDay } = useStore();
+  useEffect(() => {
+    const on = async (e: Event) => {
+      const { date, lost, source } = (e as CustomEvent<{ date: string; lost: string[]; source: string }>).detail;
+      const before = (await versionsOf(date))[1]?.day;
+      if (!before) return;
+      const what = lost.length === 1 ? lost[0] : `${lost.length} elementi`;
+      const day = new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+      offerUndo(`${source === 'google' ? 'Google Calendar ha tolto' : 'Un altro dispositivo ha tolto'} ${what} (${day})`, () => void updateDay(date, (d) => restoreMissing(d, before)), 15000);
+    };
+    window.addEventListener('logbook-lost', on);
+    return () => window.removeEventListener('logbook-lost', on);
+  }, [offerUndo, updateDay]);
+  return null;
+}
+
 function HierarchicalBack() {
   useHierarchicalBack();
   return null;

@@ -5,7 +5,7 @@ interface Offer {
   undo: () => void;
 }
 
-const Ctx = createContext<(label: string, undo: () => void) => void>(() => undefined);
+const Ctx = createContext<(label: string, undo: () => void, ms?: number) => void>(() => undefined);
 
 /** `offerUndo('Serie eliminata', restore)` shows a snackbar with "Annulla" for a few seconds. */
 export const useUndo = () => useContext(Ctx);
@@ -16,10 +16,10 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   const timer = useRef(0);
   const n = useRef(0);
 
-  const show = useCallback((label: string, undo: () => void) => {
+  const show = useCallback((label: string, undo: () => void, ms = 5000) => {
     window.clearTimeout(timer.current);
     setOffer({ label, undo, n: ++n.current });
-    timer.current = window.setTimeout(() => setOffer(null), 5000);
+    timer.current = window.setTimeout(() => setOffer(null), ms);
   }, []);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 

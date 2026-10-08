@@ -1,5 +1,5 @@
 import { confirmDelete } from '../components/Confirm';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSettings, IconShift, IconSync } from '../components/icons';
 import { Card, Chevron, Empty, Field, uid, useCollapsible } from '../components/ui';
@@ -142,6 +142,10 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           </button>
           <input ref={file} type="file" accept="application/json" hidden onChange={(e) => importJson(e.target.files?.[0])} />
         </div>
+        <Link className="btn-ghost history-link" to="/cronologia">
+          <Sym name="history" size={20} /> Cronologia delle modifiche
+          <small>versioni precedenti delle giornate, per rimettere ciò che è sparito</small>
+        </Link>
         {msg && !msg.startsWith('Turni importati') && <p className="muted small">{msg}</p>}
       </Card>
 

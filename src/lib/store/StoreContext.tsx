@@ -8,6 +8,8 @@ import { buildHistory, type History } from '../training/analytics';
 import { myRosterDays, shiftFromCodes } from '../roster';
 import { defaultSettings, migrateSettings } from '../vocab';
 import type { Repo } from './repo';
+import { mergeDay } from './merge';
+import { pruneHistory, record } from './history';
 
 interface Store {
   repo: Repo;
@@ -81,13 +83,71 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
   settingsRef.current = settings;
 
   const pushedBase = useRef<Record<ISODate, DayEntry>>({});
+  /** The version of each day last read from or written to storage: what this device's edits start from. */
+  const savedBase = useRef<Record<ISODate, DayEntry>>({});
+  const chains = useRef<Record<ISODate, Promise<void>>>({});
+  const sources = useRef<Record<ISODate, 'app' | 'google'>>({});
+
+  /**
+   * Writes a day. On the cloud it first merges with the copy saved there (another device may
+   * have changed the same day), then keeps the version in this device's history.
+   */
+  const saveToRepo = useCallback(
+    (d: DayEntry, source: 'app' | 'google' = 'app') => {
+      const run = async () => {
+        let toSave = d;
+        if (repo.mode === 'cloud') {
+          try {
+            const remote = await repo.getDay(d.date);
+            const merged = mergeDay(savedBase.current[d.date], d, remote ?? undefined);
+            if (merged !== d) {
+              toSave = merged;
+              const cur = daysRef.current[d.date];
+              // Edits made here in the meantime keep what came from the other device too.
+              const next = cur === d || !cur ? merged : mergeDay(d, cur, merged);
+              if (next !== cur) {
+                daysRef.current = { ...daysRef.current, [d.date]: next };
+                setDays(daysRef.current);
+                if (pending.current[d.date]) pending.current[d.date] = next;
+              }
+            }
+          } catch {
+            /* offline: this copy is saved and the cloud merges it later */
+          }
+        }
+        savedBase.current[d.date] = toSave;
+        persist(repo, repo.saveDay(toSave));
+        const lost = await record(toSave, source);
+        if (lost.length && source === 'google') window.dispatchEvent(new CustomEvent('logbook-lost', { detail: { date: d.date, lost, source } }));
+      };
+      const p = (chains.current[d.date] ?? Promise.resolve()).then(run, run);
+      chains.current[d.date] = p;
+      return p;
+    },
+    [repo],
+  );
+
+  /** A day read from storage becomes the starting point of this device's edits (and a version). */
+  const accepted = useCallback((d: DayEntry, notify: boolean) => {
+    savedBase.current[d.date] = d;
+    // Read back on this device only (local mode) it is not news from elsewhere.
+    void record(d, repo.mode === 'cloud' ? 'cloud' : 'app').then((lost) => {
+      if (repo.mode !== 'cloud') return;
+      if (notify && lost.length) window.dispatchEvent(new CustomEvent('logbook-lost', { detail: { date: d.date, lost, source: 'cloud' } }));
+    });
+  }, [repo]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => void pruneHistory(), 8000);
+    return () => window.clearTimeout(t);
+  }, []);
   const timers = useRef<Record<string, number>>({});
   const pending = useRef<Record<ISODate, DayEntry>>({});
 
   useEffect(() => {
     // Flush debounced writes when the app is hidden or closed.
     const flush = () => {
-      for (const d of Object.values(pending.current)) persist(repo, repo.saveDay(d));
+      for (const d of Object.values(pending.current)) void saveToRepo(d, sources.current[d.date]);
       pending.current = {};
     };
     const onVis = () => document.visibilityState === 'hidden' && flush();
@@ -97,7 +157,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('pagehide', flush);
     };
-  }, [repo]);
+  }, [repo, saveToRepo]);
 
   useEffect(() => {
     repo.getSettings().then((s) => {
@@ -120,18 +180,24 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
   );
 
   const writeDay = useCallback(
-    (d: DayEntry) => {
+    (d: DayEntry, source: 'app' | 'google' = 'app') => {
       daysRef.current = { ...daysRef.current, [d.date]: d };
       setDays(daysRef.current);
       // Debounced so typing in a note does not write on every keystroke.
       pending.current[d.date] = d;
+      // A save that carries Google's changes is remembered as such (for the "tolto da Google" notice).
+      if (source === 'google') sources.current[d.date] = 'google';
+      else sources.current[d.date] ??= 'app';
       window.clearTimeout(timers.current[`w:${d.date}`]);
       timers.current[`w:${d.date}`] = window.setTimeout(() => {
+        const latest = pending.current[d.date] ?? d;
         delete pending.current[d.date];
-        persist(repo, repo.saveDay(d));
+        const src = sources.current[d.date] ?? 'app';
+        delete sources.current[d.date];
+        void saveToRepo(latest, src);
       }, 400);
     },
-    [repo],
+    [saveToRepo],
   );
 
   const push = useCallback(
@@ -177,6 +243,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
         if (cached && cached.updatedAt > d.updatedAt) continue; // newer local edit not yet persisted
         merged[d.date] = d;
         pushedBase.current[d.date] ??= d;
+        accepted(d, true);
       }
       daysRef.current = merged;
       setDays(merged);
@@ -205,7 +272,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
           if ((daysRef.current[r.date] ?? was) !== was) continue;
           const next = { ...r, updatedAt: Date.now() };
           pushedBase.current[r.date] = next;
-          writeDay(next);
+          writeDay(next, 'google');
           // Items unlinked because their event is unknown to Google get a fresh event.
           void push(r.date);
         }
@@ -214,7 +281,7 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
         setConnected(hasToken());
       }
     },
-    [repo, writeDay, push],
+    [repo, writeDay, push, accepted],
   );
 
   const connectGoogle = useCallback(async () => {
@@ -333,11 +400,12 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
         if (cached && cached.updatedAt > d.updatedAt) continue;
         merged[d.date] = d;
         pushedBase.current[d.date] ??= d;
+        accepted(d, false);
       }
       daysRef.current = merged;
       setDays(merged);
     });
-  }, [repo]);
+  }, [repo, accepted]);
 
   const updateDay = useCallback(
     async (date: ISODate, fn: (d: DayEntry) => DayEntry) => {
