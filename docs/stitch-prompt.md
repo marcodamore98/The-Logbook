@@ -6,19 +6,19 @@
 
 | Prompt | Schermata | Stato |
 |---|---|---|
-| 0 | Stile e sistema di design | applicato |
-| 1 | Pagina del giorno | applicato |
-| 2 | "Aggiungi scheda" e schede unite | applicato |
+| 0 | Stile e sistema di design | da aggiornare: nuovo logo, finestra "Sei sicuro di voler eliminare?" |
+| 1 | Pagina del giorno | da aggiornare: impegni su due righe con luogo e Maps, scelta turno e colleghi con ricerca, pulsante ⟲ cronologia |
+| 2 | "Aggiungi scheda" e schede unite | da aggiornare: scheda Studio con cartella e anteprima degli appunti |
 | 3 | Palestra e dettaglio esercizio | applicato |
 | 4 | Allenamento in corso | da rigenerare se vuoi un restyling |
 | 5 | Fine allenamento | applicato |
 | 6 | Corsa | applicato |
-| 7 | Alimentazione | applicato |
-| 8 | Corsi e congressi, archivio attestati | applicato (l'archivio attestati ora è la scheda "Corsi e attestati" dell'Archivio) |
+| 7 | Alimentazione | da aggiornare: ventaglio dei pasti sul +, pasti a tendina, preferiti in 4 cartelle, cuoricino dopo la scansione |
+| 8 | Corsi e congressi, archivio attestati | da aggiornare: l'archivio attestati ora è la scheda "Corsi e attestati" dell'Archivio |
 | 9 | Diario | applicato |
 | 10 | Mese e Settimana | applicato |
 | 11 | Statistiche | applicato |
-| 12 | Menù, Riepilogo del giorno, Impostazioni | applicato |
+| 12 | Menù, Riepilogo del giorno, Impostazioni | da aggiornare: voce Archivio nel menù, "Cerca e togli i doppioni", "Cronologia delle modifiche" |
 | 13 | Versione desktop | applicato |
 | 14 | Archivio: Appunti e singola nota | nuovo, da generare |
 | 15 | Cronologia delle modifiche | nuovo, da generare |
