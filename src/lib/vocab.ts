@@ -244,7 +244,7 @@ export const PROCEDURES: VocabItem[] = [
   { id: 'pop-sacrocervicopessi', label: 'Sacrocervicopessi (mesh, dopo isterectomia subtotale)', group: G.popR, approach: 'laparoscopic', kw: 'cervicosacropessi LSC promontofissazione' },
   { id: 'pop-sacroisteropessi', label: 'Sacroisteropessi (mesh)', group: G.popR, approach: 'laparoscopic', kw: 'uterus sparing promontofissazione' },
   { id: 'pop-pectopessi', label: 'Pectopessi (pectopexy)', group: G.popR, approach: 'laparoscopic' },
-  { id: 'pop-sospensione-laterale', label: 'Sospensione laterale (Dubuisson)', group: G.popR, approach: 'laparoscopic' },
+  { id: 'pop-sospensione-laterale', label: 'Colpopessi sec. Dubuisson', group: G.popR, approach: 'laparoscopic', kw: 'sospensione laterale cupola lateral suspension' },
   { id: 'pop-isteropessi-laterale', label: 'Isteropessi laterale sec. Dubuisson', group: G.popR, approach: 'laparoscopic', kw: 'uterus sparing sospensione laterale lateral suspension' },
   { id: 'pop-isteropessi-uterosacrale', label: 'Isteropessi uterosacrale', group: G.popR, approach: 'laparoscopic' },
   { id: 'uro-colpocleisi', label: 'Colpocleisi (Le Fort / totale)', group: G.popR, kw: 'obliterativa' },
