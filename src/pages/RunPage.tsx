@@ -2,7 +2,7 @@ import { confirmDelete } from '../components/Confirm';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fmt } from '../components/charts';
-import { GlyphTrash, IconRun } from '../components/icons';
+import { GlyphTrash, IconRun, NavRun } from '../components/icons';
 import { PlanBuilder } from '../components/running/PlanBuilder';
 import { TreadmillBuilder } from '../components/running/TreadmillBuilder';
 import { RunSummary, type RunResult } from '../components/running/RunSummary';
@@ -97,7 +97,7 @@ export default function RunPage() {
   return (
     <div className="page run-page">
       <header className="page-head">
-        <IconRun size={44} />
+        <NavRun size={44} />
         <div className="page-title">
           <h1>Corsa</h1>
           <span className="page-sub">

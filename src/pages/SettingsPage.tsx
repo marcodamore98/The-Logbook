@@ -1,7 +1,7 @@
 import { confirmDelete } from '../components/Confirm';
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconPeople, IconSettings, IconShift, IconSync } from '../components/icons';
+import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconAccount, IconColleagues, IconGoogleCal, IconRoster, IconShiftTypes } from '../components/icons';
 import { Card, Chevron, Empty, Field, uid, useCollapsible } from '../components/ui';
 import { listCalendars, type GCalendar } from '../lib/google/calendar';
 import { firebaseConfigured, logOut } from '../lib/firebase';
@@ -116,11 +116,13 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
     <div className="page settings-page">
       <header className="page-head">
         <div className="page-title">
-          <h1>Impostazioni</h1>
+          <h1>
+            Impostazioni <span className="set-brand">The Logbook</span>
+          </h1>
         </div>
       </header>
 
-      <Card id="settings.account" className="set-card" icon={<IconSettings />} title="Account e dati" sub={firebaseConfigured ? 'Sincronizzazione cloud · backup' : 'Solo su questo dispositivo · backup'}>
+      <Card id="settings.account" className="set-card" icon={<IconAccount />} title="Account e dati" sub={firebaseConfigured ? 'Sincronizzazione cloud · backup' : 'Solo su questo dispositivo · backup'}>
         {firebaseConfigured ? (
           <p>
             Sincronizzazione cloud attiva{userEmail ? ` come ${userEmail}` : ''}. I dati restano disponibili offline e si sincronizzano appena torni online.{' '}
@@ -152,7 +154,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
       <Card
         id="settings.gcal"
         className="set-card"
-        icon={<IconSync />}
+        icon={<IconGoogleCal />}
         title="Google Calendar"
         sub={
           <span className={`set-status${gcal.connected ? ' on' : ''}`}>
@@ -209,20 +211,20 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
                 })}
               </div>
             </div>
-            <div className="row field-wide">
+            <div className="gcal-actions field-wide">
               <button
-                className="btn-ghost"
+                className="gcal-btn sync"
                 disabled={gcal.syncing}
                 onClick={async () => setMsg(`Sincronizzati ${await store.syncAll()} giorni con Google Calendar.`)}
               >
-                <IconSync size={22} /> Sincronizza elementi in sospeso
+                <Sym name="sync" size={18} /> Sincronizza sospesi
               </button>
-              <button className="btn-ghost" onClick={store.disconnectGoogle}>
-                Scollega
+              <button className="gcal-btn off" onClick={store.disconnectGoogle}>
+                <Sym name="link_off" size={18} /> Scollega
               </button>
             </div>
-            <button className="btn-ghost field-wide dup-open" onClick={() => setDups(true)}>
-              <Sym name="search" size={20} /> Cerca e togli i doppioni
+            <button className="gcal-btn wide field-wide dup-open" onClick={() => setDups(true)}>
+              <Sym name="content_copy" size={18} /> Cerca e togli i doppioni
             </button>
             {dups && <DuplicateCleaner onClose={() => setDups(false)} />}
           </div>
@@ -232,7 +234,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
 
       <Card
         id="settings.roster"
-        icon={<IconShift />}
+        icon={<IconRoster />}
         className="set-card"
         title="Tabellone di reparto"
         sub={`${myDays} tuoi turni da importare`}
@@ -264,7 +266,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
 
       <Card
         id="settings.colleagues"
-        icon={<IconPeople />}
+        icon={<IconColleagues />}
         className="set-card"
         title="Colleghi"
         sub={`${settings.colleagues.length} colleghi · per ruolo`}
@@ -306,7 +308,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
 
       <Card
         id="settings.shifttypes"
-        icon={<IconShift />}
+        icon={<IconShiftTypes />}
         className="set-card"
         title="Tipi di turno"
         sub={`${settings.shiftTypes.length} tipi · colori e orari`}
@@ -366,7 +368,7 @@ function AppVersion() {
         {BUILD_TIME.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
       </p>
       <button
-        className="btn-ghost small"
+        className="gcal-btn wide"
         onClick={async () => {
           setMsg('Controllo…');
           try {
@@ -376,9 +378,13 @@ function AppVersion() {
           }
         }}
       >
-        Cerca aggiornamenti
+        <Sym name="system_update_alt" size={18} /> Cerca aggiornamenti
       </button>
-      {msg && <p className="small">{msg}</p>}
+      {msg && (
+        <p className={`small ver-msg${msg.startsWith('Hai già') ? ' ok' : ''}`}>
+          {msg.startsWith('Hai già') && <Sym name="check_circle" size={16} />} {msg}
+        </p>
+      )}
       <p className="muted small">
         Dati nutrizionali: CIQUAL 2025 (ANSES, Licence Ouverte Etalab), Open Food Facts (ODbL) e stime per i piatti di mensa e ristorante.
       </p>

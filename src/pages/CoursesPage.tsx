@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { FileSlot, openFile, programOf } from '../components/files/FileSlot';
 import { mapsUrl, webUrl } from '../lib/links';
-import { GlyphClip, GlyphFolder, IconCourse, Sym } from '../components/icons';
+import { GlyphClip, GlyphFolder, NavCourse, Sym } from '../components/icons';
 import { COURSE_TYPES } from '../components/modules/editors';
 import { Empty, NumberInput, uid } from '../components/ui';
 import { useStore } from '../lib/store/StoreContext';
@@ -56,7 +56,7 @@ export default function CoursesPage() {
   return (
     <div className="page courses-page">
       <header className="page-head">
-        <IconCourse size={44} />
+        <NavCourse size={44} />
         <div className="page-title">
           <h1>Corsi e congressi</h1>
           <span className="page-sub">Formazione continua e crediti ECM · {rows.length} in elenco</span>

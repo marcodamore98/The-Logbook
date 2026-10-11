@@ -6,7 +6,8 @@ import { dayIntake } from '../lib/nutrition/foods';
 import { workoutVolume } from '../lib/training/analytics';
 import type { BodyGoals, BodyLog, DayEntry, ISODate } from '../lib/types';
 import { fmt } from './charts';
-import { GlyphClose, IconScale, IconShift, IconSleep, IconSteps, IconSurgery, IconTarget, IconWater, IconWorkout } from './icons';
+import { GlyphClose, IconScale, IconShift, IconSleep, IconSteps, IconTarget, IconWater, IconWork, IconWorkout, Sym } from './icons';
+import type { SymName } from './ms';
 import { NumberInput, useCollapsible, Chevron } from './ui';
 import { BodyFatCalc } from './BodyFatCalc';
 import { clinicalTotals, surgeryTotals } from '../lib/worklog';
@@ -22,6 +23,18 @@ const FIELDS: FieldDef[] = [
 ];
 
 
+/** The user's goals, each with its icon and colour. */
+const GOALS: [keyof BodyGoals, string, string, number, SymName, string][] = [
+  ['weightKg', 'Peso obiettivo', 'kg', 0.5, 'scale', 'lilac'],
+  ['kcalIn', 'Calorie giornaliere', 'kcal', 50, 'local_fire_department', 'lime'],
+  ['proteinG', 'Proteine', 'g', 5, 'nutrition', 'lav'],
+  ['carbsG', 'Carboidrati', 'g', 5, 'bakery_dining', 'lime'],
+  ['fatG', 'Grassi', 'g', 5, 'opacity', 'water'],
+  ['steps', 'Passi', '', 500, 'directions_walk', 'mint'],
+  ['sleepH', 'Sonno', 'h', 0.5, 'bedtime', 'sky'],
+  ['waterL', 'Acqua', 'L', 0.25, 'water_drop', 'water'],
+];
+
 function focusDate(pathname: string): ISODate {
   const m = pathname.match(/\/giorno\/(\d{4}-\d{2}-\d{2})/);
   return m ? m[1] : today();
@@ -30,6 +43,37 @@ function focusDate(pathname: string): ISODate {
 function avg(nums: (number | undefined)[]): number | undefined {
   const v = nums.filter((n): n is number => typeof n === 'number' && !isNaN(n));
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined;
+}
+
+/** A smooth line through the points that never overshoots them (monotone cubic), as an SVG path. */
+function smooth(pts: [number, number][]): string {
+  if (pts.length < 3) return pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const n = pts.length;
+  const d = pts.slice(1).map(([x, y], i) => (y - pts[i][1]) / (x - pts[i][0] || 1));
+  const m = pts.map((_, i) => (i === 0 ? d[0] : i === n - 1 ? d[n - 2] : d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2));
+  for (let i = 0; i < n - 1; i++) {
+    if (d[i] === 0) {
+      m[i] = 0;
+      m[i + 1] = 0;
+      continue;
+    }
+    const a = m[i] / d[i];
+    const b = m[i + 1] / d[i];
+    const h = a * a + b * b;
+    if (h > 9) {
+      const t = 3 / Math.sqrt(h);
+      m[i] = t * a * d[i];
+      m[i + 1] = t * b * d[i];
+    }
+  }
+  let out = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[i + 1];
+    const dx = (x1 - x0) / 3;
+    out += ` C${(x0 + dx).toFixed(1)},${(y0 + m[i] * dx).toFixed(1)} ${(x1 - dx).toFixed(1)},${(y1 - m[i + 1] * dx).toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  return out;
 }
 
 /** Weight over the last 30 days: lime line with a soft area, 7-day average dashed, tap/hover readout. */
@@ -46,7 +90,7 @@ function WeightChart({ points, goal }: { points: { date: ISODate; kg: number }[]
   const t1 = fromISO(points.at(-1)!.date).getTime() || t0 + 1;
   const x = (d: ISODate) => P + ((fromISO(d).getTime() - t0) / Math.max(1, t1 - t0)) * (W - 2 * P);
   const y = (kg: number) => P + (1 - (kg - min) / (max - min)) * (H - 2 * P);
-  const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.kg).toFixed(1)}`).join(' ');
+  const line = smooth(points.map((p) => [x(p.date), y(p.kg)]));
   const area = `${line} L${x(points.at(-1)!.date).toFixed(1)},${H} L${x(points[0].date).toFixed(1)},${H} Z`;
   // 7-day moving average: mean of the weights in the 7 days up to each point.
   const ma = points.map((p) => {
@@ -54,17 +98,34 @@ function WeightChart({ points, goal }: { points: { date: ISODate; kg: number }[]
     const win = points.filter((q) => q.date >= from && q.date <= p.date).map((q) => q.kg);
     return { date: p.date, kg: win.reduce((a, b) => a + b, 0) / win.length };
   });
-  const maPath = ma.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.kg).toFixed(1)}`).join(' ');
+  const maPath = smooth(ma.map((p) => [x(p.date), y(p.kg)]));
   const h = hover !== null ? points[hover] : points.at(-1)!;
   const dm = (d: ISODate) => fromISO(d).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-  const mid = points[Math.floor(points.length / 2)];
+  // Five dates under the chart, evenly spread over the period.
+  const ticks = Array.from({ length: 5 }, (_, i) => new Date(t0 + ((t1 - t0) * i) / 4));
   return (
-    <div className="wchart">
+    <>
       <div className="wchart-top">
-        <span>Max {fmt(hi, 1)} kg</span>
-        <span>Min {fmt(lo, 1)} kg</span>
-        {goal ? <span>Obiettivo {fmt(goal, 1)} kg</span> : null}
+        <span>
+          <small>Max</small>
+          <strong>{fmt(hi, 1)} kg</strong>
+        </span>
+        <span>
+          <small>Min</small>
+          <strong>{fmt(lo, 1)} kg</strong>
+        </span>
+        {goal ? (
+          <span className="goal">
+            <small>Ob.</small>
+            <strong>{fmt(goal, 1)} kg</strong>
+          </span>
+        ) : null}
       </div>
+    <div className="wchart">
+      <span className="wchart-now">
+        <i aria-hidden="true" />
+        {hover === null && h.date === points.at(-1)!.date ? 'Ultimo' : dm(h.date)} ({fmt(h.kg, 1)})
+      </span>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
@@ -96,17 +157,16 @@ function WeightChart({ points, goal }: { points: { date: ISODate; kg: number }[]
         ))}
       </svg>
       <div className="wchart-x">
-        <span>{dm(points[0].date)}</span>
-        <span>{dm(mid.date)}</span>
-        <span className="wchart-now">
-          {hover === null && h.date === points.at(-1)!.date ? 'Ultimo' : dm(h.date)} ({fmt(h.kg, 1)})
-        </span>
+        {ticks.map((t) => (
+          <span key={t.getTime()}>{t.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }).replace('.', '')}</span>
+        ))}
       </div>
+    </div>
       <div className="wchart-legend">
         <span><i className="l-line" /> peso</span>
         <span><i className="l-ma" /> media 7 giorni</span>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -211,22 +271,32 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
         </div>
         <div className="brief-tiles">
           <div className="brief-tile">
-            <IconSurgery size={28} />
-            <span>
+            <span className="bt-head">
+              <IconWork size={24} />
               <small>Lavoro</small>
-              <strong>{[surgeries && `${surgeries} ${surgeries === 1 ? 'intervento' : 'interventi'}`, clinical && `${clinical} ${clinical === 1 ? 'prestazione' : 'prestazioni'}`, study && `${study}′ studio`].filter(Boolean).join(' · ') || 'Niente registrato'}</strong>
             </span>
+            {surgeries || clinical || study ? (
+              <>
+                <strong>{surgeries ? `${surgeries} ${surgeries === 1 ? 'intervento' : 'interventi'}` : clinical ? `${clinical} ${clinical === 1 ? 'prestazione' : 'prestazioni'}` : `${study}′ di studio`}</strong>
+                <em>{[surgeries && clinical && `${clinical} ${clinical === 1 ? 'prestazione' : 'prestazioni'}`, (surgeries || clinical) && study && `${study}′ di studio`].filter(Boolean).join(' · ') || ' '}</em>
+              </>
+            ) : (
+              <strong className="muted">Niente registrato</strong>
+            )}
           </div>
           <div className="brief-tile">
-            <IconWorkout size={28} />
-            <span>
-              <small>Sport</small>
-              <strong>
-                {workouts.length
-                  ? workouts.map((w) => (w.kind === 'workout' ? `${w.title ?? 'Allenamento'} · ${fmt(workoutVolume(w))} kg` : '')).join(' / ')
-                  : 'Nessuno'}
-              </strong>
+            <span className="bt-head">
+              <IconWorkout size={24} />
+              <small>Allenamento</small>
             </span>
+            {workouts.length ? (
+              <>
+                <strong>{workouts.map((w) => (w.kind === 'workout' ? w.title || 'Allenamento' : '')).join(' / ')}</strong>
+                <em className="lime">{fmt(workouts.reduce((n, w) => n + (w.kind === 'workout' ? workoutVolume(w) : 0), 0))} kg</em>
+              </>
+            ) : (
+              <strong className="muted">Nessuno</strong>
+            )}
           </div>
         </div>
         {!loc.pathname.startsWith('/giorno') && (
@@ -317,7 +387,9 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
             </>
           )}
           <label className="bal-tile act">
-            <small>Attive</small>
+            <small>
+              Attive <Sym name="edit" size={11} />
+            </small>
             <NumberInput value={body.kcalOut} step={50} placeholder="–" onChange={(v) => setBody({ kcalOut: v })} />
             <span>kcal</span>
           </label>
@@ -343,54 +415,47 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
           )}
         </div>
         <WeightChart points={weights} goal={goals.weightKg} />
-        <dl className="side-stats">
+        <dl className="side-stats five">
           <div>
             <dt>Media 7 gg</dt>
             <dd>{w7 ? `${fmt(w7, 1)} kg` : '—'}</dd>
           </div>
           <div>
-            <dt>Variazione</dt>
+            <dt>Variaz.</dt>
             <dd>{w7 && wPrev ? `${w7 - wPrev > 0 ? '+' : ''}${fmt(w7 - wPrev, 1)} kg` : '—'}</dd>
           </div>
           <div>
-            <dt>Kcal medie</dt>
+            <dt>Kcal med.</dt>
             <dd>{kcal7 ? fmt(kcal7) : '—'}</dd>
           </div>
           <div>
-            <dt>Passi medi</dt>
+            <dt>Passi med.</dt>
             <dd>{steps7 ? fmt(steps7) : '—'}</dd>
           </div>
           <div>
-            <dt>Sonno medio</dt>
+            <dt>Sonno med.</dt>
             <dd>{sleep7 ? `${fmt(sleep7, 1)} h` : '—'}</dd>
           </div>
         </dl>
       </section>
 
-      <section className="side-section">
+      <section className="side-section side-card goals-card">
         <button className="side-toggle" onClick={toggleGoals} aria-expanded={goalsOpen}>
-          <h3 className="sub">Obiettivi</h3>
+          <Sym name="flag" size={22} className="goals-flag" />
+          <h3>Obiettivi</h3>
+          <span className="goals-count">{GOALS.filter(([k]) => goals[k]).length === 1 ? '1 attivo' : `${GOALS.filter(([k]) => goals[k]).length} attivi`}</span>
           <Chevron open={goalsOpen} />
         </button>
         {goalsOpen && (
-          <div className="side-grid">
-            {(
-              [
-                ['weightKg', 'Peso obiettivo', 'kg', 0.5],
-                ['kcalIn', 'Calorie giornaliere', 'kcal', 50],
-                ['proteinG', 'Proteine', 'g', 5],
-                ['carbsG', 'Carboidrati', 'g', 5],
-                ['fatG', 'Grassi', 'g', 5],
-                ['steps', 'Passi', '', 500],
-                ['sleepH', 'Sonno', 'h', 0.5],
-                ['waterL', 'Acqua', 'L', 0.25],
-              ] as [keyof BodyGoals, string, string, number][]
-            ).map(([k, label, unit, step]) => (
-              <label key={k} className="side-field">
-                <span className="side-label">{label}</span>
-                <span className="side-input">
-                  <NumberInput value={goals[k]} step={step} onChange={(v) => store.saveSettings({ ...settings, goals: { ...goals, [k]: v } })} />
-                  <span className="unit">{unit}</span>
+          <div className="goal-rows">
+            <p className="muted small">Tocca un valore per cambiarlo: si salva da solo.</p>
+            {GOALS.map(([k, label, unit, step, icon, tone]) => (
+              <label key={k} className="goal-row">
+                <Sym name={icon} size={20} className={`goal-ico ${tone}`} />
+                <span className="goal-label">{label}</span>
+                <span className="goal-input">
+                  <NumberInput value={goals[k]} step={step} placeholder="–" onChange={(v) => store.saveSettings({ ...settings, goals: { ...goals, [k]: v } })} />
+                  {unit && <span className="unit">{unit}</span>}
                 </span>
               </label>
             ))}
@@ -401,7 +466,7 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
   );
 }
 
-/** Calories left today as a small lime ring next to the big number. */
+/** Calories left today: a big lime ring with the number inside. */
 function KcalRing({ eaten, goal, burned }: { eaten: number; goal?: number; burned?: number }) {
   if (!goal) return null;
   const target = goal + (burned ?? 0);
@@ -409,15 +474,15 @@ function KcalRing({ eaten, goal, burned }: { eaten: number; goal?: number; burne
   const pct = Math.min(1, eaten / target);
   const C = 2 * Math.PI * 15.9;
   return (
-    <div className="kcal-ring">
-      <svg viewBox="0 0 36 36" width="76" height="76" aria-hidden="true">
+    <div className="kcal-ring big">
+      <svg viewBox="0 0 36 36" aria-hidden="true">
         <circle cx="18" cy="18" r="15.9" className="kr-track" />
         <circle cx="18" cy="18" r="15.9" className={`kr-fill${left < 0 ? ' over' : ''}`} strokeDasharray={`${pct * C} ${C}`} transform="rotate(-90 18 18)" />
       </svg>
       <span className="kr-text">
         <strong>{fmt(Math.abs(left))}</strong>
         <span className="kr-cap">{left >= 0 ? 'kcal rimanenti' : 'kcal oltre'}</span>
-        <span className="muted small">
+        <span className="kr-sub">
           {fmt(eaten)} mangiate / {fmt(target)}
         </span>
       </span>

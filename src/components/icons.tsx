@@ -5,7 +5,7 @@
 import type { ReactNode } from 'react';
 import { MS, type SymName } from './ms';
 
-export type Pigment = 'ochre' | 'rose' | 'sage' | 'indigo' | 'teal' | 'terra' | 'plum' | 'sand' | 'sky';
+export type Pigment = 'ochre' | 'rose' | 'sage' | 'indigo' | 'teal' | 'terra' | 'plum' | 'sand' | 'sky' | 'gold' | 'aqua';
 
 /** A Material Symbol on its own (buttons, fields): takes the text colour. `fill` uses the filled variant when there is one. */
 export function Sym({ name, size = 20, fill = false, className }: { name: SymName; size?: number; fill?: boolean; className?: string }) {
@@ -76,6 +76,33 @@ export const IconToday = ({ size = 36, day = new Date().getDate() }: { size?: nu
     </text>
   </Art>
 );
+
+// ---- The menu and the pages it opens (Stitch, 11 ottobre): their own colours ----
+
+export const NavMonth = (p: P) => <Art pigment="sky" sym="calendar_view_month" {...p} />;
+export const NavWeek = (p: P) => <Art pigment="sage" sym="calendar_view_week" {...p} />;
+/** Today: just the day's number on a sand disc. */
+export const NavToday = ({ size = 36, day = new Date().getDate() }: { size?: number; day?: number }) => (
+  <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true" className="art-icon pigment-sand">
+    <circle cx="20" cy="20" r="18" className="wash" />
+    <text x="20" y="25.5" textAnchor="middle" className="nav-day-num">
+      {day}
+    </text>
+  </svg>
+);
+export const NavDiary = (p: P) => <Art pigment="terra" sym="edit_calendar" {...p} />;
+export const NavRun = (p: P) => <Art pigment="sky" sym="directions_run" {...p} />;
+export const NavFood = (p: P) => <Art pigment="sage" sym="restaurant" {...p} />;
+export const NavCourse = (p: P) => <Art pigment="gold" sym="school" {...p} />;
+export const NavArchive = (p: P) => <Art pigment="plum" sym="menu_book" {...p} />;
+export const NavStats = (p: P) => <Art pigment="aqua" sym="query_stats" {...p} />;
+export const IconWork = (p: P) => <Art pigment="sky" sym="clinical_notes" {...p} />;
+// Settings cards
+export const IconAccount = (p: P) => <Art pigment="rose" sym="account_circle" {...p} />;
+export const IconGoogleCal = (p: P) => <Art pigment="ochre" sym="calendar_month" {...p} />;
+export const IconRoster = (p: P) => <Art pigment="sage" sym="table_chart" {...p} />;
+export const IconColleagues = (p: P) => <Art pigment="sky" sym="group" {...p} />;
+export const IconShiftTypes = (p: P) => <Art pigment="terra" sym="schedule" {...p} />;
 
 // ---- Plain UI glyphs (no disc) ----
 

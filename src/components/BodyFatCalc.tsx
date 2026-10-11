@@ -4,6 +4,7 @@ import type { BodyLog } from '../lib/types';
 import { useStore } from '../lib/store/StoreContext';
 import { fmt } from './charts';
 import { NumberInput } from './ui';
+import { Sym } from './icons';
 
 type Sex = 'f' | 'm';
 
@@ -16,6 +17,56 @@ export function navyBodyFat(sex: Sex, heightCm: number, neckCm: number, waistCm:
   }
   if (!hipCm || waistCm + hipCm <= neckCm) return undefined;
   return 495 / (1.29579 - 0.35004 * log(waistCm + hipCm - neckCm) + 0.221 * log(heightCm)) - 450;
+}
+
+/** Body-fat bands of the American Council on Exercise, by sex: [name, from %, to %]. */
+const ACE: Record<Sex, [string, number, number][]> = {
+  f: [
+    ['Essenziale', 10, 14],
+    ['Atleta', 14, 21],
+    ['Fitness', 21, 25],
+    ['Nella media', 25, 32],
+    ['Elevata', 32, 42],
+  ],
+  m: [
+    ['Essenziale', 2, 6],
+    ['Atleta', 6, 14],
+    ['Fitness', 14, 18],
+    ['Nella media', 18, 25],
+    ['Elevata', 25, 35],
+  ],
+};
+const range = (from: number, to: number, last: boolean) => (last ? `≥${from}%` : `${from}–${to - 1}%`);
+
+/** The band of an estimate, with a segmented bar and the point on it. */
+function FatBand({ sex, pct }: { sex: Sex; pct: number }) {
+  const bands = ACE[sex];
+  const lo = bands[0][1];
+  const hi = bands.at(-1)![2];
+  const i = Math.max(0, bands.findIndex(([, , to], k) => pct < to || k === bands.length - 1));
+  const [name, from, to] = bands[i];
+  const at = Math.min(100, Math.max(0, ((pct - lo) / (hi - lo)) * 100));
+  return (
+    <div className="bf-band">
+      <span className="bf-pill">
+        <Sym name="verified" size={14} fill /> {name} ({range(from, to, i === bands.length - 1)})
+      </span>
+      <div className="bf-bar" role="img" aria-label={`Fascia ${name}`}>
+        {bands.map(([n, f, t], k) => (
+          <span key={n} className={k === i ? 'on' : undefined} style={{ flexGrow: t - f }} />
+        ))}
+        <i style={{ left: `${at}%` }} aria-hidden="true" />
+      </div>
+      <div className="bf-scale">
+        {bands.map(([n, f, t], k) => (
+          <span key={n} className={k === i ? 'on' : undefined} style={{ flexGrow: t - f }}>
+            {n}
+          </span>
+        ))}
+      </div>
+      <span className="bf-src">Fasce dell'American Council on Exercise</span>
+    </div>
+  );
 }
 
 /** Sheet that estimates body fat from a few tape measurements and writes it into the day. */
@@ -32,7 +83,10 @@ export function BodyFatCalc({ last, onUse, onClose }: { last: BodyLog; onUse: (p
 
   const field = (label: string, hint: string, value: number | undefined, set: (v: number | undefined) => void) => (
     <label className="bf-field">
-      <span className="bf-label">{label}</span>
+      <span className="bf-label">
+        {label}
+        <Sym name="straighten" size={16} />
+      </span>
       <span className="bf-input">
         <NumberInput value={value} step={0.5} onChange={set} />
         <span className="unit">cm</span>
@@ -78,15 +132,18 @@ export function BodyFatCalc({ last, onUse, onClose }: { last: BodyLog; onUse: (p
             <i aria-hidden="true" /> Stima calcolata
           </span>
           {pct !== undefined ? (
-            <span className="bf-big">
-              <strong>{fmt(pct, 1)}%</strong> <span>massa grassa stimata</span>
-            </span>
+            <>
+              <span className="bf-big">
+                <strong>{fmt(pct, 1)}%</strong> <span>massa grassa stimata</span>
+              </span>
+              {sex && <FatBand sex={sex} pct={pct} />}
+            </>
           ) : (
             <span className="muted">{sex ? 'Inserisci le misure' : 'Scegli la formula e inserisci le misure'}</span>
           )}
         </div>
         <button
-          className="lime-banner"
+          className="lime-banner bf-use"
           disabled={pct === undefined}
           onClick={() => {
             onUse({ bodyFatPct: pct, ...m });

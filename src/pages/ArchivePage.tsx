@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FolderPicker, toneColor, TONE_NAMES, useAddFolder } from '../components/notes/NoteParts';
 import { useNotes } from '../components/notes/useNotes';
-import { IconStudy, Sym } from '../components/icons';
+import { NavArchive, Sym } from '../components/icons';
 import { SwipeDelete } from '../components/SwipeDelete';
 import { useUndo } from '../components/Undo';
 import { DragGrip } from '../components/ui';
@@ -42,7 +42,7 @@ export default function ArchivePage() {
   return (
     <div className="page archive2">
       <header className="page-head">
-        <IconStudy size={44} />
+        <NavArchive size={44} />
         <div className="page-title">
           <h1>Archivio</h1>
           <span className="page-sub">Appunti di studio, corsi e attestati</span>

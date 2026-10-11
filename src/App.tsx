@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { HashRouter, Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { BodySidebar } from './components/BodySidebar';
-import { GlyphClose, GlyphMenu, IconCourse, IconFood, IconMonth, IconNote, IconRun, IconSettings, IconStats, IconStudy, IconSync, IconToday, IconWeek, IconWorkout } from './components/icons';
+import { GlyphClose, GlyphMenu, IconSettings, IconSync, IconToday, IconWorkout, NavArchive, NavCourse, NavDiary, NavFood, NavMonth, NavRun, NavStats, NavToday, NavWeek } from './components/icons';
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
 import { UndoProvider, useUndo } from './components/Undo';
@@ -36,16 +36,16 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 
 const NAV = [
-  { to: '/mese', label: 'Mese', Icon: IconMonth },
-  { to: '/settimana', label: 'Settimana', Icon: IconWeek },
-  { to: '/giorno', label: 'Oggi', Icon: IconToday },
-  { to: '/diario', label: 'Diario', Icon: IconNote },
+  { to: '/mese', label: 'Mese', Icon: NavMonth },
+  { to: '/settimana', label: 'Settimana', Icon: NavWeek },
+  { to: '/giorno', label: 'Oggi', Icon: NavToday },
+  { to: '/diario', label: 'Diario', Icon: NavDiary },
   { to: '/palestra', label: 'Palestra', Icon: IconWorkout },
-  { to: '/corsa', label: 'Corsa', Icon: IconRun },
-  { to: '/alimentazione', label: 'Alimentazione', Icon: IconFood },
-  { to: '/corsi', label: 'Corsi e congressi', Icon: IconCourse },
-  { to: '/archivio', label: 'Archivio', Icon: IconStudy },
-  { to: '/statistiche', label: 'Statistiche', Icon: IconStats },
+  { to: '/corsa', label: 'Corsa', Icon: NavRun },
+  { to: '/alimentazione', label: 'Alimentazione', Icon: NavFood },
+  { to: '/corsi', label: 'Corsi e congressi', Icon: NavCourse },
+  { to: '/archivio', label: 'Archivio', Icon: NavArchive },
+  { to: '/statistiche', label: 'Statistiche', Icon: NavStats },
   { to: '/impostazioni', label: 'Impostazioni', Icon: IconSettings },
 ];
 
