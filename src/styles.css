@@ -3658,3 +3658,54 @@ section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; ali
 .wt-head { flex-wrap: wrap; row-gap: 0.25rem; }
 .wt-head .stat-label, .wt-head strong { white-space: nowrap; }
 .wt-head .wt-change { order: 3; }
+
+/* Corsi e congressi (Stitch 11 ottobre) */
+.cc-time.on { color: var(--ink); border: 1px solid rgb(214 242 95 / 0.45); font-weight: 800; }
+:root[data-theme='dark'] .cc-time.on { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .cc-time.on { color: var(--lime); } }
+.cc-done { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 6px; background: var(--surface-2); color: var(--muted); }
+.course-card.done { opacity: 0.85; gap: 0.5rem; padding: 0.95rem 1.1rem; }
+.course-card.done .cc-title { font-size: 1rem; }
+.cc-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem 0.8rem; flex-wrap: wrap; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.cc-progs { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.cc-progs:empty { display: none; }
+.cc-foot > :last-child { margin-left: auto; }
+.cc-program span { color: var(--ink); }
+.cc-see { display: inline-flex; align-items: center; gap: 0.3rem; border: none; background: none; padding: 0; font: inherit; font-size: 0.86rem; font-weight: 800; color: var(--lime-strong, #6f8a17); }
+:root[data-theme='dark'] .cc-see { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .cc-see { color: var(--lime); } }
+.cc-see .sym, .cc-see svg { width: 18px; height: 18px; }
+.cc-foot .cc-add .file-slot, .cc-foot2 .cc-add .file-slot { display: flex; }
+.cc-foot .cc-add .file-add { flex: none; padding: 0.4rem 0.85rem; font-size: 0.82rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); justify-content: center; }
+.cc-foot .cc-add .file-add svg { display: none; }
+.cc-foot2 { display: flex; justify-content: flex-end; }
+.cc-foot2 .cc-add { flex: 1; }
+.cc-foot2 .cc-add .file-add { width: 100%; justify-content: center; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); padding: 0.55rem; }
+.cc-foot2 .cc-add .file-add svg { display: none; }
+
+/* Archivio · Corsi e attestati */
+.arch-summary-card { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); }
+.arch-summary-card .arch-summary { padding: 0; border: none; background: none; }
+.arch-summary-card .folder-ico { box-shadow: 0 0 18px rgb(214 242 95 / 0.35); }
+.arch-summary-card .icon-input { background: var(--surface-2); border-radius: 12px; }
+.arch-summary-card .chips { margin: 0; }
+.ct-ico.tone-terra svg, .ct-ico.tone-lav svg, .ct-ico.tone-sage svg { color: #131313; }
+.new-cert { gap: 0.8rem; }
+.nc-head { display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--line); }
+.nc-head h2 { margin: 0; font-size: 1.05rem; }
+.nc-head .sym { color: var(--lime-strong, #6f8a17); }
+:root[data-theme='dark'] .nc-head .sym { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .nc-head .sym { color: var(--lime); } }
+.nc-drop { display: flex; flex-direction: column; align-items: stretch; gap: 0.35rem; padding: 0.9rem; border-radius: 14px; border: 1.5px dashed var(--line); background: var(--surface-2); text-align: center; }
+.nc-drop .file-add { justify-content: center; border: none; background: none; padding: 0.3rem; font-weight: 800; }
+.nc-drop small { font-size: 0.7rem; color: var(--muted); }
+.nc-drop.has-file { border-style: solid; }
+.nc-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin-top: -0.4rem; }
+.nc-types button { padding: 0.55rem; border-radius: 12px; border: none; background: var(--surface-2); color: var(--muted); font: inherit; font-size: 0.86rem; font-weight: 700; }
+.nc-types button.on { background: var(--lime); color: #131313; font-weight: 800; }
+.new-cert-row { align-items: end; }
+.nc-note { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0; padding: 0.65rem 0.75rem; border-radius: 12px; background: var(--surface-2); font-size: 0.78rem; color: var(--muted); }
+.nc-note .sym { flex: none; color: var(--lav-ink); }
+.nc-save { display: flex; align-items: center; justify-content: space-between; min-height: 3.3rem; padding: 0 1.4rem; border: none; border-radius: 999px; background: var(--lime); color: #131313; font: inherit; font-size: 1rem; font-weight: 800; box-shadow: 0 0 20px rgb(214 242 95 / 0.25); }
+.nc-save:disabled { opacity: 0.45; box-shadow: none; }
+.nc-cancel { min-height: 2.8rem; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--ink); font: inherit; font-weight: 700; }

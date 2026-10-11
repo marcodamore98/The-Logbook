@@ -4,7 +4,7 @@ import { FileSlot, openFile, programOf } from '../components/files/FileSlot';
 import { mapsUrl, webUrl } from '../lib/links';
 import { GlyphClip, GlyphFolder, NavCourse, Sym } from '../components/icons';
 import { COURSE_TYPES } from '../components/modules/editors';
-import { Empty, NumberInput, uid } from '../components/ui';
+import { Empty, NumberInput, TimeTile, uid } from '../components/ui';
 import { useStore } from '../lib/store/StoreContext';
 import type { CourseModule, FileRef, ISODate } from '../lib/types';
 import { today } from '../lib/dates';
@@ -38,6 +38,9 @@ const dateLong = (a: ISODate, b: ISODate) => {
 const ecmOf = (xs: Row[]) => xs.reduce((n, r) => n + (r.m.ecm ?? 0), 0);
 const fmtNum = (n: number) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
 const kb = (n?: number) => (!n ? '' : n > 1024 * 1024 ? `${fmtNum(n / 1024 / 1024)} MB` : `${Math.round(n / 1024)} KB`);
+
+/** "PDF · 2,4 MB" or "foto · 340 KB" for a programme file. */
+const fileKind = (f: FileRef) => `${/\.pdf$/i.test(f.name) ? 'PDF' : 'foto'}${f.size ? ` · ${kb(f.size)}` : ''}`;
 
 const IconCal = () => (
   <Sym name="calendar_today" size={15} />
@@ -78,7 +81,13 @@ export default function CoursesPage() {
 
       {rows.length === 0 && <Empty>Nessun corso o congresso. Aggiungili dalla pagina del giorno con “Aggiungi scheda → Corsi e congressi”.</Empty>}
       {years.map((y) => {
-        const list = rows.filter((r) => r.m.startDate.startsWith(y));
+        // The coming ones first, nearest first; those already over at the bottom, most recent first.
+        const now = today();
+        const yearRows = rows.filter((r) => r.m.startDate.startsWith(y));
+        const list = [
+          ...yearRows.filter((r) => r.m.endDate >= now).sort((a, b) => a.m.startDate.localeCompare(b.m.startDate)),
+          ...yearRows.filter((r) => r.m.endDate < now).sort((a, b) => b.m.startDate.localeCompare(a.m.startDate)),
+        ];
         return (
           <section key={y} className="course-year">
             <div className="cy-head">
@@ -93,17 +102,37 @@ export default function CoursesPage() {
             <ul className="course-list">
               {list.map(({ origin, m }) => {
                 const type = m.type ?? 'course';
+                const done = m.endDate < now;
+                const join = m.type === 'webinar' && m.link ? m.link : undefined;
+                const certAction = m.certificate ? (
+                  <button type="button" className="cc-see" onClick={() => openFile(store.repo, m.certificate!)}>
+                    <GlyphClip crown /> Vedi attestato ›
+                  </button>
+                ) : (
+                  <div className="cc-add">
+                    <FileSlot
+                      label="+ Aggiungi l’attestato"
+                      onChange={(certificate) => {
+                        if (certificate) store.updateDay(origin, (d) => ({ ...d, modules: d.modules.map((x) => (x.id === m.id && x.kind === 'course' ? { ...x, certificate } : x)) }));
+                      }}
+                    />
+                  </div>
+                );
                 return (
-                  <li key={m.id} className="course-card">
+                  <li key={m.id} className={`course-card${done ? ' done' : ''}`}>
                     <div className="cc-top">
                       <span className="cc-chips">
                         <span className={`cc-type tone-${TONE[type]}`}>{COURSE_TYPES.find((t) => t.id === type)?.label}</span>
                         {m.ecm ? <span className="cc-ecm">✓ {fmtNum(m.ecm)} crediti ECM</span> : null}
                       </span>
-                      {m.startTime && (
-                        <span className={`cc-time${m.remind ? ' on' : ''}`}>
-                          <IconBell on={!!m.remind} /> {m.startTime}
-                        </span>
+                      {done ? (
+                        <span className="cc-done">Completato</span>
+                      ) : (
+                        m.startTime && (
+                          <span className={`cc-time${m.remind ? ' on' : ''}`}>
+                            <IconBell on={!!m.remind} /> {m.startTime}
+                          </span>
+                        )
                       )}
                     </div>
                     <Link className="cc-title" to={`/giorno/${origin}?apri=${m.id}`}>
@@ -127,36 +156,23 @@ export default function CoursesPage() {
                         </>
                       ) : null}
                     </span>
-                    {(programOf(m).length > 0 || (m.type === 'webinar' && m.link)) && (
-                      <div className="cc-files">
+                    <div className="cc-foot">
+                      <span className="cc-progs">
                         {programOf(m).map((f, i, all) => (
                           <button key={f.id} type="button" className="cc-program" onClick={() => openFile(store.repo, f)}>
-                            <GlyphClip /> <span>{all.length > 1 ? `Programma ${i + 1}` : 'Programma'}</span>
+                            <GlyphClip /> <span>{all.length > 1 ? `Programma ${i + 1}` : 'Programma'} ({fileKind(f)})</span>
                           </button>
                         ))}
-                        {m.type === 'webinar' && m.link && (
-                          <a className="cc-program cc-join" href={webUrl(m.link)} target="_blank" rel="noopener noreferrer">
-                            <span>Collegati al webinar ›</span>
-                          </a>
-                        )}
-                      </div>
-                    )}
-                    {m.certificate ? (
-                      <button type="button" className="lime-banner" onClick={() => openFile(store.repo, m.certificate!)}>
-                        <span className="cc-cert"><GlyphClip crown /> Vedi attestato</span>
-                        <span aria-hidden="true">›</span>
-                      </button>
-                    ) : (
-                      <div className="cc-add">
-                        <FileSlot
-                          label="+ Aggiungi l’attestato"
-                          crown
-                          onChange={(certificate) => {
-                            if (certificate) store.updateDay(origin, (d) => ({ ...d, modules: d.modules.map((x) => (x.id === m.id && x.kind === 'course' ? { ...x, certificate } : x)) }));
-                          }}
-                        />
-                      </div>
-                    )}
+                      </span>
+                      {join ? (
+                        <a className="cc-program cc-join" href={webUrl(join)} target="_blank" rel="noopener noreferrer">
+                          <span>Collegati al webinar ›</span>
+                        </a>
+                      ) : (
+                        certAction
+                      )}
+                    </div>
+                    {join && <div className="cc-foot2">{certAction}</div>}
                   </li>
                 );
               })}
@@ -167,8 +183,6 @@ export default function CoursesPage() {
     </div>
   );
 }
-
-const TILE_TONES = ['lime', 'lav', 'sage', 'sky', 'terra', 'plum'];
 
 /** Only the certificate PDFs: search, filter by year, tiles grouped by year (tab of the Archivio). */
 export function CertArchive({ rows }: { rows: Row[] }) {
@@ -181,9 +195,9 @@ export function CertArchive({ rows }: { rows: Row[] }) {
   const list = all.filter((r) => (!year || r.m.endDate.startsWith(year)) && (!ql || r.m.title.toLowerCase().includes(ql) || (r.m.place ?? '').toLowerCase().includes(ql)));
   const ecm = ecmOf;
   const [adding, setAdding] = useState(false);
-  const toneOf = (id: string) => TILE_TONES[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % TILE_TONES.length];
   return (
     <div className="cert-archive">
+      <section className="arch-summary-card">
       <div className="arch-summary">
         <span className="folder-ico">
           <GlyphFolder />
@@ -211,6 +225,7 @@ export function CertArchive({ rows }: { rows: Row[] }) {
           </div>
         </>
       )}
+      </section>
       {all.length === 0 && <Empty>Ancora nessun attestato caricato.</Empty>}
       {adding ? <NewCertificate onDone={() => setAdding(false)} /> : null}
       {all.length > 0 && list.length === 0 && <Empty>Nessun attestato trovato.</Empty>}
@@ -231,8 +246,8 @@ export function CertArchive({ rows }: { rows: Row[] }) {
                   <div key={m.id} className="cert-tile">
                     <button type="button" className="ct-open" onClick={() => openFile(store.repo, m.certificate!)}>
                       <span className="ct-top">
-                        <span className={`ct-ico tone-${toneOf(m.id)}`} aria-hidden="true">
-                          <GlyphClip crown />
+                        <span className={`ct-ico tone-${TONE[m.type ?? 'course']}`} aria-hidden="true">
+                          <GlyphClip />
                         </span>
                         {m.ecm ? <span className="ct-ecm">{fmtNum(m.ecm)} ECM</span> : null}
                       </span>
@@ -294,38 +309,44 @@ function NewCertificate({ onDone }: { onDone: () => void }) {
   };
   return (
     <section className="card new-cert">
-      <h2>Nuovo attestato</h2>
-      <FileSlot label="Scegli il PDF dell’attestato" doneLabel="Attestato" crown file={file} onChange={setFile} />
+      <div className="nc-head">
+        <Sym name="post_add" size={22} />
+        <h2>Nuovo attestato</h2>
+      </div>
+      <div className={`nc-drop${file ? ' has-file' : ''}`}>
+        <FileSlot label="Tocca per scegliere il PDF dell’attestato" doneLabel="Attestato" crown file={file} onChange={setFile} />
+        {!file && <small>Formato accettato: PDF (fino a 8 MB)</small>}
+      </div>
       <label className="field">
         <span className="field-label">Titolo del corso o congresso</span>
         <input value={title} placeholder="es. Corso BLSD" onChange={(e) => setTitle(e.target.value)} />
       </label>
-      <div className="chips" role="radiogroup" aria-label="Tipo">
+      <span className="field-label">Tipo</span>
+      <div className="nc-types" role="radiogroup" aria-label="Tipo">
         {COURSE_TYPES.map((t) => (
-          <button key={t.id} type="button" role="radio" aria-checked={type === t.id} className={`chip${type === t.id ? ' chip-on' : ''}`} onClick={() => setType(t.id)}>
+          <button key={t.id} type="button" role="radio" aria-checked={type === t.id} className={type === t.id ? 'on' : undefined} onClick={() => setType(t.id)}>
             {t.label}
           </button>
         ))}
       </div>
       <div className="new-cert-row">
-        <label className="field">
-          <span className="field-label">Data</span>
-          <input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
-        </label>
+        <TimeTile type="date" label="Data" value={date} onChange={(v) => v && setDate(v)} />
         <label className="field">
           <span className="field-label">Crediti ECM</span>
-          <NumberInput value={ecm} step={0.5} onChange={setEcm} />
+          <NumberInput value={ecm} step={0.5} placeholder="es. 12" onChange={setEcm} />
         </label>
       </div>
-      <div className="row">
-        <button type="button" className="btn" disabled={!file || !title.trim()} onClick={save}>
-          Salva nell’archivio
-        </button>
-        <button type="button" className="btn-ghost" onClick={onDone}>
-          Annulla
-        </button>
-      </div>
-      <p className="muted small">La scheda Corsi e congressi viene aggiunta anche nella pagina di quel giorno.</p>
+      <p className="nc-note">
+        <Sym name="info" size={18} />
+        <span>Crea anche la scheda Corsi e congressi nella pagina di quel giorno.</span>
+      </p>
+      <button type="button" className="nc-save" disabled={!file || !title.trim()} onClick={save}>
+        <span>Salva nell’archivio</span>
+        <span aria-hidden="true">›</span>
+      </button>
+      <button type="button" className="nc-cancel" onClick={onDone}>
+        Annulla
+      </button>
     </section>
   );
 }
