@@ -3,7 +3,7 @@ import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fmt } from '../components/charts';
-import { GlyphCheck, GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconBreakfast, IconDinner, IconLunch, IconSnack, IconWater } from '../components/icons';
+import { GlyphCheck, GlyphClose, GlyphNext, GlyphPlus, GlyphPrev, GlyphTrash, IconBreakfast, IconDinner, IconLunch, IconSnack, IconWater, Sym } from '../components/icons';
 import { FoodSheet } from '../components/nutrition/FoodSheet';
 import { useUndo } from '../components/Undo';
 import { Chevron, NumberInput } from '../components/ui';
@@ -43,12 +43,18 @@ function Gauge({ eaten, goal, burned }: { eaten: number; goal?: number; burned?:
       </div>
       <div className="kg-sides">
         <span>
-          <strong>{fmt(eaten)}</strong>
+          <strong>
+            <Sym name="local_fire_department" size={16} className="kg-ico eat" />
+            {fmt(eaten)}
+          </strong>
           Assunte
         </span>
         <span className="kg-goal">{goal ? `Obiettivo ${fmt(goal)} kcal` : 'Nessun obiettivo'}</span>
         <span>
-          <strong>{burned ? fmt(burned) : 0}</strong>
+          <strong>
+            <Sym name="bolt" size={16} className="kg-ico burn" />
+            {burned ? fmt(burned) : 0}
+          </strong>
           Bruciate
         </span>
       </div>
@@ -60,17 +66,20 @@ function Gauge({ eaten, goal, burned }: { eaten: number; goal?: number; burned?:
 function MacroCard({ label, value, goal, tone }: { label: string; value: number; goal?: number; tone: string }) {
   return (
     <div className={`macro-card tone-${tone}`}>
-      <span className="mc-label">{label}</span>
+      <span className="mc-label">
+        {label}
+        <i className="mc-dot" aria-hidden="true" />
+      </span>
+      <span className="mc-value">
+        <strong>{fmt(value)}</strong>
+        {goal ? ` /${fmt(goal)}` : ''}g
+      </span>
       <span className="mc-track">
         <span
           style={{
             width: `${goal ? Math.min(100, (value / goal) * 100) : 0}%`,
           }}
         />
-      </span>
-      <span className="mc-value">
-        <strong>{fmt(value)}</strong>
-        {goal ? `/${fmt(goal)}` : ''}g
       </span>
     </div>
   );
@@ -276,14 +285,16 @@ function WeekKcal({ days, goal, current }: { days: { d: string; label: string; v
   );
 }
 
-/** Position of the i-th meal disc on a quarter circle from straight up to straight left of the +, and its label further out. */
+/** Where the i-th meal disc sits around the + (a gentle arc going up and to the left, as in Stitch); its label is on its left. */
+const FAN_AT: [number, number][] = [
+  [0, -150],
+  [-55, -92],
+  [-125, -40],
+  [-150, 30],
+];
 function fanPos(i: number): CSSProperties {
-  const a = ((90 + i * 30) * Math.PI) / 180;
-  const at = (r: number) => [Math.round(Math.cos(a) * r), Math.round(-Math.sin(a) * r)];
-  const [x, y] = at(150);
-  // label just outside the disc: further sideways (labels are wide) than up (labels are short)
-  const lx = Math.round(Math.cos(a) * 78), ly = Math.round(-Math.sin(a) * 46);
-  return { '--i': i, '--x': `${x}px`, '--y': `${y}px`, '--lx': `${lx}px`, '--ly': `${ly}px` } as CSSProperties;
+  const [x, y] = FAN_AT[i] ?? [0, 0];
+  return { '--i': i, '--x': `${x}px`, '--y': `${y}px` } as CSSProperties;
 }
 
 function MealIcon({ id }: { id: MealId }) {
@@ -371,6 +382,7 @@ export default function NutritionPage() {
       return n.size ? n : null;
     });
   const water = day.body?.waterL ?? 0;
+  const glassCount = Math.max(goals.waterL ? Math.round(goals.waterL / 0.25) : 8, Math.round(water / 0.25) + 1);
 
   const week = Array.from({ length: 7 }, (_, i) => addDays(date, i - 6)).map((d) => ({
     d,
@@ -540,13 +552,16 @@ export default function NutritionPage() {
       <section className="card water">
         <div className="card-head">
           <IconWater />
-          <h2>Acqua</h2>
+          <span className="water-title">
+            <h2>Idratazione</h2>
+            {goals.waterL ? <small>Obiettivo {fmt(goals.waterL, 1)} L</small> : null}
+          </span>
           <span className="water-amount">
-            {fmt(water, 2)} L{goals.waterL ? ` / ${fmt(goals.waterL, 1)} L` : ''}
+            {fmt(water, 2)} L{goals.waterL ? <small> / {fmt(goals.waterL, 1)} L</small> : null}
           </span>
         </div>
-        <div className="glasses" role="group" aria-label="Bicchieri d'acqua (250 ml)">
-          {Array.from({ length: Math.max(8, Math.ceil(water / 0.25) + 1) }, (_, i) => {
+        <div className={`glasses${glassCount > 12 ? ' many' : ''}`} role="group" aria-label="Bicchieri d'acqua (250 ml)">
+          {Array.from({ length: glassCount }, (_, i) => {
             const full = i < Math.round(water / 0.25);
             return (
               <button
@@ -563,10 +578,7 @@ export default function NutritionPage() {
                   }))
                 }
               >
-                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-                  <path d="M6 3h12l-1.6 17a1.5 1.5 0 0 1-1.5 1.4H9.1a1.5 1.5 0 0 1-1.5-1.4z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-                  {full && <path d="M7.2 9h9.6l-1 11a1 1 0 0 1-1 .9H9.2a1 1 0 0 1-1-.9z" className="water-fill" />}
-                </svg>
+                <Sym name={full ? 'local_drink-fill' : 'local_drink'} size={20} />
               </button>
             );
           })}
@@ -644,7 +656,10 @@ export default function NutritionPage() {
                       }}
                     >
                       <MealIcon id={x.id} />
-                      <span className="fan-label">{x.label}</span>
+                      <span className="fan-label">
+                        {x.label}
+                        {date === today() && x.id === mealNow() && <b> ORA</b>}
+                      </span>
                     </button>
                   ))}
                 </div>

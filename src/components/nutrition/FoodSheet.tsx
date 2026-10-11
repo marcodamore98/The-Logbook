@@ -61,6 +61,7 @@ function FoodRow({ food, onPick, fav, onFav, onQuick, picked, onSwipe, children 
       <Swipeable onSwipe={onSwipe}>
       <div className="fc-row">
       <button type="button" className="fc-main" onClick={onPick} aria-expanded={picked}>
+        {picked && <span className="fc-editing">In modifica</span>}
         <span className="fc-name">
           {food.name}
           {food.brand && <span className="muted"> · {food.brand}</span>}
@@ -136,11 +137,14 @@ function Quantity({ food, meal, onMeal, onAdd, onBack, inline, fav, onFav }: { f
           </button>
         ))}
         <button type="button" className={free ? 'on' : ''} onClick={() => box.current?.querySelector<HTMLInputElement>('.q-grams input')?.focus()}>
-          Porzione libera
+          <span>Porzione libera</span>
+          <Icon d="tune" size={18} />
         </button>
       </div>
       <div className="q-stepper">
-        <span>Grammi</span>
+        <span className="q-step-label">
+          <Icon d="scale" size={20} /> Grammi
+        </span>
         <button type="button" aria-label="Meno" onClick={() => setGrams(Math.max(step, (grams ?? 0) - step))}>
           −
         </button>
@@ -419,7 +423,12 @@ export function FoodSheet({
   const list = (items: Food[], empty: string, title?: string, onSwipe?: (f: Food) => void) =>
     items.length ? (
       <>
-        {title && <h3 className="fs-kicker">{title}</h3>}
+        {title && (
+          <h3 className="fs-kicker">
+            {title}
+            <small>{items.length === 1 ? '1 alimento' : `${items.length} alimenti`}</small>
+          </h3>
+        )}
         <ul className="food-cards">
           {items.map((f) => {
             const open = picked?.id === f.id;
@@ -441,13 +450,17 @@ export function FoodSheet({
   const searching = tab === 'search';
   const bar = (label: string, v: number, goal: number | undefined, tone: string) => (
     <div className={`fs-macro tone-${tone}`}>
-      <span>{label}</span>
+      <span className="fm-label">
+        {label}
+        <i aria-hidden="true" />
+      </span>
+      <small>
+        <b>{Math.round(v)} g</b>
+        {goal ? ` / ${goal} g` : ''}
+      </small>
       <span className="fs-track">
         <span style={{ width: `${goal ? Math.min(100, (v / goal) * 100) : 0}%` }} />
       </span>
-      <small>
-        {Math.round(v)} g{goal ? ` / ${goal} g` : ''}
-      </small>
     </div>
   );
 
@@ -501,14 +514,12 @@ export function FoodSheet({
           {!searching && tab !== 'barcode' && (
             <section className="fs-intake">
               <div className="fs-intake-head">
-                <strong>
-                  Assunzione giornaliera
-                  {goals.kcalIn ? <span className="fs-pct">{Math.round((eaten.kcal / goals.kcalIn) * 100)}%</span> : null}
-                </strong>
-                <strong>
-                  {Math.round(eaten.kcal)}
+                <strong className="fi-label">Assunzione giornaliera</strong>
+                {goals.kcalIn ? <span className="fs-pct">{Math.round((eaten.kcal / goals.kcalIn) * 100)}%</span> : null}
+                <span className="fi-kcal">
+                  · <b>{Math.round(eaten.kcal)}</b>
                   {goals.kcalIn ? ` / ${goals.kcalIn}` : ''} kcal
-                </strong>
+                </span>
               </div>
               <span className="fs-track big">
                 <span style={{ width: `${goals.kcalIn ? Math.min(100, (eaten.kcal / goals.kcalIn) * 100) : 0}%` }} />
@@ -598,55 +609,57 @@ export function FoodSheet({
                   <h3>Scanner codice</h3>
                   <p>Inquadra la confezione o scrivi il numero sotto il codice</p>
                 </div>
-                <div className="scan-view">
+                <div className={`scan-view${scanning ? ' live' : ''}`}>
                   {scanning ? (
                     // Tapping the preview refocuses, like the camera app.
                     <video ref={video} className="scanner" playsInline muted onClick={() => stream.current && setFocus(stream.current, 'single-shot').then(() => window.setTimeout(() => stream.current && setFocus(stream.current, 'continuous'), 1200))} />
                   ) : (
-                    <button type="button" className="scan-start" onClick={startScan}>
-                      <Icon d={ICON.barcode} size={30} />
-                      Avvia la fotocamera
-                    </button>
+                    <button type="button" className="scan-start" aria-label="Avvia la fotocamera" onClick={startScan} />
                   )}
-                  {scanning && (
-                    <span className="scan-guide" aria-hidden="true">
-                      <i className="tl" /><i className="tr" /><i className="bl" /><i className="br" />
-                      <i className="laser" />
-                    </span>
-                  )}
-                  {scanning && <span className="scan-hint2">Avvicina il codice dentro il riquadro · tocca per mettere a fuoco</span>}
+                  <span className="scan-guide" aria-hidden="true">
+                    <i className="tl" /><i className="tr" /><i className="bl" /><i className="br" />
+                    <i className="laser" />
+                  </span>
+                  <span className="scan-hint2">
+                    <Icon d="center_focus_weak" size={16} />
+                    {scanning ? 'Avvicina il codice dentro il riquadro · tocca per mettere a fuoco' : 'Tocca il riquadro per avviare la fotocamera'}
+                  </span>
                 </div>
                 <div className="scan-actions">
                   {torch !== null && (
                     <button
                       type="button"
-                      className={`btn-ghost small${torch ? ' on' : ''}`}
+                      className={`scan-btn${torch ? ' on' : ''}`}
+                      aria-pressed={torch}
                       onClick={() => {
                         if (!stream.current) return;
                         setTorch(stream.current, !torch);
                         setTorchOn(!torch);
                       }}
                     >
-                      {torch ? 'Torcia accesa' : 'Torcia'}
+                      <Icon d="flashlight_on" size={20} /> Torcia
                     </button>
                   )}
-                  <button type="button" className="btn-ghost small" onClick={() => gallery.current?.click()}>
-                    Galleria
+                  <button type="button" className="scan-btn" onClick={() => gallery.current?.click()}>
+                    <Icon d="photo_library" size={20} /> Galleria
                   </button>
                   <input ref={gallery} type="file" accept="image/*" hidden onChange={(e) => fromPhoto(e.target.files?.[0])} />
                   {scanning && (
-                    <button type="button" className="btn-ghost small" onClick={stopScan}>
-                      Annulla
+                    <button type="button" className="scan-btn" onClick={stopScan}>
+                      <Icon d="close" size={20} /> Annulla
                     </button>
                   )}
                 </div>
                 <section className="scan-manual">
                   <div className="scan-manual-head">
-                    <span>Oppure scrivi il codice (EAN / UPC)</span>
-                    <small>8–13 cifre</small>
+                    <Icon d="keyboard" size={18} />
+                    <span>Oppure scrivi il codice (EAN / UPC) · 8–13 cifre</span>
                   </div>
                   <div className="scan-manual-row">
-                    <input inputMode="numeric" placeholder="Es. 8001234567890" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+                    <span className="scan-code">
+                      <input inputMode="numeric" placeholder="es. 8001234567890" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+                      <Icon d="barcode" size={22} />
+                    </span>
                     <button type="button" className="btn scan-go" disabled={code.length < 8 || busy} onClick={() => lookup(code)}>
                       {busy ? 'Cerco…' : 'Cerca ›'}
                     </button>
@@ -655,27 +668,48 @@ export function FoodSheet({
                 {lastFound && (
                   <section className="scan-last">
                     <div className="scan-last-head">
-                      <span>✓ Ultimo prodotto riconosciuto</span>
+                      <span>
+                        <Icon d="check_circle-fill" size={20} /> Ultimo prodotto riconosciuto
+                      </span>
                       <small>EAN {lastFound.code}</small>
                     </div>
-                    <div className="scan-last-line">
-                    <button type="button" className="scan-last-row" onClick={() => quickAdd(lastFound.food)}>
-                      <span className="fc-name">
-                        {lastFound.food.name}
-                        {lastFound.food.brand && <span className="muted"> · {lastFound.food.brand}</span>}
+                    <div className="scan-last-name">
+                      <span>
+                        <strong>{lastFound.food.name}</strong>
+                        {lastFound.food.brand && <small>{lastFound.food.brand}</small>}
                       </span>
-                      <span className="fc-portion">
-                        {usual(lastFound.food)} g · {entryFor(lastFound.food, usual(lastFound.food), '').kcal} kcal · P {fmtG(entryFor(lastFound.food, usual(lastFound.food), '').protein)}
-                      </span>
-                      <b className="scan-last-add">+ Aggiungi</b>
-                    </button>
-                    <button type="button" className={`fc-fav${isFav(lastFound.food.id) ? ' on' : ''}`} aria-label={isFav(lastFound.food.id) ? 'Preferiti: scegli i pasti' : 'Aggiungi ai preferiti'} aria-pressed={isFav(lastFound.food.id)} onClick={() => onHeart(lastFound.food)}>
-                      <Icon d={ICON.heart} size={22} fill={isFav(lastFound.food.id)} />
-                    </button>
+                      <button type="button" className={`fc-fav${isFav(lastFound.food.id) ? ' on' : ''}`} aria-label={isFav(lastFound.food.id) ? 'Preferiti: scegli i pasti' : 'Aggiungi ai preferiti'} aria-pressed={isFav(lastFound.food.id)} onClick={() => onHeart(lastFound.food)}>
+                        <Icon d={ICON.heart} size={22} fill={isFav(lastFound.food.id)} />
+                      </button>
+                    </div>
+                    {(() => {
+                      const f = lastFound.food;
+                      const g = usual(f);
+                      const e = entryFor(f, g, '');
+                      return (
+                        <div className="scan-last-chips">
+                          <span>{f.portionG ? `${(f.portionName ?? '1 porzione').replace(/^1\s+/, '1 ')} (${g} g)` : '100 g'}</span>
+                          <span className="kcal">{e.kcal} kcal</span>
+                          <span>P <b>{fmtG(e.protein)}</b></span>
+                          <span>C <b>{fmtG(e.carbs)}</b></span>
+                          <span>G <b>{fmtG(e.fat)}</b></span>
+                        </div>
+                      );
+                    })()}
+                    <div className="scan-last-foot">
+                      <button type="button" className="link-quiet" onClick={() => { setPicked(lastFound.food); window.setTimeout(() => document.querySelector('.fs-body > .quantity')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120); }}>
+                        Personalizza porzione
+                      </button>
+                      <button type="button" className="btn scan-last-add" onClick={() => quickAdd(lastFound.food)}>
+                        <Icon d="add" size={20} /> Aggiungi
+                      </button>
                     </div>
                   </section>
                 )}
-                <p className="muted small scan-help">Codice rovinato o illeggibile? Scrivilo qui sopra. I dati dei prodotti confezionati vengono da Open Food Facts, database libero e collaborativo.</p>
+                <p className="muted small scan-help">
+                  <Icon d="verified" size={18} />
+                  <span>Codice rovinato o illeggibile? Scrivilo qui sopra. Database collegato a Open Food Facts (prodotti confezionati) e alla banca dati CIQUAL dell’ANSES.</span>
+                </p>
               </div>
             )}
 

@@ -3393,3 +3393,93 @@ button.op-tutor:disabled { opacity: 0.7; cursor: default; }
 :root[data-theme='dark'] .note-tags .tag-pill.sug { background: rgb(214 242 95 / 0.1); border-color: rgb(214 242 95 / 0.3); color: var(--lime); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .note-tags .tag-pill.sug { background: rgb(214 242 95 / 0.1); border-color: rgb(214 242 95 / 0.3); color: var(--lime); } }
 .note-tags .tag-label::after { content: ':'; }
+
+/* Alimentazione (Stitch 11 ottobre) */
+.fan-label { left: auto; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-size: 0.82rem; padding: 0.2rem 0.65rem; background: rgb(29 29 31 / 0.92); border: 1px solid #333335; }
+.fan-label b { color: var(--lime); font-weight: 800; font-size: 0.7rem; letter-spacing: 0.06em; }
+.fan-item.now .art-icon { width: 52px; height: 52px; }
+.kg-sides strong { display: inline-flex; align-items: center; gap: 0.2rem; }
+.kg-ico.eat { color: var(--lime-strong, #a8c43a); }
+:root[data-theme='dark'] .kg-ico.eat { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .kg-ico.eat { color: var(--lime); } }
+.kg-ico.burn { color: var(--muted); }
+.macro-card { gap: 0.35rem; }
+.mc-label { display: flex; align-items: center; justify-content: space-between; gap: 0.3rem; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mc-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.mc-value { font-size: 0.72rem; }
+.mc-value strong { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+.water .card-head { align-items: center; }
+.water-title { display: flex; flex-direction: column; min-width: 0; }
+.water-title h2 { margin: 0; }
+.water-title small { color: var(--muted); font-size: 0.78rem; font-weight: 600; }
+.water .card-head .water-amount { font-size: 1.5rem; letter-spacing: -0.02em; }
+.water .card-head .water-amount small { font-size: 0.82rem; font-weight: 700; color: var(--muted); }
+.water .glasses { flex-wrap: wrap; gap: 0.1rem; align-items: center; }
+.water .glass { padding: 0; color: var(--water); opacity: 0.45; display: grid; place-items: center; }
+.water .glass.full { opacity: 1; }
+.water .water-add { margin-left: auto; padding: 0.35rem 0.75rem; background: color-mix(in srgb, var(--water) 18%, var(--surface)); border-color: color-mix(in srgb, var(--water) 40%, var(--line)); font-weight: 800; }
+
+/* Aggiungi alimenti (Stitch 11 ottobre) */
+.fs-intake-head { justify-content: flex-start; align-items: center; flex-wrap: nowrap; white-space: nowrap; gap: 0.4rem; font-size: 0.86rem; }
+.fs-intake-head .fi-label { font-weight: 700; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.fs-intake-head .fs-pct { margin-left: 0; flex: none; }
+.fi-kcal { color: var(--muted); font-size: 0.82rem; flex: none; }
+.fi-kcal b { color: var(--ink); }
+.fs-macros { gap: 0.45rem; }
+.fs-macro { align-items: stretch; gap: 0.3rem; padding: 0.55rem 0.6rem; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); min-width: 0; }
+.fs-macro .fm-label { display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.fs-macro .fm-label i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.fs-macro small { font-size: 0.72rem; white-space: nowrap; }
+.fs-macro small b { color: var(--ink); font-size: 0.82rem; }
+.fs-macro .fs-track { height: 4px; background: var(--surface); }
+.fs-kicker { display: flex; align-items: baseline; justify-content: space-between; }
+.fs-kicker small { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em; text-transform: none; }
+.fc-editing { align-self: flex-start; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--lime); color: #131313; }
+.q-portions button:last-child:nth-child(odd) { display: flex; align-items: center; justify-content: space-between; }
+.q-step-label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.q-step-label .sym { color: var(--lime-strong, #7f9a1f); }
+:root[data-theme='dark'] .q-step-label .sym { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .q-step-label .sym { color: var(--lime); } }
+
+/* Scanner (Stitch 11 ottobre) */
+.scan-view:not(.live) { background-color: #0e0e0e; background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px); background-size: 14px 14px; }
+.scan-view:not(.live) .scan-guide { box-shadow: none; }
+.scan-start { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; z-index: 1; }
+.scan-hint2 { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; border: 1px solid #333335; }
+.scan-hint2 .sym { flex: none; color: var(--lime); }
+.scan-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 2.75rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 0.88rem; font-weight: 700; }
+.scan-btn .sym { color: var(--muted); }
+.scan-actions .scan-btn.on { background: var(--surface); color: var(--ink); border-color: var(--lime); box-shadow: 0 0 14px rgb(214 242 95 / 0.2); }
+.scan-actions .scan-btn.on .sym { color: var(--lime); }
+.scan-manual-head { justify-content: flex-start; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.scan-manual-head .sym { flex: none; color: var(--lime-strong, #7f9a1f); }
+:root[data-theme='dark'] .scan-manual-head .sym { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .scan-manual-head .sym { color: var(--lime); } }
+.scan-code { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; padding-right: 0.7rem; border-radius: 14px; background: var(--surface-2); border: 1px solid transparent; color: var(--muted); }
+.scan-code:focus-within { border-color: var(--lime); }
+.scan-code input { flex: 1; min-width: 0; border: none !important; background: none !important; height: 3.2rem; font-size: 1.05rem; }
+.scan-go { min-height: 3.2rem; font-size: 1rem; font-weight: 800; }
+.scan-last { position: relative; overflow: hidden; }
+.scan-last::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--lime), transparent); box-shadow: 0 0 16px rgb(214 242 95 / 0.7); }
+.scan-last-head span { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800; }
+.scan-last-head span .sym { color: var(--lime-strong, #7f9a1f); }
+:root[data-theme='dark'] .scan-last-head span .sym { color: var(--lime); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .scan-last-head span .sym { color: var(--lime); } }
+.scan-last-head small { white-space: nowrap; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.scan-last-name { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; padding-top: 0.55rem; border-top: 1px solid var(--line); }
+.scan-last-name > span { display: flex; flex-direction: column; min-width: 0; }
+.scan-last-name strong { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; }
+.scan-last-name small { color: var(--muted); font-size: 0.82rem; }
+.scan-last-name .fc-fav { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); flex: none; }
+.scan-last-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.scan-last-chips span { padding: 0.2rem 0.55rem; border-radius: 8px; background: var(--surface-2); font-size: 0.78rem; color: var(--muted); }
+.scan-last-chips span b { color: var(--ink); }
+.scan-last-chips .kcal { background: color-mix(in srgb, var(--lime) 22%, var(--surface-2)); color: var(--ink); font-weight: 800; }
+.scan-last-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.scan-last-foot .link-quiet { font-weight: 700; color: var(--ink-2); text-decoration: underline; text-underline-offset: 4px; background: none; border: none; font: inherit; font-size: 0.88rem; }
+section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 999px; background: var(--lime); color: #131313; font-weight: 800; padding: 0.55rem 1.1rem; }
+.scan-help { display: flex; align-items: flex-start; justify-content: center; gap: 0.5rem; text-align: left; }
+.scan-help .sym { flex: none; margin-top: 0.1rem; }
+.water .glasses { flex-wrap: nowrap; gap: 0; }
+.water .glass { flex: 0 1 auto; min-width: 0; }
+.water .glasses.many { flex-wrap: wrap; }
