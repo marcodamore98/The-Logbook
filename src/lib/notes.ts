@@ -140,7 +140,7 @@ export const hasContent = (m: StudyModule) => !!(plainOf(bodyOf(m)) || m.attachm
 
 // ---- Cleaning HTML (pasted text, imported copies, what the editor produces) ----
 
-const KEEP = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL', 'SPAN', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'TABLE', 'TBODY', 'TR', 'TD', 'TH', 'FIGURE', 'IMG', 'DIV', 'AUDIO', 'SUB', 'SUP', 'HR']);
+const KEEP = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL', 'SPAN', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'TABLE', 'TBODY', 'TR', 'TD', 'TH', 'FIGURE', 'FIGCAPTION', 'IMG', 'DIV', 'AUDIO', 'SUB', 'SUP', 'HR']);
 const RENAME: Record<string, string> = { H1: 'H2', H4: 'H3', H5: 'H3', H6: 'H3', THEAD: 'TBODY', MARK: 'SPAN', FONT: 'SPAN' };
 const DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'LINK', 'META', 'TITLE', 'svg', 'SVG', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'NOSCRIPT', 'TEMPLATE', 'VIDEO', 'CANVAS', 'HEAD']);
 const STYLE_OK = /^(color|background-color|font-weight|font-style|text-decoration|text-decoration-line)$/;

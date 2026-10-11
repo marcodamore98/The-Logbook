@@ -221,7 +221,7 @@ function NotesArchive({ folder }: { folder?: string }) {
                 if (folder) nav('/archivio/appunti', { replace: true });
               }}
             >
-              <Sym name={icon} size={16} fill={s === 'fav'} /> {label} <small>{n}</small>
+              <Sym name={icon} size={16} fill={s === 'fav'} className={s === 'fav' ? 'amber' : undefined} /> {label} <small>{n}</small>
             </button>
           ))}
         </div>
@@ -252,6 +252,12 @@ function NotesArchive({ folder }: { folder?: string }) {
         </nav>
       )}
 
+      {scope === 'all' && !qn && (
+        <button type="button" className="na-label" onClick={() => setSheet('manage')}>
+          {current ? 'Sottocartelle' : 'Cartelle'}
+          <Sym name="chevron_right" size={18} />
+        </button>
+      )}
       {scope === 'all' && !qn && (
         <div className="folder-tiles">
           {tiles.map((f) => (
@@ -306,7 +312,10 @@ function NotesArchive({ folder }: { folder?: string }) {
 
       {groups.map(([label, rs]) => (
         <section key={label} className="na-group">
-          <h2 className="na-period">{label}</h2>
+          <h2 className="na-period">
+            {label}
+            <small>{rs.length === 1 ? '1 nota' : `${rs.length} note`}</small>
+          </h2>
           {layout === 'grid' ? (
             <div className="note-grid">
               {rs.map((r) => (
@@ -534,15 +543,30 @@ function FolderTile({ f, n, onOpen, onHold }: { f: NoteFolder; n: number; onOpen
   const { held, ...hold } = useHold(onHold);
   return (
     <button type="button" className="folder-tile" style={{ '--tile': toneColor(f.tone) } as CSSProperties} {...hold} onClick={() => !held() && onOpen()}>
-      <Sym name="folder" fill size={22} className="ft-ico" />
+      <Sym name="folder" fill size={20} className="ft-ico" />
       <span className="ft-name">{f.name}</span>
       <span className="ft-count">{n}</span>
     </button>
   );
 }
 
-/** First image of the note, else the beginning of its text. */
-function Preview({ r }: { r: NoteRow }) {
+/** Headings, list items and paragraphs at the start of a note, for the little page in the card. */
+function firstLines(html: string, max = 7): { kind: 'h' | 'li' | 'check' | 'done' | 'p'; text: string }[] {
+  const box = document.createElement('div');
+  box.innerHTML = html.replace(/<(img|audio)[^>]*>/gi, '');
+  const out: { kind: 'h' | 'li' | 'check' | 'done' | 'p'; text: string }[] = [];
+  box.querySelectorAll('h2, h3, p, li, tr, blockquote').forEach((el) => {
+    if (out.length >= max || el.querySelector('p, li, h2, h3')) return;
+    const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    const check = el.tagName === 'LI' && el.parentElement?.classList.contains('n-check');
+    out.push({ kind: /^H/.test(el.tagName) ? 'h' : check ? (el.hasAttribute('data-done') ? 'done' : 'check') : el.tagName === 'LI' ? 'li' : 'p', text });
+  });
+  return out;
+}
+
+/** First image of the note filling the card, else a small white page with the title and the first lines. */
+function Preview({ r, tone, mini }: { r: NoteRow; tone?: string; mini?: boolean }) {
   const { repo } = useStore();
   const html = bodyOf(r.m);
   const img: NoteFile | undefined = (r.m.attachments ?? []).find((a) => a.kind === 'image' && html.includes(`data-att="${a.id}"`));
@@ -554,24 +578,49 @@ function Preview({ r }: { r: NoteRow }) {
       alive = false;
     };
   }, [repo, img?.src]);
-  const text = plainOf(html).slice(0, 260);
+  const lines = useMemo(() => firstLines(html), [html]);
   const pdf = (r.m.attachments ?? []).some((a) => a.kind === 'pdf');
   if (img && url) return <img className="nc-img" src={url} alt="" />;
-  if (text) return <span className="nc-text">{text}</span>;
-  if (pdf) return <span className="nc-pdf">PDF</span>;
-  return <span className="nc-text muted">Nota vuota</span>;
+  if (mini) return lines.length ? <span className="nc-text">{lines.map((l) => l.text).join('\n')}</span> : pdf ? <span className="nc-pdf">PDF</span> : <span className="nc-text muted">Nota vuota</span>;
+  return (
+    <span className="nc-page" aria-hidden="true">
+      <i className="np-bar" style={{ background: toneColor(tone) }} />
+      <strong className="np-title">{noteTitle(r)}</strong>
+      <i className="np-rule" />
+      {lines.length ? (
+        lines.map((l, i) => (
+          <span key={i} className={`np-line np-${l.kind}`}>
+            {l.kind === 'li' ? '• ' : l.kind === 'check' ? '☐ ' : l.kind === 'done' ? '☑ ' : ''}
+            {l.text}
+          </span>
+        ))
+      ) : (
+        <span className="np-line np-empty">{pdf ? 'PDF allegato' : 'Nota vuota'}</span>
+      )}
+    </span>
+  );
 }
 
 function Badges({ r }: { r: NoteRow }) {
   const att = r.m.attachments ?? [];
   return (
     <span className="nc-badges">
-      {r.m.favorite && <Sym name="star" fill size={16} className="b-star" />}
-      {att.some((a) => a.kind === 'audio') && <Sym name="mic" size={16} />}
-      {att.some((a) => a.kind === 'pdf') && <Sym name="picture_as_pdf" size={16} />}
-      {!r.m.free && <Sym name="school" size={16} />}
+      {r.m.favorite && <Sym name="star" fill size={14} className="b-star" />}
+      {!r.m.free && <Sym name="school" size={14} className="b-study" />}
+      {att.some((a) => a.kind === 'audio') && <Sym name="mic" fill size={14} className="b-mic" />}
+      {att.some((a) => a.kind === 'pdf') && <Sym name="picture_as_pdf" size={14} className="b-pdf" />}
     </span>
   );
+}
+
+/** "Oggi, 11:20", "Ieri, 18:05", else "4 ott". */
+function cardDate(ts: number): string {
+  const d = new Date(ts);
+  const now = new Date();
+  const t = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return `Oggi, ${t}`;
+  if (d.toDateString() === new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toDateString()) return `Ieri, ${t}`;
+  return shortDate(ts);
 }
 
 function NoteCard({ r, all, selecting, selected, onOpen, onHold }: { r: NoteRow; all: NoteFolder[]; selecting: boolean; selected: boolean; onOpen: () => void; onHold: () => void }) {
@@ -580,14 +629,14 @@ function NoteCard({ r, all, selecting, selected, onOpen, onHold }: { r: NoteRow;
   return (
     <button type="button" className={`note-card${selected ? ' selected' : ''}`} {...hold} onClick={() => !held() && onOpen()} aria-pressed={selecting ? selected : undefined}>
       <span className="nc-prev">
-        <Preview r={r} />
+        <Preview r={r} tone={f?.tone} />
         {r.m.trashedAt ? <span className="nc-left">{daysLeft(r.m.trashedAt)} giorni</span> : <Badges r={r} />}
         {selecting && <span className={`nc-check${selected ? ' on' : ''}`} aria-hidden="true">{selected && <Sym name="check" size={16} />}</span>}
       </span>
       <span className="nc-title">{noteTitle(r)}</span>
       <span className="nc-date">
         {f && <i className="nc-dot" style={{ background: toneColor(f.tone) }} />}
-        {shortDate(editedOf(r))}
+        {cardDate(editedOf(r))}
       </span>
     </button>
   );
@@ -600,7 +649,7 @@ function NoteRowItem({ r, all, selecting, selected, onOpen, onHold }: { r: NoteR
     <button type="button" className={`note-row${selected ? ' selected' : ''}`} {...hold} onClick={() => !held() && onOpen()}>
       {selecting && <span className={`nc-check inline${selected ? ' on' : ''}`} aria-hidden="true">{selected && <Sym name="check" size={16} />}</span>}
       <span className="nr-prev">
-        <Preview r={r} />
+        <Preview r={r} mini />
       </span>
       <span className="nr-text">
         <strong>{noteTitle(r)}</strong>
@@ -608,7 +657,7 @@ function NoteRowItem({ r, all, selecting, selected, onOpen, onHold }: { r: NoteR
         <span className="nr-meta">
           {f && <i className="nc-dot" style={{ background: toneColor(f.tone) }} />}
           {f ? `${f.name} · ` : ''}
-          {r.m.trashedAt ? `${daysLeft(r.m.trashedAt)} giorni nel Cestino` : shortDate(editedOf(r))}
+          {r.m.trashedAt ? `${daysLeft(r.m.trashedAt)} giorni nel Cestino` : cardDate(editedOf(r))}
           {(r.m.tags ?? []).slice(0, 3).map((t) => (
             <span key={t} className="nr-tag">#{t}</span>
           ))}

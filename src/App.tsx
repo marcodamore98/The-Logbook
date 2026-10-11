@@ -159,8 +159,10 @@ function Topbar({ onMenu, onSummary }: { onMenu: () => void; onSummary: () => vo
   const loc = useLocation();
   const dayDate = loc.pathname === '/' || loc.pathname.startsWith('/giorno') ? loc.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? today() : null;
   const sub = dayDate ? fullDay(dayDate) : title;
+  // A note has its own bar (← Fine 📖 + ⋮): on the phone the app bar steps aside.
+  const own = loc.pathname.startsWith('/appunti/');
   return (
-    <header className="topbar">
+    <header className={`topbar${own ? ' topbar-own' : ''}`}>
       <button className="brand brand-btn" onClick={onMenu} aria-label="Apri il menu">
         <GlyphMenu />
         <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={30} height={30} />

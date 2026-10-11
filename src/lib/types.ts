@@ -158,6 +158,8 @@ export interface NoteFile extends FileRef {
   kind: 'image' | 'pdf' | 'audio';
   /** Durata della registrazione, in secondi. */
   sec?: number;
+  /** Forma d'onda della registrazione (48 valori 0–1), per il lettore della nota. */
+  wave?: number[];
 }
 
 /** Folder of the notes archive; folders nest through parentId. */

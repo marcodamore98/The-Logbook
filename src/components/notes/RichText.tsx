@@ -5,6 +5,8 @@ import { sanitizeHtml } from '../../lib/notes';
 import { useStore } from '../../lib/store/StoreContext';
 import type { NoteFile } from '../../lib/types';
 import { openFile } from '../files/FileSlot';
+import { attachPlayer, stripPlayers, toWave } from './audioPlayer';
+import { createPortal } from 'react-dom';
 import { Sym } from '../icons';
 import type { SymName } from '../ms';
 import { uid } from '../ui';
@@ -61,6 +63,7 @@ interface Active {
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const sizeLabel = (b: number) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toLocaleString('it-IT', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /** A photo of a page turned into a clean, high-contrast "scanned" image. */
@@ -118,6 +121,21 @@ export function RichText({
   const [active, setActive] = useState<Active>({});
   const [pop, setPop] = useState<'block' | 'color' | 'marker' | null>(null);
   const [busy, setBusy] = useState(false);
+  const [caption, setCaption] = useState<{ el: HTMLElement; text: string } | null>(null);
+  /** Writes (or takes away) the caption under a photo. */
+  const saveCaption = (el: HTMLElement, text: string) => {
+    let cap = el.querySelector('figcaption');
+    if (!text.trim()) cap?.remove();
+    else {
+      if (!cap) {
+        cap = document.createElement('figcaption');
+        el.appendChild(cap);
+      }
+      cap.textContent = text.trim();
+    }
+    changed();
+    setCaption(null);
+  };
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
   const [rec, setRec] = useState<{ sec: number; paused: boolean } | null>(null);
   const recorder = useRef<{ mr: MediaRecorder; chunks: Blob[]; started: number; acc: number; lock?: WakeLockSentinel; cancel?: boolean } | null>(null);
@@ -127,6 +145,7 @@ export function RichText({
     if (!node) return '';
     const c = node.cloneNode(true) as HTMLElement;
     c.querySelectorAll('img, audio').forEach((m) => m.removeAttribute('src'));
+    stripPlayers(c);
     return c.innerHTML;
   };
   const flush = useCallback(() => {
@@ -149,6 +168,14 @@ export function RichText({
       const id = el.dataset.att!;
       const f = filesRef.current.find((x) => x.id === id);
       const media = el.querySelector<HTMLImageElement | HTMLAudioElement>('img, audio');
+      // PDF: its weight next to the name; recording: the app's own player.
+      if (el.classList.contains('n-file') && f?.size && !el.querySelector('.n-size')) {
+        const sz = document.createElement('span');
+        sz.className = 'n-size';
+        sz.textContent = sizeLabel(f.size);
+        el.querySelector('.n-name')?.after(sz);
+      }
+      if (media instanceof HTMLAudioElement) attachPlayer(el, media, { id, sec: f?.sec ?? (Number(el.dataset.sec) || undefined), wave: f?.wave });
       if (!media || media.getAttribute('src')) return;
       const set = (u: string) => u && media.setAttribute('src', u);
       const known = urls.current.get(id);
@@ -179,6 +206,7 @@ export function RichText({
         dirty.current = false;
         const c = node.cloneNode(true) as HTMLElement;
         c.querySelectorAll('img, audio').forEach((m) => m.removeAttribute('src'));
+        stripPlayers(c);
         onChangeRef.current(c.innerHTML);
       }
     };
@@ -426,10 +454,32 @@ export function RichText({
       const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'].find((t) => MediaRecorder.isTypeSupported(t));
       const mr = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 32_000 });
       const state = { mr, chunks: [] as Blob[], started: Date.now(), acc: 0, lock: undefined as WakeLockSentinel | undefined, cancel: false };
+      // Loudness every quarter of a second, for the waveform of the player.
+      const levels: number[] = [];
+      let meter: AudioContext | undefined;
+      let sampler = 0;
+      try {
+        meter = new AudioContext();
+        const an = meter.createAnalyser();
+        an.fftSize = 1024;
+        meter.createMediaStreamSource(stream).connect(an);
+        const buf = new Float32Array(an.fftSize);
+        sampler = window.setInterval(() => {
+          if (mr.state !== 'recording') return;
+          an.getFloatTimeDomainData(buf);
+          let sum = 0;
+          for (const v of buf) sum += v * v;
+          levels.push(Math.sqrt(sum / buf.length));
+        }, 250);
+      } catch {
+        /* no waveform: the player draws a quiet one */
+      }
       recorder.current = state;
       mr.ondataavailable = (e) => e.data.size && state.chunks.push(e.data);
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        window.clearInterval(sampler);
+        void meter?.close().catch(() => undefined);
         state.lock?.release().catch(() => undefined);
         const sec = Math.round(state.acc);
         recorder.current = null;
@@ -443,7 +493,8 @@ export function RichText({
           const id = uid();
           const { src, path } = await repo.uploadFile(id, blob);
           urls.current.set(id, URL.createObjectURL(blob));
-          const f: NoteFile = { id, name: `Registrazione ${when}.${ext}`, src, path, size: blob.size, kind: 'audio', sec };
+          const wave = toWave(levels);
+          const f: NoteFile = { id, name: `Registrazione ${when}.${ext}`, src, path, size: blob.size, kind: 'audio', sec, ...(wave.length ? { wave } : {}) };
           filesRef.current = [...filesRef.current, f];
           // The note was closed while recording: the recording goes at the end of it.
           if (!ed.current?.isConnected) return onFiles([f], true);
@@ -567,6 +618,11 @@ export function RichText({
               return;
             }
             const f = filesRef.current.find((x) => x.id === media.dataset.att);
+            const img = media.querySelector('img');
+            if (media.classList.contains('n-img') && img && e.clientY > img.getBoundingClientRect().bottom) {
+              if (!readOnly) setCaption({ el: media, text: media.querySelector('figcaption')?.textContent ?? '' });
+              return;
+            }
             if (media.classList.contains('n-img')) {
               const u = media.querySelector('img')?.getAttribute('src');
               if (u) onViewImage(u, () => removeMedia(media));
@@ -587,6 +643,43 @@ export function RichText({
       <input ref={(el) => void (inputs.current.scan = el)} type="file" accept="image/*" capture="environment" hidden onChange={(e) => (upload([...(e.target.files ?? [])], 'scan'), (e.target.value = ''))} />
       <input ref={(el) => void (inputs.current.pdf = el)} type="file" accept="application/pdf,.pdf" multiple hidden onChange={(e) => (upload([...(e.target.files ?? [])], 'pdf'), (e.target.value = ''))} />
       <input ref={(el) => void (inputs.current.audio = el)} type="file" accept="audio/*" hidden onChange={(e) => (upload([...(e.target.files ?? [])], 'audio'), (e.target.value = ''))} />
+
+      {caption &&
+        createPortal(
+          <div className="sheet-backdrop" onClick={() => setCaption(null)}>
+            <form
+              className="sheet caption-sheet"
+              role="dialog"
+              aria-label="Didascalia"
+              onClick={(e) => e.stopPropagation()}
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveCaption(caption.el, caption.text);
+              }}
+            >
+              <div className="sheet-head">
+                <h2>Didascalia</h2>
+                <button type="button" className="icon-btn" aria-label="Chiudi" onClick={() => setCaption(null)}>
+                  <Sym name="close" size={20} />
+                </button>
+              </div>
+              <input autoFocus value={caption.text} placeholder="es. Fig. 1 · Punto di flessione e asse di trazione" onChange={(e) => setCaption({ ...caption, text: e.target.value })} enterKeyHint="done" />
+              <div className="sheet-foot">
+                {caption.el.querySelector('figcaption') ? (
+                  <button type="button" className="btn-ghost" onClick={() => saveCaption(caption.el, '')}>
+                    Togli
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <button type="submit" className="btn">
+                  Salva
+                </button>
+              </div>
+            </form>
+          </div>,
+          document.body,
+        )}
 
       {!readOnly && (
         <div className="rt-dock no-print">

@@ -1,5 +1,5 @@
 import { confirmDelete } from '../components/Confirm';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { mediaHtml, RichText, type InsertKind, type RichHandle } from '../components/notes/RichText';
@@ -19,6 +19,36 @@ import { labelOf, STUDY_TYPES } from '../lib/vocab';
 
 const SESSION_TYPES = STUDY_TYPES.filter((t) => !['course', 'congress', 'webinar'].includes(t.id));
 const dur = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h${min % 60 ? ` ${min % 60}′` : ''}` : `${min}′`);
+
+/** The note's title: big, on as many lines as it needs (Enter goes to the text). */
+function NoteTitle({ value, readOnly, onChange }: { value: string; readOnly: boolean; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      className="note-title"
+      rows={1}
+      value={value}
+      placeholder="Titolo"
+      readOnly={readOnly}
+      aria-label="Titolo della nota"
+      enterKeyHint="next"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          (document.querySelector('.note-body') as HTMLElement | null)?.focus();
+        }
+      }}
+      onChange={(e) => onChange(e.target.value.replace(/\n/g, ' '))}
+    />
+  );
+}
 
 /** One note, full page, like a page of Samsung Notes. */
 export default function NotePage() {
@@ -192,13 +222,14 @@ export default function NotePage() {
         </button>
       </header>
 
-      <input className="note-title" value={m.title} placeholder="Titolo" readOnly={reading} onChange={(e) => save((x) => ({ ...x, title: e.target.value }))} aria-label="Titolo della nota" />
+      <div className="note-head">
+        <NoteTitle value={m.title} readOnly={reading} onChange={(title) => save((x) => ({ ...x, title }))} />
+        <button type="button" className={`nm-star no-print${m.favorite ? ' on' : ''}`} aria-label={m.favorite ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'} aria-pressed={!!m.favorite} onClick={() => save((x) => ({ ...x, favorite: !x.favorite }))}>
+          <Sym name="star" fill={!!m.favorite} size={24} />
+        </button>
+      </div>
 
       <div className="note-meta no-print">
-        <button type="button" className={`nm-star${m.favorite ? ' on' : ''}`} aria-label={m.favorite ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'} aria-pressed={!!m.favorite} onClick={() => save((x) => ({ ...x, favorite: !x.favorite }))}>
-          <Sym name="star" fill={!!m.favorite} size={22} />
-        </button>
-        <span className="nm-sep" aria-hidden="true" />
         <button type="button" className="nm-folder" onClick={() => setSheet('folder')}>
           <span className="nm-dot" style={{ background: toneColor(path.at(-1)?.tone) }} aria-hidden="true" />
           <span className="nm-path">{path.length ? path.map((f) => f.name).join(' › ') : 'Nessuna cartella'}</span>
