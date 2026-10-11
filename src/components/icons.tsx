@@ -97,6 +97,12 @@ export const NavCourse = (p: P) => <Art pigment="gold" sym="school" {...p} />;
 export const NavArchive = (p: P) => <Art pigment="plum" sym="menu_book" {...p} />;
 export const NavStats = (p: P) => <Art pigment="aqua" sym="query_stats" {...p} />;
 export const IconWork = (p: P) => <Art pigment="sky" sym="clinical_notes" {...p} />;
+// "Aggiungi una scheda" sheet (Stitch): its own colours
+export const AddShift = (p: P) => <Art pigment="ochre" sym="local_hospital" {...p} />;
+export const AddGuardia = (p: P) => <Art pigment="rose" sym="medical_services" {...p} />;
+export const AddSurgery = (p: P) => <Art pigment="ochre" sym="surgical" {...p} />;
+export const AddStudy = (p: P) => <Art pigment="rose" sym="school" {...p} />;
+export const AddTravel = (p: P) => <Art pigment="sage" sym="flight_takeoff" {...p} />;
 // Settings cards
 export const IconAccount = (p: P) => <Art pigment="rose" sym="account_circle" {...p} />;
 export const IconGoogleCal = (p: P) => <Art pigment="ochre" sym="calendar_month" {...p} />;

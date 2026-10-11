@@ -235,7 +235,8 @@ async function askNotifications() {
 
 function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
   const store = useStore();
-  const synced = store.gcal.connected && store.settings.gcal.enabled;
+  const gcalOn = store.gcal.configured && store.settings.gcal.enabled;
+  const synced = gcalOn && store.gcal.connected;
   const webinar = m.type === 'webinar';
   const link = m.link?.trim();
   return (
@@ -332,10 +333,10 @@ function CourseEditor({ value: m, onChange }: Props<CourseModule>) {
           <FileSlot label="Aggiungi l’attestato di partecipazione (PDF)" doneLabel="Attestato" crown file={m.certificate} onChange={(certificate) => onChange({ ...m, certificate })} />
         </div>
       </div>
-      {synced && (
-        <p className="field field-wide gcal-note">
+      {gcalOn && (
+        <p className={`field field-wide gcal-note${synced && m.gcalEventId ? ' ok' : ''}`}>
           <Sym name="sync" size={16} />
-          Sincronizzato automaticamente con Google Calendar
+          {synced ? (m.gcalEventId ? 'Sincronizzato con Google Calendar' : 'Lo invio a Google Calendar…') : 'In attesa di Google: si invia appena ti ricolleghi'}
         </p>
       )}
     </div>

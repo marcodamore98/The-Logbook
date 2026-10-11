@@ -5,7 +5,8 @@ import { Sym } from '../components/icons';
 import { Empty } from '../components/ui';
 import { fromISO } from '../lib/dates';
 import { changedDays, versionsOf, type Version } from '../lib/store/history';
-import { diffWith, restoreItem, restoreMissing } from '../lib/store/restore';
+import { describeChange, diffWith, restoreItem, restoreMissing } from '../lib/store/restore';
+import { itemsOf } from '../lib/store/history';
 import { useStore } from '../lib/store/StoreContext';
 import type { ISODate } from '../lib/types';
 
@@ -16,6 +17,7 @@ const when = (ts: number) => {
   if (d.toDateString() === new Date().toDateString()) return `oggi alle ${t}`;
   return `${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} alle ${t}`;
 };
+const REMOVED_BY: Record<string, string> = { app: 'Tolto su questo dispositivo', cloud: 'Tolto da un altro dispositivo', google: 'Tolto da Google Calendar' };
 const SOURCE: Record<string, string> = { app: 'Modifica su questo dispositivo', cloud: 'Arrivata dal cloud (altro dispositivo)', google: 'Arrivata da Google Calendar' };
 
 /** "Cronologia delle modifiche": the earlier versions kept on this device, to put back what was lost. */
@@ -41,8 +43,10 @@ function AllDays() {
         </div>
       </header>
       <p className="hist-intro">
-        Ogni volta che una giornata cambia, il telefono ne tiene una copia. Se qualcosa sparisce — per un errore, per Google Calendar o perché un altro dispositivo ha salvato una copia vecchia — qui la ritrovi e la rimetti al suo posto.
+        <Sym name="shield" size={20} />
+        <span>Ogni volta che una giornata cambia, il telefono ne tiene una copia. Se qualcosa sparisce — per un errore, per Google Calendar o perché un altro dispositivo ha salvato una copia vecchia — qui la ritrovi e la rimetti al suo posto.</span>
       </p>
+      {days && days.length > 0 && <h2 className="hist-kicker">Giornate con versioni</h2>}
       {!days && <p className="muted">Carico…</p>}
       {days && days.length === 0 && <Empty>Ancora nessuna versione salvata: compariranno dalle prossime modifiche.</Empty>}
       <ul className="hist-days">
@@ -55,7 +59,7 @@ function AllDays() {
                   {d.versions === 1 ? '1 versione' : `${d.versions} versioni`} · ultima {when(d.last)}
                 </small>
               </span>
-              {d.losses > 0 && <span className="hd-lost">{d.losses === 1 ? '1 con elementi tolti' : `${d.losses} con elementi tolti`}</span>}
+              {d.losses > 0 ? <span className="hd-lost">{d.losses === 1 ? '1 con elementi tolti' : `${d.losses} con elementi tolti`}</span> : <span className="hd-ok">Tutto allineato</span>}
               <Sym name="chevron_right" size={20} />
             </Link>
           </li>
@@ -110,10 +114,15 @@ function DayHistory({ date }: { date: ISODate }) {
           <h1>Versioni precedenti</h1>
           <span className="page-sub hist-date">{dayName(date)}</span>
         </div>
+        <Link className="hist-goto" to={`/giorno/${date}`}>
+          Apri la giornata ›
+        </Link>
       </header>
-      <Link className="btn-ghost hist-goto" to={`/giorno/${date}`}>
-        Apri la giornata ›
-      </Link>
+      {versions && versions.length > 0 && (
+        <h2 className="hist-kicker">
+          Versioni <small>più recenti prima</small>
+        </h2>
+      )}
       {!versions && <p className="muted">Carico…</p>}
       {versions && versions.length === 0 && <Empty>Nessuna versione precedente salvata per questa giornata.</Empty>}
       <ol className="hist-versions">
@@ -121,14 +130,26 @@ function DayHistory({ date }: { date: ISODate }) {
           const diff = diffWith(v.day, current);
           const missing = diff.filter((x) => x.kind === 'missing');
           const isOpen = open === v.at;
+          // Who took a missing item away: the first later version without it.
+          const remover = (id: string) => {
+            for (let j = i - 1; j >= 0; j--) if (!itemsOf(versions[j].day).has(id)) return REMOVED_BY[versions[j].source ?? 'app'];
+            return 'Tolto dopo questa versione';
+          };
           return (
             <li key={v.at} className={`hist-v${v.lost?.length ? ' lost' : ''}${isOpen ? ' open' : ''}`}>
               <button type="button" className="hv-head" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : v.at)}>
                 <span className="hv-dot" aria-hidden="true" />
                 <span className="hv-text">
-                  <strong>{i === 0 ? `Ultima versione · ${when(v.at)}` : when(v.at)}</strong>
+                  <strong>
+                    {i === 0 ? `Ultima versione · ${when(v.at)}` : when(v.at)}
+                    {i === 0 && diff.length === 0 && <span className="hv-active">Attiva</span>}
+                  </strong>
                   <small>{SOURCE[v.source ?? 'app']}</small>
-                  {v.lost?.length ? <span className="hv-lost">Tolto: {v.lost.join(', ')}</span> : null}
+                  {v.lost?.length ? (
+                    <span className="hv-lost">
+                      <Sym name="warning" size={16} /> Tolto: {v.lost.join(', ')}
+                    </span>
+                  ) : null}
                   {diff.length > 0 ? (
                     <span className="hv-diff">
                       {missing.length > 0 && `${missing.length === 1 ? '1 elemento che oggi manca' : `${missing.length} elementi che oggi mancano`}`}
@@ -147,16 +168,20 @@ function DayHistory({ date }: { date: ISODate }) {
                     {diff.map((x) => (
                       <li key={x.id}>
                         <span className={`hv-tag ${x.kind}`}>{x.kind === 'missing' ? 'manca' : 'diverso'}</span>
-                        <span className="hv-label">{x.label}</span>
+                        <span className="hv-label">
+                          {x.label}
+                          <small>{x.kind === 'missing' ? remover(x.id) : describeChange(v.day, current, x.id)}</small>
+                        </span>
                         <button type="button" className="btn-ghost small" onClick={() => putBack(v, x.id, x.label, x.kind === 'changed')}>
-                          <Sym name="history" size={16} /> Ripristina
+                          <Sym name="replay" size={16} /> Ripristina
                         </button>
                       </li>
                     ))}
                   </ul>
                   {missing.length > 1 && (
                     <button type="button" className="btn hv-all" onClick={() => putBackAll(v, missing.length)}>
-                      Rimetti tutti gli elementi che mancano ({missing.length})
+                      <span>Rimetti tutti gli elementi che mancano ({missing.length})</span>
+                      <span aria-hidden="true">›</span>
                     </button>
                   )}
                 </div>

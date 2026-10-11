@@ -35,6 +35,7 @@ export function surgeryTotals(modules: Module[]) {
   let procedures = 0;
   let minutes = 0;
   let complications = 0;
+  let severe = 0;
   for (const m of modules) {
     if (m.kind !== 'surgery') continue;
     for (const c of surgeryCases(m)) {
@@ -44,9 +45,10 @@ export function surgeryTotals(modules: Module[]) {
       procedures += n;
       minutes += c.durationMin ?? 0;
       if (hasComplication(c)) complications++;
+      if (c.clavien && /^(III|IV|V)/.test(c.clavien)) severe++;
     }
   }
-  return { patients, procedures, minutes, complications };
+  return { patients, procedures, minutes, complications, severe };
 }
 
 /** Patients seen and activities done in some clinical cards. */

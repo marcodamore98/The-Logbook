@@ -27,6 +27,34 @@ function find(d: DayEntry, id: string): unknown {
   return undefined;
 }
 
+const FIELD: Record<string, string> = {
+  title: 'titolo', text: 'testo', start: 'orario', end: 'orario', startTime: 'orario', endTime: 'orario', startDate: 'date', endDate: 'date',
+  place: 'luogo', location: 'luogo', destination: 'destinazione', notes: 'note', body: 'testo', cases: 'pazienti', durationMin: 'durata',
+  exercises: 'esercizi', items: 'elementi', people: 'persone', ecm: 'ECM', type: 'tipo', area: 'area', tags: 'tag', attachments: 'allegati',
+  colleagueIds: 'colleghi', shiftTypeId: 'tipo di turno', note: 'nota', done: 'spunta', grams: 'quantità', category: 'categoria',
+  distanceM: 'distanza', durationSec: 'durata', photos: 'foto', certificate: 'attestato', program: 'programma', link: 'link', folderId: 'cartella',
+};
+const IGNORE = new Set(['gcalEventId', 'gcalSkip', 'editedAt', 'updatedAt', 'createdAt']);
+
+/** In words, what is different today from the earlier version of an item: "prima 14:00–15:00, ora 15:30–16:30", or the fields that changed. */
+export function describeChange(version: DayEntry, current: DayEntry, id: string): string {
+  const a = find(version, id) as Record<string, unknown> | undefined;
+  const b = find(current, id) as Record<string, unknown> | undefined;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return '';
+  const span = (x: Record<string, unknown>) => (typeof x.start === 'string' && typeof x.end === 'string' ? `${x.start}–${x.end}` : typeof x.startTime === 'string' ? String(x.startTime) : '');
+  const parts: string[] = [];
+  if (span(a) && span(a) !== span(b)) parts.push(`orario di prima ${span(a)} (ora ${span(b) || '—'})`);
+  if (typeof a.title === 'string' && a.title !== b.title) parts.push(`titolo di prima “${a.title || 'senza titolo'}”`);
+  if (a.startDate !== b.startDate || a.endDate !== b.endDate) if (typeof a.startDate === 'string') parts.push(`date di prima ${a.startDate.split('-').reverse().slice(0, 2).join('/')}${a.endDate && a.endDate !== a.startDate ? `–${String(a.endDate).split('-').reverse().slice(0, 2).join('/')}` : ''}`);
+  const shown = new Set(['start', 'end', 'startTime', 'title', 'startDate', 'endDate']);
+  const other = [...new Set([...Object.keys(a), ...Object.keys(b)])]
+    .filter((k) => !shown.has(k) && !IGNORE.has(k) && !same(a[k], b[k]))
+    .map((k) => FIELD[k] ?? 'altri dettagli');
+  const names = [...new Set(other)];
+  if (names.length) parts.push(`cambiati: ${names.join(', ')}`);
+  return parts.join(' · ');
+}
+
 export function diffWith(version: DayEntry, current: DayEntry): DiffItem[] {
   const now = itemsOf(current);
   const out: DiffItem[] = [];

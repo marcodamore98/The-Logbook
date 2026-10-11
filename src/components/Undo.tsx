@@ -12,16 +12,23 @@ export const useUndo = () => useContext(Ctx);
 
 /** Snackbar at the bottom, like Gmail or Google Calendar: deletions are reversible instead of asking first. */
 export function UndoProvider({ children }: { children: ReactNode }) {
-  const [offer, setOffer] = useState<(Offer & { n: number }) | null>(null);
+  const [offer, setOffer] = useState<(Offer & { n: number; until: number }) | null>(null);
+  const [, tick] = useState(0);
   const timer = useRef(0);
   const n = useRef(0);
 
   const show = useCallback((label: string, undo: () => void, ms = 5000) => {
     window.clearTimeout(timer.current);
-    setOffer({ label, undo, n: ++n.current });
+    setOffer({ label, undo, n: ++n.current, until: Date.now() + ms });
     timer.current = window.setTimeout(() => setOffer(null), ms);
   }, []);
   useEffect(() => () => window.clearTimeout(timer.current), []);
+  // The seconds left on "Annulla" count down.
+  useEffect(() => {
+    if (!offer) return;
+    const t = window.setInterval(() => tick((x) => x + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [offer]);
 
   return (
     <Ctx.Provider value={show}>
@@ -38,7 +45,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
               setOffer(null);
             }}
           >
-            Annulla
+            Annulla <small>({Math.max(1, Math.ceil((offer.until - Date.now()) / 1000))}s)</small>
           </button>
         </div>
       )}

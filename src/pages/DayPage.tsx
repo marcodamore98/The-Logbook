@@ -18,6 +18,11 @@ import {
   IconShift,
   IconTodo,
   Sym,
+  AddGuardia,
+  AddShift,
+  AddStudy,
+  AddSurgery,
+  AddTravel,
 } from '../components/icons';
 import { RosterCard } from '../components/RosterCard';
 import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
@@ -57,6 +62,17 @@ const BLOCK_KICKER: Record<string, string> = {
   private: 'Tempo libero',
   diary: 'Personale',
 };
+/** Group of each block, for the small headings between groups. */
+const BLOCK_GROUP: Record<string, string> = {
+  shift: 'Lavoro',
+  work: 'Lavoro',
+  agenda: 'Agenda e promemoria',
+  todos: 'Agenda e promemoria',
+  training: 'Sport e salute',
+  nutrition: 'Sport e salute',
+  private: 'Personale',
+  diary: 'Personale',
+};
 const DAY_PRINT = [
   { id: 'lavoro', label: 'Lavoro' },
   { id: 'agenda', label: 'Impegni e promemoria' },
@@ -68,6 +84,8 @@ const DAY_PRINT = [
 const KIND_KICKER: Partial<Record<ModuleKind, string>> = { study: 'Formazione', course: 'Formazione' };
 
 const ADDABLE: ModuleKind[] = ['surgery', 'study', 'travel'];
+/** Icons of the "Aggiungi una scheda" sheet (Stitch's colours). */
+const ADD_ICON: Partial<Record<ModuleKind, (p: { size?: number }) => React.ReactElement>> = { surgery: AddSurgery, study: AddStudy, travel: AddTravel };
 /** Entries that stand for two kinds of card: you pick the exact one inside the card. */
 const MERGED: Partial<Record<ModuleKind, { label: string; hint: string }>> = {
   surgery: { label: 'Attività chirurgica e clinica', hint: 'Interventi, ambulatorio, ecografie, PS, sala parto' },
@@ -582,10 +600,15 @@ export default function DayPage() {
   const saveSettings = store.saveSettings;
   const { drag, settling, compact, onPointerDown } = useBlockDrag(order, (o) => saveOrder(o), { compact: true });
   const rendered: React.ReactNode[] = [];
+  let lastGroup = '';
   for (const id of order) {
     if (hidden.includes(id)) continue;
     const node = renderBlock(id);
     if (!node) continue;
+    // A small heading where a new group of sections starts (Lavoro, Agenda e promemoria…).
+    const group = BLOCK_GROUP[id];
+    if (group && group !== lastGroup) rendered.push(<h2 key={`g-${id}`} className="day-group no-print">{group}</h2>);
+    lastGroup = group ?? lastGroup;
     const me = drag?.id === id;
     const shift = drag && !me ? drag.shifts[id] ?? 0 : 0;
     rendered.push(
@@ -659,24 +682,28 @@ export default function DayPage() {
             </div>
             {(!day.shift || (!day.guardia && guardiaTypes.length > 0)) && (
               <section>
-                <h3 className="palette-area">Turni</h3>
-                <div className="add-tiles">
+                <h3 className="palette-area">
+                  Turni <small>Tocca per aggiungere subito</small>
+                </h3>
+                <div className="add-rows">
                   {!day.shift && (
-                    <button className="add-tile" onClick={() => { addShift(); setEditingWork('shift'); setAdding(false); }}>
-                      <IconShift size={38} />
+                    <button className="add-row shift" onClick={() => { addShift(); setEditingWork('shift'); setAdding(false); }}>
+                      <AddShift size={42} />
                       <span>
                         <strong>Turno</strong>
                         <small>Turno in ospedale</small>
                       </span>
+                      <Sym name="add_circle" size={24} className="add-circle" />
                     </button>
                   )}
                   {!day.guardia && guardiaTypes.length > 0 && (
-                    <button className="add-tile" onClick={() => { chooseGuardia(guardiaTypes[0].id); setEditingWork('guardia'); setAdding(false); }}>
-                      <IconSleep size={38} />
+                    <button className="add-row shift" onClick={() => { chooseGuardia(guardiaTypes[0].id); setEditingWork('guardia'); setAdding(false); }}>
+                      <AddGuardia size={42} />
                       <span>
                         <strong>Guardia medica</strong>
                         <small>Dalle … alle …</small>
                       </span>
+                      <Sym name="add_circle" size={24} className="add-circle" />
                     </button>
                   )}
                 </div>
@@ -688,7 +715,10 @@ export default function DayPage() {
                 {(['lavoro', 'personale'] as const).flatMap((area) =>
                   MODULES.filter((m) => m.area === area && ADDABLE.includes(m.kind)).map((m) => (
                     <button key={m.kind} className="add-row" onClick={() => addModule(m.kind)}>
-                      <m.Icon size={42} />
+                      {(() => {
+                        const I = ADD_ICON[m.kind] ?? m.Icon;
+                        return <I size={42} />;
+                      })()}
                       <span>
                         <strong>{MERGED[m.kind]?.label ?? m.label}</strong>
                         <small>{MERGED[m.kind]?.hint ?? m.hint}</small>
@@ -763,19 +793,20 @@ function WorkTiles({ day }: { day: DayEntry }) {
   const c = clinicalTotals(day.modules);
   if (!s.patients && !c.patients) return null;
   const minutes = s.minutes;
-  const tiles: [string, string, boolean?][] = [];
-  if (s.patients) tiles.push(['Interventi', String(s.patients), true]);
-  if (s.procedures > s.patients) tiles.push(['Procedure', String(s.procedures)]);
-  if (c.patients) tiles.push(['Pazienti in clinica', String(c.patients), !s.patients]);
-  if (c.activities > c.patients) tiles.push(['Prestazioni', String(c.activities)]);
-  if (minutes) tiles.push(['Tempo operatorio', minutes >= 60 ? `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m` : `${minutes}m`]);
-  if (s.patients) tiles.push(['Complicanze', String(s.complications)]);
+  const tiles: [string, string, string, boolean?][] = [];
+  if (s.patients) tiles.push(['Interventi', String(s.patients), s.patients === 1 ? 'paziente operata' : 'pazienti operate', true]);
+  if (s.procedures > s.patients) tiles.push(['Procedure', String(s.procedures), 'eseguite']);
+  if (c.patients) tiles.push(['Pazienti in clinica', String(c.patients), 'in carico', !s.patients]);
+  if (c.activities > c.patients) tiles.push(['Prestazioni', String(c.activities), 'eseguite']);
+  if (minutes) tiles.push(['Tempo operatorio', minutes >= 60 ? `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m` : `${minutes}m`, 'in sala']);
+  if (s.patients) tiles.push(['Complicanze', String(s.complications), `Clavien ≥ III: ${s.severe}`]);
   return (
     <div className="stat-tiles work-tiles-row scroll-x">
-      {tiles.map(([label, value, hi]) => (
+      {tiles.map(([label, value, sub, hi]) => (
         <div key={label} className="stat-tile">
           <span className="stat-label">{label}</span>
           <strong className={hi ? 'hi' : undefined}>{value}</strong>
+          <span className="stat-sub">{sub}</span>
         </div>
       ))}
     </div>
@@ -793,6 +824,7 @@ function BodyPills({ day }: { day: DayEntry }) {
     { key: 'steps', Icon: IconSteps, label: 'Passi', value: b.steps !== undefined ? fmt(b.steps) : undefined, goal: goals.steps ? fmt(goals.steps) : undefined },
   ];
   return (
+    <>
     <div className="body-pills no-print">
       {pills.map((p) => (
         <button key={p.key} type="button" className={`body-pill pill-${p.key}`} onClick={open}>
@@ -803,6 +835,10 @@ function BodyPills({ day }: { day: DayEntry }) {
         </button>
       ))}
     </div>
+    <button type="button" className="summary-link no-print" onClick={open}>
+      Riepilogo del giorno <span aria-hidden="true">›</span>
+    </button>
+    </>
   );
 }
 

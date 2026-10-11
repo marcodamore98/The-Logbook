@@ -305,25 +305,37 @@ function WeekTraining({ date }: { date: ISODate }) {
   const store = useStore();
   const monday = startOfWeek(date);
   useEffect(() => {
-    store.loadRange(monday, addDays(monday, 6));
+    store.loadRange(addDays(monday, -7), addDays(monday, 6));
   }, [monday]);
   const now = today();
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = addDays(monday, i);
-    const minutes = store.day(d).modules.reduce((n, m) => {
+  const minutesOn = (d: ISODate) =>
+    store.day(d).modules.reduce((n, m) => {
       if (m.kind === 'workout') return n + (m.durationMin ?? (m.startedAt && !m.finishedAt ? Math.round((Date.now() - m.startedAt) / 60000) : 0));
       if (m.kind === 'run') return n + Math.round((m.durationSec ?? 0) / 60);
       return n;
     }, 0);
-    return { d, minutes };
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(monday, i);
+    return { d, minutes: minutesOn(d) };
   });
   const total = days.reduce((n, x) => n + x.minutes, 0);
+  // Compared with the week before, up to the same weekday (a week in progress against a whole one would always look worse).
+  const sameDays = monday === startOfWeek(now) ? Math.min(6, Math.round((new Date(`${now}T12:00:00`).getTime() - new Date(`${monday}T12:00:00`).getTime()) / 864e5)) : 6;
+  const thisPart = days.slice(0, sameDays + 1).reduce((n, x) => n + x.minutes, 0);
+  const prevPart = Array.from({ length: sameDays + 1 }, (_, i) => minutesOn(addDays(monday, i - 7))).reduce((a, b) => a + b, 0);
+  const change = prevPart ? Math.round(((thisPart - prevPart) / prevPart) * 100) : null;
   if (!total) return null;
   const max = Math.max(...days.map((x) => x.minutes));
   return (
     <div className="week-train" aria-label={`Allenamento della settimana: ${dur(total)}`}>
       <div className="wt-head">
         <span className="stat-label">{monday === startOfWeek(now) ? 'Questa settimana' : 'Settimana'}</span>
+        {change !== null && (
+          <span className={`wt-change${change >= 0 ? ' up' : ' down'}`} title={monday === startOfWeek(now) ? 'Rispetto agli stessi giorni della settimana prima' : 'Rispetto alla settimana prima'}>
+            {change >= 0 ? '+' : ''}
+            {change}% vs prec.
+          </span>
+        )}
         <strong>{dur(total)}</strong>
       </div>
       <div className="wt-bars">

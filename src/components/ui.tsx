@@ -399,10 +399,13 @@ export function TimeTile({ label, value, onChange, type = 'time', min, clearable
       </div>
     );
   }
+  // Dates: "04 OTT 2026" in big letters; the phone's calendar opens on tap (the real field lies over it, invisible).
+  const shown = value ? new Date(`${value}T12:00:00`).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', '').toUpperCase() : '—';
   return (
     <label className={`time-tile tile-${type}`}>
       <span className="tt-label">{label}</span>
-      <input type={type} value={value} min={min} onChange={(e) => onChange(e.target.value)} />
+      <span className="tt-date">{shown}</span>
+      <input type={type} value={value} min={min} aria-label={label} onChange={(e) => onChange(e.target.value)} />
     </label>
   );
 }
