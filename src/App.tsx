@@ -58,6 +58,14 @@ function dayLabel(date: string): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+/** "Domenica, 11 ottobre" (with the year when it isn't this one). */
+function fullDay(date: string): string {
+  const d = new Date(`${date}T12:00:00`);
+  const s = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: date.slice(0, 4) === today().slice(0, 4) ? undefined : 'numeric' });
+  const t = s.replace(/^(\S+) /, '$1, ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 function useCurrentTitle() {
   const loc = useLocation();
   if (loc.pathname.startsWith('/appunti/')) return 'Appunti';
@@ -147,12 +155,19 @@ function BackToDay() {
 
 function Topbar({ onMenu, onSummary }: { onMenu: () => void; onSummary: () => void }) {
   const title = useCurrentTitle();
+  // On the phone the section (or the full date of the day page) sits under the name.
+  const loc = useLocation();
+  const dayDate = loc.pathname === '/' || loc.pathname.startsWith('/giorno') ? loc.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? today() : null;
+  const sub = dayDate ? fullDay(dayDate) : title;
   return (
     <header className="topbar">
       <button className="brand brand-btn" onClick={onMenu} aria-label="Apri il menu">
         <GlyphMenu />
         <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={30} height={30} />
-        <span className="brand-name">The Logbook</span>
+        <span className="brand-text">
+          <span className="brand-name">The Logbook</span>
+          {sub && <span className="brand-sub">{sub}</span>}
+        </span>
       </button>
       {title && <span className="topbar-title">{title}</span>}
       <GoogleStatus />

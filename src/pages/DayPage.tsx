@@ -21,6 +21,7 @@ import {
 } from '../components/icons';
 import { RosterCard } from '../components/RosterCard';
 import { NutritionBlock, TrainingBlock } from '../components/day/DayBlocks';
+import { ClinicalPeek, SurgeryPeek } from '../components/day/WorkPeeks';
 import { DiaryEntryView } from '../components/diary/DiaryEntry';
 import { TimeField } from '../components/WheelPicker';
 import { ShoppingList } from '../components/day/ShoppingList';
@@ -48,7 +49,6 @@ import { clinicalTotals, surgeryTotals } from '../lib/worklog';
 /** Small label above each card title, by block. */
 const BLOCK_KICKER: Record<string, string> = {
   shift: 'Lavoro',
-  guardia: 'Lavoro',
   work: 'Lavoro',
   agenda: 'Agenda',
   todos: 'Agenda',
@@ -171,6 +171,7 @@ export default function DayPage() {
       }
     }, 6500);
   };
+  const [editingWork, setEditingWork] = useState<'shift' | 'guardia' | null>(null);
   const removeShift = (which: 'shift' | 'guardia') => {
     const before = dayRef.current[which];
     update((d) => ({ ...d, [which]: undefined }));
@@ -211,15 +212,10 @@ export default function DayPage() {
   const todoSort = useSortableList(day.todos, (todos) => update((d) => ({ ...d, todos })), { attr: 'todo', handle: '.todo' });
   const shiftName = settings.shiftTypes.find((t) => t.id === day.shift?.shiftTypeId)?.name ?? 'Turno';
   const who = day.shift ? day.shift.colleagueIds.map((c) => settings.colleagues.find((x) => x.id === c)?.name).filter(Boolean).slice(0, 3).join(', ') : '';
-  const shiftSummary = day.shift
-    ? `${shiftName} · ${day.shift.start}–${day.shift.end}${who ? ` · con ${who}` : ''}`
-    : suggestion
-      ? `Dal tabellone: ${myCodes.map(codeShort).join(' · ')}`
-      : 'Nessun turno';
   const order = blockOrder(settings.dayLayout);
   const orderSort = useSortableList(order, (o) => store.saveSettings({ ...settings, dayLayout: o }), { attr: 'ord', handle: '.order-list li' });
-  // "Domenica 4 ottobre": the year only when it isn't the current one.
-  const longDate = formatLong(date).replace(new RegExp(` ${today().slice(0, 4)}$`), '');
+  // "Domenica 4 ottobre 2026": on the phone it is a thin uppercase strip.
+  const longDate = formatLong(date);
   const dayTitle = longDate.charAt(0).toUpperCase() + longDate.slice(1);
   const dayShifts = [day.shift && `${shiftName} ${day.shift.start}–${day.shift.end}`, day.guardia && `Guardia ${day.guardia.start}–${day.guardia.end}`].filter((x): x is string => !!x);
 
@@ -255,6 +251,9 @@ export default function DayPage() {
         );
       });
 
+  /** What a closed card shows under its head: the list with the numbers, when there is one. */
+  const peekOf = (m: Module): React.ReactNode =>
+    m.kind === 'course' || m.kind === 'travel' ? <SpanPeek m={m} /> : m.kind === 'surgery' ? SurgeryPeek({ m, colleagues: settings.colleagues }) : m.kind === 'clinical' ? ClinicalPeek({ m }) : undefined;
   const moduleCards = (block: string) =>
     day.modules
       .filter((m) => (block === 'work' || block === 'private') && MODULE_BLOCK[m.kind] === block)
@@ -269,9 +268,9 @@ export default function DayPage() {
             className={`module module-${m.kind}`}
             icon={<meta.Icon />}
             kicker={KIND_KICKER[m.kind]}
-            peek={m.kind === 'course' || m.kind === 'travel' ? <SpanPeek m={m} /> : undefined}
+            peek={peekOf(m)}
             title={meta.label}
-            summary={m.kind === 'course' || m.kind === 'travel' ? undefined : summarize(m)}
+            summary={peekOf(m) ? undefined : summarize(m)}
             open={open}
             onToggle={() => setOpenId(open ? null : m.id)}
             actions={
@@ -290,91 +289,108 @@ export default function DayPage() {
   const renderBlock = (id: string): React.ReactNode => {
     switch (id) {
       case 'shift': {
-        // The card shows when there is a shift, or a roster/suggestion to start from; otherwise add it with "Aggiungi scheda".
-        if (!day.shift) return null;
+        // One card for the day's work hours: the hospital shift and the guardia medica, one row each with its hours.
+        if (!day.shift && !day.guardia) return null;
+        const rows = [
+          day.shift && { key: 'shift' as const, name: shiftName, s: day.shift, color: shiftType?.color, who },
+          day.guardia && { key: 'guardia' as const, name: settings.shiftTypes.find((t) => t.id === day.guardia?.shiftTypeId)?.name ?? 'Guardia medica', s: day.guardia, color: undefined, who: '' },
+        ].filter((x): x is Exclude<typeof x, undefined> => !!x);
+        const total = rows.reduce((n, r) => n + spanMin(r.s.start, r.s.end), 0);
         return (
-          <Card
-            key="shift"
-            id="day.shift"
-            print="lavoro"
-            icon={<IconShift />}
-            title="Turno"
-            style={shiftType ? ({ '--tint': shiftType.color } as React.CSSProperties) : undefined}
-            summary={shiftSummary}
-            actions={
-              day.shift && (
-                <button type="button" className="icon-btn small no-print" aria-label="Elimina il turno" onClick={async () => (await confirmDelete('il turno')) && removeShift('shift')}>
-                  <GlyphTrash />
-                </button>
-              )
-            }
-          >
-            {suggestion && (
-              <div className="suggest no-print">
-                <span>
-                  Dal tabellone: <strong>{myCodes.map(codeShort).join(' · ')}</strong> ({suggestion.start}–{suggestion.end})
-                </span>
-                <button className="btn small" onClick={() => setShift(suggestion)}>
-                  Usa
-                </button>
-              </div>
-            )}
-            <div className="shift-form">
-              <div className="field">
-                <span className="mini-label">Tipo turno</span>
-                <ShiftTypeSelect pill types={settings.shiftTypes.filter((t) => t.group !== 'Guardia medica' || t.id === day.shift?.shiftTypeId)} value={day.shift?.shiftTypeId} onChange={chooseShiftType} />
-              </div>
-              {day.shift && (
-                <>
-                  <div className="time-pair">
-                    <TimeTile label="Dalle" value={day.shift.start} onChange={(start) => setShift({ ...day.shift!, start })} />
-                    <TimeTile label="Alle" value={day.shift.end} onChange={(end) => setShift({ ...day.shift!, end })} />
+          <Card key="shift" id="day.shift" print="lavoro" icon={<IconShift />} title={rows.length > 1 ? 'Turno e guardia' : rows[0].key === 'shift' ? 'Turno' : 'Guardia medica'} summary={rows.map((r) => `${r.name} ${r.s.start}–${r.s.end}`).join(' · ')}>
+            <div className="work-rows">
+              {rows.map((r) => {
+                const open = editingWork === r.key;
+                return (
+                  <div key={r.key} className={`work-row${open ? ' open' : ''}`} style={r.color ? ({ '--tint': r.color } as React.CSSProperties) : undefined}>
+                    <button type="button" className="wr-head" aria-expanded={open} onClick={() => setEditingWork(open ? null : r.key)}>
+                      <span className="wr-text">
+                        <strong>{r.name}</strong>
+                        <small>
+                          {r.s.start}–{r.s.end}
+                          {r.who ? ` · con ${r.who}` : ''}
+                        </small>
+                      </span>
+                      <span className="wr-hours">{hoursLabel(spanMin(r.s.start, r.s.end))}</span>
+                    </button>
+                    {open && r.key === 'shift' && day.shift && (
+                      <div className="wr-body">
+                        {suggestion && (
+                          <div className="suggest no-print">
+                            <span>
+                              Dal tabellone: <strong>{myCodes.map(codeShort).join(' · ')}</strong> ({suggestion.start}–{suggestion.end})
+                            </span>
+                            <button className="btn small" onClick={() => setShift(suggestion)}>
+                              Usa
+                            </button>
+                          </div>
+                        )}
+                        <div className="shift-form">
+                          <div className="field">
+                            <span className="mini-label">Tipo turno</span>
+                            <ShiftTypeSelect pill types={settings.shiftTypes.filter((t) => t.group !== 'Guardia medica' || t.id === day.shift?.shiftTypeId)} value={day.shift.shiftTypeId} onChange={chooseShiftType} />
+                          </div>
+                          <div className="time-pair">
+                            <TimeTile label="Dalle" value={day.shift.start} onChange={(start) => setShift({ ...day.shift!, start })} />
+                            <TimeTile label="Alle" value={day.shift.end} onChange={(end) => setShift({ ...day.shift!, end })} />
+                          </div>
+                          <div className="field">
+                            <span className="mini-label">In turno con</span>
+                            <ColleaguePicker colleagues={settings.colleagues} selected={day.shift.colleagueIds} onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })} onCreate={(name) => { const id = uid(); store.saveSettings({ ...settings, colleagues: [...settings.colleagues, { id, name }] }); return id; }} />
+                          </div>
+                          <label className="note-line">
+                            <Sym name="edit_note" size={18} />
+                            <input aria-label="Note sul turno" placeholder="Aggiungi una nota al turno…" value={day.shift.note ?? ''} onChange={(e) => setShift({ ...day.shift!, note: e.target.value })} />
+                          </label>
+                        </div>
+                        <RosterCard
+                          date={date}
+                          onJoin={(names) => {
+                            const base = dayRef.current.shift ?? (myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null);
+                            if (!base) return;
+                            const ids = idsForNames(names, settings.colleagues);
+                            setShift({ ...base, colleagueIds: [...new Set([...base.colleagueIds, ...ids])] });
+                          }}
+                        />
+                        <button type="button" className="btn-ghost small wr-delete no-print" onClick={async () => (await confirmDelete('il turno')) && (setEditingWork(null), removeShift('shift'))}>
+                          <GlyphTrash /> Elimina il turno
+                        </button>
+                      </div>
+                    )}
+                    {open && r.key === 'guardia' && day.guardia && (
+                      <div className="wr-body">
+                        <div className="time-pair">
+                          <TimeTile label="Dalle" value={day.guardia.start} onChange={(start) => setGuardia({ ...day.guardia!, start })} />
+                          <TimeTile label="Alle" value={day.guardia.end} onChange={(end) => setGuardia({ ...day.guardia!, end })} />
+                        </div>
+                        <button type="button" className="btn-ghost small wr-delete no-print" onClick={async () => (await confirmDelete('la guardia medica')) && (setEditingWork(null), removeShift('guardia'))}>
+                          <GlyphTrash /> Elimina la guardia medica
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="field">
-                    <span className="mini-label">In turno con</span>
-                    <ColleaguePicker colleagues={settings.colleagues} selected={day.shift.colleagueIds} onChange={(colleagueIds) => setShift({ ...day.shift!, colleagueIds })} onCreate={(name) => { const id = uid(); store.saveSettings({ ...settings, colleagues: [...settings.colleagues, { id, name }] }); return id; }} />
-                  </div>
-                  <label className="note-line">
-                    <Sym name="edit_note" size={18} />
-                    <input aria-label="Note sul turno" placeholder="Aggiungi una nota al turno…" value={day.shift.note ?? ''} onChange={(e) => setShift({ ...day.shift!, note: e.target.value })} />
-                  </label>
-                </>
-              )}
+                );
+              })}
             </div>
-            <RosterCard
-              date={date}
-              onJoin={(names) => {
-                const base = dayRef.current.shift ?? (myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null);
-                if (!base) return;
-                const ids = idsForNames(names, settings.colleagues);
-                setShift({ ...base, colleagueIds: [...new Set([...base.colleagueIds, ...ids])] });
-              }}
-            />
+            <div className="work-foot">
+              {!day.shift ? (
+                <button type="button" className="btn-ghost small no-print" onClick={() => { addShift(); setEditingWork('shift'); }}>
+                  <GlyphPlus /> Turno
+                </button>
+              ) : !day.guardia && guardiaTypes.length > 0 ? (
+                <button type="button" className="btn-ghost small no-print" onClick={() => { chooseGuardia(guardiaTypes[0].id); setEditingWork('guardia'); }}>
+                  <GlyphPlus /> Guardia medica
+                </button>
+              ) : (
+                <span />
+              )}
+              <span className="wf-total">
+                Totale <strong>{hoursLabel(total)}</strong>
+              </span>
+            </div>
           </Card>
         );
       }
-      case 'guardia':
-        if (!day.guardia) return null;
-        return (
-          <Card
-            key="guardia"
-            id="day.guardia"
-            print="lavoro"
-            icon={<IconSleep />}
-            title="Guardia medica"
-            summary={`${day.guardia.start}–${day.guardia.end}`}
-            actions={
-              <button type="button" className="icon-btn small no-print" aria-label="Elimina la guardia medica" onClick={async () => (await confirmDelete('la guardia medica')) && removeShift('guardia')}>
-                <GlyphTrash />
-              </button>
-            }
-          >
-            <div className="time-pair">
-              <TimeTile label="Dalle" value={day.guardia.start} onChange={(start) => setGuardia({ ...day.guardia!, start })} />
-              <TimeTile label="Alle" value={day.guardia.end} onChange={(end) => setGuardia({ ...day.guardia!, end })} />
-            </div>
-          </Card>
-        );
       case 'agenda':
         return (
           <Card
@@ -646,7 +662,7 @@ export default function DayPage() {
                 <h3 className="palette-area">Turni</h3>
                 <div className="add-tiles">
                   {!day.shift && (
-                    <button className="add-tile" onClick={() => { addShift(); setAdding(false); }}>
+                    <button className="add-tile" onClick={() => { addShift(); setEditingWork('shift'); setAdding(false); }}>
                       <IconShift size={38} />
                       <span>
                         <strong>Turno</strong>
@@ -655,7 +671,7 @@ export default function DayPage() {
                     </button>
                   )}
                   {!day.guardia && guardiaTypes.length > 0 && (
-                    <button className="add-tile" onClick={() => { chooseGuardia(guardiaTypes[0].id); setAdding(false); }}>
+                    <button className="add-tile" onClick={() => { chooseGuardia(guardiaTypes[0].id); setEditingWork('guardia'); setAdding(false); }}>
                       <IconSleep size={38} />
                       <span>
                         <strong>Guardia medica</strong>
@@ -733,6 +749,14 @@ export default function DayPage() {
   );
 }
 
+/** Minutes from start to end, across midnight (20:00–08:00 = 12 h); same time = 24 h. */
+function spanMin(start: string, end: string): number {
+  const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const d = (m(end) - m(start) + 1440) % 1440;
+  return d || 1440;
+}
+const hoursLabel = (min: number) => `${Math.floor(min / 60)}h${min % 60 ? ` ${String(min % 60).padStart(2, '0')}m` : ''}`;
+
 /** Key numbers of the day's clinical work, above the surgery/clinical cards. */
 function WorkTiles({ day }: { day: DayEntry }) {
   const s = surgeryTotals(day.modules);
@@ -796,6 +820,7 @@ function SpanPeek({ m }: { m: Extract<Module, { kind: 'course' | 'travel' }> }) 
         <strong>{m.title || (m.kind === 'course' ? 'Corso / congresso' : 'Viaggio')}</strong>
         <span className="sp-dates">{rangeLabel(m.startDate, m.endDate)}</span>
       </div>
+      {m.kind === 'course' && m.ecm ? <span className="sp-ecm">{fmt(m.ecm, 1)} ECM</span> : null}
       {(files.some(([, f]) => f) || link || place) && (
         <div className="sp-files no-print">
           {place && (

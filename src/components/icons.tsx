@@ -33,13 +33,13 @@ type P = { size?: number };
 export const IconMonth = (p: P) => <Art pigment="ochre" sym="calendar_month" {...p} />;
 export const IconWeek = (p: P) => <Art pigment="sky" sym="view_week" {...p} />;
 export const IconDay = (p: P) => <Art pigment="ochre" sym="light_mode" {...p} />;
-export const IconShift = (p: P) => <Art pigment="rose" sym="medical_services" {...p} />;
-export const IconSurgery = (p: P) => <Art pigment="terra" sym="surgical" {...p} />;
-export const IconClinical = (p: P) => <Art pigment="rose" sym="stethoscope" {...p} />;
-export const IconStudy = (p: P) => <Art pigment="indigo" sym="menu_book" {...p} />;
+export const IconShift = (p: P) => <Art pigment="sage" sym="medical_services" {...p} />;
+export const IconSurgery = (p: P) => <Art pigment="rose" sym="surgical" {...p} />;
+export const IconClinical = (p: P) => <Art pigment="sage" sym="stethoscope" {...p} />;
+export const IconStudy = (p: P) => <Art pigment="sky" sym="menu_book" {...p} />;
 export const IconPhotos = (p: P) => <Art pigment="teal" sym="photo_library" {...p} />;
 export const IconNote = (p: P) => <Art pigment="sand" sym="edit_note" {...p} />;
-export const IconWorkout = (p: P) => <Art pigment="sage" sym="fitness_center" {...p} />;
+export const IconWorkout = (p: P) => <Art pigment="ochre" sym="fitness_center" {...p} />;
 export const IconRun = (p: P) => <Art pigment="terra" sym="directions_run" {...p} />;
 export const IconOuting = (p: P) => <Art pigment="sage" sym="landscape" {...p} />;
 export const IconTodo = (p: P) => <Art pigment="plum" sym="checklist" {...p} />;
@@ -49,7 +49,7 @@ export const IconSettings = (p: P) => <Art pigment="sand" sym="settings" {...p} 
 export const IconSync = (p: P) => <Art pigment="teal" sym="sync" {...p} />;
 export const IconPeople = (p: P) => <Art pigment="plum" sym="group" {...p} />;
 export const IconMood = (p: P) => <Art pigment="ochre" sym="mood" {...p} />;
-export const IconFood = (p: P) => <Art pigment="sage" sym="restaurant" {...p} />;
+export const IconFood = (p: P) => <Art pigment="plum" sym="restaurant" {...p} />;
 export const IconHeart = (p: P) => <Art pigment="rose" sym="favorite" {...p} />;
 export const IconSteps = (p: P) => <Art pigment="ochre" sym="footprint" {...p} />;
 export const IconSleep = (p: P) => <Art pigment="indigo" sym="bedtime" {...p} />;
@@ -65,7 +65,7 @@ export const IconLunch = (p: P) => <Art pigment="sage" sym="lunch_dining" {...p}
 export const IconDinner = (p: P) => <Art pigment="indigo" sym="dinner_dining" {...p} />;
 export const IconSnack = (p: P) => <Art pigment="terra" sym="cookie" {...p} />;
 export const IconBarcode = (p: P) => <Art pigment="sky" sym="barcode_scanner" {...p} />;
-export const IconCourse = (p: P) => <Art pigment="indigo" sym="school" {...p} />;
+export const IconCourse = (p: P) => <Art pigment="sky" sym="school" {...p} />;
 export const IconTravel = (p: P) => <Art pigment="sky" sym="luggage" {...p} />;
 
 /** Calendar page showing today's day number. */

@@ -1,7 +1,7 @@
 import { confirmDelete } from '../Confirm';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { dayIntake } from '../../lib/nutrition/foods';
+import { dayFoodTotals, dayIntake } from '../../lib/nutrition/foods';
 import { useStore } from '../../lib/store/StoreContext';
 import { bestsBefore, prsOf, workingSets, workoutVolume } from '../../lib/training/analytics';
 import { exerciseDef } from '../../lib/training/exercises';
@@ -56,7 +56,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
     const running = !!w.startedAt && !w.finishedAt;
     const minutes = running ? Math.max(1, Math.round((Date.now() - w.startedAt!) / 60000)) : w.durationMin;
     const times = w.startedAt ? (w.finishedAt ? `${hhmm(w.startedAt)}–${hhmm(w.finishedAt)}` : `dalle ${hhmm(w.startedAt)}`) : '';
-    return { running, name: w.title || 'Allenamento', volume: Math.round(workoutVolume(w)), minutes, times };
+    return { running, name: w.title || 'Allenamento', volume: Math.round(workoutVolume(w)), sets: workingSets(w), minutes, times };
   };
   const summary = workouts.length
     ? workouts
@@ -113,18 +113,22 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
                     {prs.length === 1 ? `Nuovo record · ${prs[0]}` : `${prs.length} nuovi record · ${prs.join(', ')}`}
                   </span>
                 )}
+                {i.times && <span className="ws-when">{i.times}</span>}
                 <dl className="ws-stats">
                   <div>
-                    <dt>Carico sollevato</dt>
-                    <dd className="hi">{fmt(i.volume)} kg</dd>
+                    <dt>Volume</dt>
+                    <dd className="hi">{fmt(i.volume)}</dd>
+                    <small>kg</small>
+                  </div>
+                  <div>
+                    <dt>Serie</dt>
+                    <dd>{i.sets}</dd>
+                    <small>totali</small>
                   </div>
                   <div>
                     <dt>Durata</dt>
-                    <dd>{i.minutes ? (i.minutes >= 60 ? `${Math.floor(i.minutes / 60)}h ${String(i.minutes % 60).padStart(2, '0')}m` : `${i.minutes} min`) : '–'}</dd>
-                  </div>
-                  <div>
-                    <dt>Orario</dt>
-                    <dd>{i.times || '–'}</dd>
+                    <dd>{i.minutes ? (i.minutes >= 60 ? `${Math.floor(i.minutes / 60)}h ${String(i.minutes % 60).padStart(2, '0')}′` : `${i.minutes}′`) : '–'}</dd>
+                    <small>{i.running ? 'finora' : 'totale'}</small>
                   </div>
                 </dl>
               </button>
@@ -148,15 +152,18 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
               <dl className="ws-stats">
                 <div>
                   <dt>Distanza</dt>
-                  <dd className="hi">{m.distanceM ? `${fmtKm(m.distanceM)} km` : '–'}</dd>
-                </div>
-                <div>
-                  <dt>Durata</dt>
-                  <dd>{m.durationSec ? fmtDuration(m.durationSec) : '–'}</dd>
+                  <dd className="hi run-hi">{m.distanceM ? fmtKm(m.distanceM) : '–'}</dd>
+                  <small>km</small>
                 </div>
                 <div>
                   <dt>Passo</dt>
-                  <dd>{m.distanceM && m.durationSec ? `${fmtPace(m.distanceM, m.durationSec)}/km` : '–'}</dd>
+                  <dd>{m.distanceM && m.durationSec ? fmtPace(m.distanceM, m.durationSec) : '–'}</dd>
+                  <small>/km</small>
+                </div>
+                <div>
+                  <dt>Tempo</dt>
+                  <dd>{m.durationSec ? fmtDuration(m.durationSec) : '–'}</dd>
+                  <small>{m.durationSec && m.durationSec >= 3600 ? 'h:min:s' : 'min:s'}</small>
                 </div>
               </dl>
             </button>
@@ -214,20 +221,25 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
   );
 }
 
-/** Calories and protein of the day, always visible; the full food diary is on the nutrition page. */
+/** The day's food at a glance: kcal left (goal + burned − eaten), the three macros and the water; the full diary is on its own page. */
 export function NutritionBlock({ day }: { day: DayEntry }) {
-  const { settings } = useStore();
-  const goals = settings.goals ?? {};
+  const store = useStore();
+  const goals = store.settings.goals ?? {};
   const intake = dayIntake(day);
+  const t = dayFoodTotals(day.food);
   const kcal = intake.kcal ?? 0;
-  const protein = intake.protein ?? 0;
   const logged = intake.kcal !== undefined;
-  const bar = (v: number, goal?: number, thin = false) =>
-    goal ? (
-      <span className={`nut-bar${thin ? ' thin' : ''}`}>
-        <span style={{ width: `${Math.min(100, (v / goal) * 100)}%` }} />
-      </span>
-    ) : null;
+  const target = goals.kcalIn ? goals.kcalIn + (day.body?.kcalOut ?? 0) : 0;
+  const over = target > 0 && kcal > target;
+  const water = day.body?.waterL ?? 0;
+  const glasses = Math.round(water / 0.25);
+  const slots = Math.max(goals.waterL ? Math.round(goals.waterL / 0.25) : 8, glasses);
+  const addWater = () => store.updateDay(day.date, (d) => ({ ...d, body: { ...d.body, waterL: Math.round(((d.body?.waterL ?? 0) + 0.25) * 100) / 100 } }));
+  const macros: [string, number | undefined, string][] = [
+    ['Carbo', t?.carbs, ''],
+    ['Proteine', t?.protein ?? intake.protein, ' lav'],
+    ['Grassi', t?.fat, ''],
+  ];
   return (
     <Card
       id="day.nutrition"
@@ -235,28 +247,51 @@ export function NutritionBlock({ day }: { day: DayEntry }) {
       icon={<IconFood />}
       title="Alimentazione"
       defaultOpen={true}
-      summary={logged ? `${fmt(kcal)}${goals.kcalIn ? ` / ${fmt(goals.kcalIn)}` : ''} kcal · proteine ${fmt(protein)}${goals.proteinG ? ` / ${fmt(goals.proteinG)}` : ''} g` : 'Niente registrato'}
+      summary={logged ? (target ? `${fmt(Math.abs(target - kcal))} kcal ${over ? 'in più' : 'rimanenti'} · ${fmt(kcal)} assunte` : `${fmt(kcal)} kcal assunte`) : 'Niente registrato'}
     >
-      {logged && (
-        <div className="nut-bars">
-          <span className="nut-protein nut-kcal">
-            <span>Calorie</span>
-            <strong>
-              {fmt(kcal)}
-              {goals.kcalIn ? ` / ${fmt(goals.kcalIn)}` : ''} kcal
-            </strong>
+      <div className="nut-energy">
+        <div className="ne-top">
+          <strong className={over ? 'over' : undefined}>{fmt(target ? Math.abs(target - kcal) : kcal)}</strong>
+          <span>{target ? (over ? 'kcal in più' : 'kcal rimanenti') : 'kcal assunte'}</span>
+        </div>
+        {target > 0 && (
+          <span className="nut-bar">
+            <span className={over ? 'over' : undefined} style={{ width: `${Math.min(100, (kcal / target) * 100)}%` }} />
           </span>
-          {bar(kcal, goals.kcalIn)}
-          <span className="nut-protein">
-            <span>Proteine</span>
-            <strong>
-              {fmt(protein)}
-              {goals.proteinG ? ` / ${fmt(goals.proteinG)}` : ''} g
-            </strong>
-          </span>
-          {bar(protein, goals.proteinG, true)}
+        )}
+        <div className="ne-foot">
+          <span>{target ? `${fmt(kcal)} assunte` : logged ? '' : 'Ancora niente registrato'}</span>
+          {goals.kcalIn ? <span>Obiettivo {fmt(target)} kcal</span> : null}
+        </div>
+      </div>
+      {(t || intake.protein !== undefined) && (
+        <div className="nut-macros">
+          {macros.map(([label, v, tone]) => (
+            <div key={label} className={`nm-tile${tone}`}>
+              <span>{label}</span>
+              <strong>{v !== undefined ? `${fmt(v)}g` : '–'}</strong>
+            </div>
+          ))}
         </div>
       )}
+      <div className="nut-water no-print">
+        <div className="nw-text">
+          <span className="nw-head">
+            <strong>Acqua</strong>
+            <span className="nw-amount">
+              {fmt(water, 2)} L{goals.waterL ? ` / ${fmt(goals.waterL, 1)} L` : ''}
+            </span>
+          </span>
+          <span className="nw-glasses" aria-hidden="true">
+            {Array.from({ length: slots }, (_, i) => (
+              <i key={i} className={i < glasses ? 'full' : undefined} />
+            ))}
+          </span>
+        </div>
+        <button type="button" className="nw-add" onClick={addWater}>
+          +250 ml
+        </button>
+      </div>
       <Link className="lime-banner" to={`/alimentazione/${day.date}`}>
         <span>Apri il diario alimentare</span>
         <span aria-hidden="true">›</span>
