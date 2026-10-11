@@ -69,7 +69,7 @@ Deleting anything (a card, a workout, a study, a course, a note, a set, a food, 
 
 ```
 Screen: the day page for Sunday 4 October 2026 (dark mode).
-Header inside one rounded card on two rows: small prev chevron, bold centred "Domenica 4 ottobre" with a lime "OGGI" badge, small next chevron; a thin divider, then one muted line "Turno 08:00–14:00 · Guardia 20:00–08:00 · Settimana 40" (ellipsis if long) with two small borderless icon buttons on its right (reorder sections, print).
+Header inside one rounded card on two rows: small prev chevron, bold centred "Domenica 4 ottobre" with a lime "OGGI" badge, small next chevron; a thin divider, then one muted line "Turno 08:00–14:00 · Guardia 20:00–08:00 · Settimana 40" (ellipsis if long) with three small borderless icon buttons on its right (reorder sections, ⟲ earlier versions of the day — opens "Cronologia delle modifiche", Prompt 15 — and print).
 Under the header a row of pills: "SONNO 7,3 h" (lavender value), "ACQUA 1,5 L" (blue value), "PASSI 8.200" — tapping opens the "Riepilogo del giorno" panel.
 
 Cards in this order:
