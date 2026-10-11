@@ -603,7 +603,7 @@ export default function DayPage() {
         <button className="icon-btn no-print" aria-label="Ordina le sezioni" title="Ordina le sezioni" onClick={() => setOrdering(true)}>
           <Sym name="swap_vert" size={20} />
         </button>
-        <Link className="icon-btn no-print" aria-label="Versioni precedenti di questa giornata" title="Versioni precedenti" to={`/cronologia/${date}`}>
+        <Link className="icon-btn no-print day-history" aria-label="Versioni precedenti di questa giornata" title="Versioni precedenti" to={`/cronologia/${date}`}>
           <Sym name="history" size={20} />
         </Link>
         <div className="day-jump no-print" role="group" aria-label="Vai al giorno">

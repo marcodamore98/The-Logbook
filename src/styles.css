@@ -1483,6 +1483,7 @@ select.add-pill { field-sizing: content; }
 .day-page .page-head > button[aria-label='Giorno precedente'] { grid-area: prev; }
 .day-page .page-head > button[aria-label='Giorno successivo'] { grid-area: next; }
 .day-page .page-head > button[aria-label='Ordina le sezioni'] { grid-area: reorder; }
+.day-page .page-head > a.day-history { grid-area: history; display: grid; place-items: center; color: var(--muted); }
 .day-page .page-head > button[aria-label='Stampa o salva in PDF'] { grid-area: print; }
 .day-title h1 { flex-wrap: nowrap; }
 
@@ -1860,7 +1861,7 @@ li.best-lap .rs-idx { background: color-mix(in srgb, var(--amber) 22%, transpare
 /* ---- Stitch restyle, round 9: desktop day page and Corpo panel ---- */
 .day-jump { display: none; }
 @media (min-width: 900px) {
-  .day-page .page-head { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; grid-template-areas: 'prev title jump reorder print next' '. sub sub sub sub sub'; }
+  .day-page .page-head { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto; grid-template-areas: 'prev title jump reorder history print next' '. sub sub sub sub sub sub'; }
   .day-jump { grid-area: jump; display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
   .day-jump button { border: none; background: none; border-radius: 9px; padding: 0.3rem 0.75rem; font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
   .day-jump button.on { background: var(--surface-2); color: var(--ink); font-weight: 800; }
@@ -2442,12 +2443,12 @@ a.btn.link-open, a.btn-ghost.link-open { display: inline-flex; padding-block: 0;
 
 /* Day page (Stitch, Prompt 1): compact header card on the phone */
 @media (max-width: 899px) {
-  .day-page .page-head { grid-template-columns: auto minmax(0, 1fr) auto auto auto; grid-template-areas: 'prev title title title next' 'sub sub sub reorder print'; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 0.55rem 0.6rem 0.4rem; row-gap: 0.35rem; column-gap: 0.25rem; }
+  .day-page .page-head { grid-template-columns: auto minmax(0, 1fr) auto auto auto; grid-template-areas: 'prev title title title next' 'sub sub reorder history print'; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 0.55rem 0.6rem 0.4rem; row-gap: 0.35rem; column-gap: 0.25rem; }
   .day-page .page-head::before { content: ''; grid-column: 1 / -1; grid-row: 2; align-self: start; border-top: 1px solid var(--line); margin-top: -0.15rem; }
   .day-title h1 { justify-self: center; }
   .day-title .page-sub { align-self: center; padding-left: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; min-width: 0; }
-  .day-page .page-head > button[aria-label='Ordina le sezioni'], .day-page .page-head > button[aria-label='Stampa o salva in PDF'] { width: 32px; height: 32px; min-width: 32px; border: none; background: none; color: var(--muted); }
-  .day-page .page-head > button[aria-label='Ordina le sezioni'] svg, .day-page .page-head > button[aria-label='Stampa o salva in PDF'] svg { width: 17px; height: 17px; }
+  .day-page .page-head > button[aria-label='Ordina le sezioni'], .day-page .page-head > button[aria-label='Stampa o salva in PDF'], .day-page .page-head > a.day-history { width: 32px; height: 32px; min-width: 32px; border: none; background: none; color: var(--muted); }
+  .day-page .page-head > button[aria-label='Ordina le sezioni'] svg, .day-page .page-head > button[aria-label='Stampa o salva in PDF'] svg, .day-page .page-head > a.day-history svg { width: 17px; height: 17px; }
 }
 
 /* Work numbers on one line that scrolls sideways */
