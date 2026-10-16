@@ -39,7 +39,7 @@ interface Run {
 }
 type Block =
   | { t: 'h2' | 'h3' | 'p' | 'quote'; runs: Run[] }
-  | { t: 'li'; runs: Run[]; level: number; mark: 'bullet' | 'number' | 'todo' | 'done'; n: number; list: number }
+  | { t: 'li'; runs: Run[]; level: number; mark: 'bullet' | 'number' | 'todo' | 'done'; n: number; list: number; label: string; multi: boolean }
   | { t: 'image'; id: string }
   | { t: 'file'; id: string; name: string; kind: string }
   | { t: 'table'; rows: Run[][][] };
@@ -76,7 +76,8 @@ function blocksOf(html: string): Block[] {
   root.innerHTML = sanitizeHtml(html);
   const out: Block[] = [];
   let lists = 0;
-  const walk = (el: Element, level = 0) => {
+  // A numbered list "1.1, 1.2" shares one numbering with its sub-lists; `pre` is the parent's number ("2.").
+  const walk = (el: Element, level = 0, multi: { list: number; pre: string } | null = null) => {
     for (const c of el.children) {
       const e = c as HTMLElement;
       if (e.dataset.att) {
@@ -96,13 +97,18 @@ function blocksOf(html: string): Block[] {
         case 'UL':
         case 'OL': {
           const list = ++lists;
+          const ol = e.tagName === 'OL';
+          const m = ol && (multi || e.classList.contains('n-multi')) ? { list: multi?.list ?? list, pre: multi?.pre ?? '' } : null;
           let n = 0;
           for (const li of e.children) {
+            // A sub-list left beside its item (older notes) still comes out one level deeper.
+            if (/^(UL|OL)$/.test(li.tagName)) walk({ children: [li] } as unknown as Element, level + 1, m && { list: m.list, pre: `${m.pre}${n}.` });
             if (li.tagName !== 'LI') continue;
             n++;
-            const mark = e.tagName === 'OL' ? 'number' : e.classList.contains('n-check') ? (li.hasAttribute('data-done') ? 'done' : 'todo') : 'bullet';
-            out.push({ t: 'li', runs: runsOf(li), level, mark, n, list });
-            for (const sub of li.children) if (/^(UL|OL)$/.test(sub.tagName)) walk({ children: [sub] } as unknown as Element, level + 1);
+            const mark = ol ? 'number' : e.classList.contains('n-check') ? (li.hasAttribute('data-done') ? 'done' : 'todo') : 'bullet';
+            const label = m ? (m.pre ? `${m.pre}${n}` : `${n}.`) : `${n}.`;
+            out.push({ t: 'li', runs: runsOf(li), level, mark, n, list: m?.list ?? list, label, multi: !!m });
+            for (const sub of li.children) if (/^(UL|OL)$/.test(sub.tagName)) walk({ children: [sub] } as unknown as Element, level + 1, m && { list: m.list, pre: `${m.pre}${n}.` });
           }
           break;
         }
@@ -283,7 +289,7 @@ export async function notePdf(n: ExportNote, repo: Repo): Promise<Blob> {
       doc.setTextColor(...ink);
       doc.setFont('helvetica', 'normal');
       if (b.mark === 'bullet') doc.text('•', x, y);
-      else if (b.mark === 'number') doc.text(`${b.n}.`, x, y);
+      else if (b.mark === 'number') doc.text(b.label, x, y);
       else {
         doc.setDrawColor(...ink);
         doc.setLineWidth(0.3);
@@ -296,7 +302,8 @@ export async function notePdf(n: ExportNote, repo: Repo): Promise<Blob> {
           doc.line(x + 1.6, y - 0.5, x + 3, y - 2.5);
         }
       }
-      paragraph(b.runs, 11, x + 6, CW - (x + 6 - M), b.mark === 'done' ? { s: true, color: `rgb(${muted.join(',')})` } : {}, 1);
+      const gap = b.mark === 'number' ? Math.max(6, doc.getTextWidth(b.label) + 2) : 6;
+      paragraph(b.runs, 11, x + gap, CW - (x + gap - M), b.mark === 'done' ? { s: true, color: `rgb(${muted.join(',')})` } : {}, 1);
     } else if (b.t === 'image') {
       const f = byId.get(b.id);
       const url = f ? await dataOf(repo, f) : '';
@@ -393,7 +400,7 @@ export async function noteDocx(n: ExportNote, repo: Repo): Promise<Blob> {
     else if (b.t === 'quote') children.push(new d.Paragraph({ indent: { left: 567 }, border: { left: { style: d.BorderStyle.SINGLE, size: 12, color: 'B9B0F5', space: 8 } }, children: runs(b.runs, { i: true }) }));
     else if (b.t === 'li') {
       if (b.mark === 'bullet') children.push(new d.Paragraph({ bullet: { level: b.level }, children: runs(b.runs) }));
-      else if (b.mark === 'number') children.push(new d.Paragraph({ numbering: { reference: 'num', level: b.level, instance: b.list }, children: runs(b.runs) }));
+      else if (b.mark === 'number') children.push(new d.Paragraph({ numbering: { reference: b.multi ? 'multi' : 'num', level: b.level, instance: b.list }, children: runs(b.runs) }));
       else children.push(new d.Paragraph({ indent: { left: 360 + b.level * 360 }, children: [new d.TextRun(b.mark === 'done' ? '☑ ' : '☐ '), ...runs(b.runs, b.mark === 'done' ? { s: true } : {})] }));
     } else if (b.t === 'image') {
       const f = byId.get(b.id);
@@ -430,6 +437,17 @@ export async function noteDocx(n: ExportNote, repo: Repo): Promise<Blob> {
         {
           reference: 'num',
           levels: [0, 1, 2, 3].map((level) => ({ level, format: d.LevelFormat.DECIMAL, text: `%${level + 1}.`, alignment: d.AlignmentType.START, style: { paragraph: { indent: { left: 720 + level * 360, hanging: 360 } } } })),
+        },
+        {
+          // 1. → 1.1 → 1.1.1, as the note shows it.
+          reference: 'multi',
+          levels: [0, 1, 2, 3].map((level) => ({
+            level,
+            format: d.LevelFormat.DECIMAL,
+            text: level ? Array.from({ length: level + 1 }, (_, i) => `%${i + 1}`).join('.') : '%1.',
+            alignment: d.AlignmentType.START,
+            style: { paragraph: { indent: { left: 720 + level * 540, hanging: 360 + level * 180 } } },
+          })),
         },
       ],
     },

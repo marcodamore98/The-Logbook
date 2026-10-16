@@ -3031,6 +3031,15 @@ button.op-tutor:disabled { opacity: 0.7; cursor: default; }
 .note-body blockquote { margin: 0.4rem 0; padding: 0.2rem 0 0.2rem 0.9rem; border-left: 3px solid #b9b0f5; color: var(--muted); font-style: italic; }
 .note-body ul, .note-body ol { margin: 0.2rem 0 0.5rem; padding-left: 1.5rem; }
 .note-body li { margin: 0.12rem 0; }
+.note-body li > ul, .note-body li > ol { margin: 0.12rem 0 0.2rem; }
+/* Word-style multilevel numbering: 1. → 1.1 → 1.1.1 */
+.note-body ol.n-multi, .note-body ol.n-multi ol { counter-reset: n-li; }
+.note-body ol.n-multi > li, .note-body ol.n-multi ol > li { counter-increment: n-li; }
+.note-body ol.n-multi > li::marker { content: counter(n-li) ".  "; }
+.note-body ol.n-multi ol > li::marker { content: counters(n-li, ".") "  "; }
+.note-body ol.n-multi ol { padding-left: 2.3rem; }
+.note-body ol.n-multi ol ol { padding-left: 2.9rem; }
+.note-body li::marker { font-variant-numeric: tabular-nums; }
 .note-body ul.n-check { list-style: none; padding-left: 0.2rem; }
 .note-body ul.n-check > li { position: relative; padding-left: 2rem; }
 .note-body ul.n-check > li::before { content: ''; position: absolute; left: 0.1rem; top: 0.22em; width: 1.15rem; height: 1.15rem; border-radius: 6px; border: 2px solid var(--muted); box-sizing: border-box; }
@@ -3097,6 +3106,10 @@ button.op-tutor:disabled { opacity: 0.7; cursor: default; }
 .rt-table { align-self: center; display: flex; gap: 0.3rem; overflow-x: auto; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 0.3rem; }
 .rt-table button { flex: none; border: none; background: var(--surface-2); color: var(--ink); border-radius: 999px; padding: 0.4rem 0.75rem; font: inherit; font-size: 0.82rem; font-weight: 700; }
 .rt-table .danger { color: var(--coral); }
+.rt-table button { display: inline-flex; align-items: center; gap: 0.3rem; }
+.rt-table button.on { background: var(--lime); color: #1d1d1f; }
+.rt-listbar { align-self: flex-start; }
+.rt-level { flex: none; align-self: center; padding: 0 0.4rem 0 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .rt-busy { align-self: center; background: #1d1d1f; color: #fff; border-radius: 999px; padding: 0.4rem 0.9rem; font-size: 0.85rem; font-weight: 600; }
 .rt-rec { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; background: #1d1d1f; color: #fff; border-radius: 18px; padding: 0.5rem 0.6rem 0.5rem 0.9rem; box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); }
 .rt-rec strong { font-variant-numeric: tabular-nums; }

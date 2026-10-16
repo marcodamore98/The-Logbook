@@ -78,6 +78,27 @@ interface Active {
   pt?: number;
   font?: string;
   en?: boolean;
+  /** Depth of the list item at the caret (1 = main list, 2 = sub-list…); 0 outside lists. */
+  level?: number;
+  /** The numbered list shows 1.1, 1.2 (Word's multilevel numbering). */
+  multi?: boolean;
+}
+
+/** Tab outside a list: a gap like Word's tab stop (two em spaces, so it survives saving and export). */
+const TAB = '\u2003\u2003';
+const MULTI_KEY = 'logbook.notes.multiNumbers';
+const prefersMulti = () => {
+  try {
+    return localStorage.getItem(MULTI_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+/** The outermost numbered list around a node: the one that carries the numbering style for all its levels. */
+const outerOl = (n: Element | null | undefined, root: HTMLElement): HTMLOListElement | null => {
+  let found: HTMLOListElement | null = null;
+  for (let e = n; e && e !== root; e = e.parentElement) if (e.tagName === 'OL') found = e as HTMLOListElement;
+  return found;
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -254,6 +275,12 @@ export function RichText({
         pt: at ? ptOf(at) : undefined,
         font: FONTS.find(([, f]) => f && at?.closest<HTMLElement>('[style*="font-family"]')?.style.fontFamily.replace(/['"]/g, '') === f.replace(/['"]/g, ''))?.[0],
         en: !!at?.closest('[lang="en"]'),
+        level: (() => {
+          let n = 0;
+          for (let e = at?.closest('li'); e && node.contains(e); e = e.parentElement?.closest('li')) n++;
+          return n;
+        })(),
+        multi: !!outerOl(at, node)?.classList.contains('n-multi'),
       });
     };
     document.addEventListener('selectionchange', onSel);
@@ -262,8 +289,10 @@ export function RichText({
 
   const restore = () => {
     const node = ed.current!;
-    node.focus({ preventScroll: true });
     const sel = document.getSelection()!;
+    // Still writing here: the live caret is newer than the one remembered at the last selectionchange.
+    if (document.activeElement === node && sel.rangeCount && node.contains(sel.anchorNode)) return;
+    node.focus({ preventScroll: true });
     if (range.current && node.contains(range.current.startContainer)) {
       sel.removeAllRanges();
       sel.addRange(range.current);
@@ -282,7 +311,10 @@ export function RichText({
   const exec = (cmd: string, value?: string) => {
     restore();
     document.execCommand(cmd, false, value);
-    if (/List|indent|outdent|formatBlock/.test(cmd)) fixNesting();
+    if (/List|indent|outdent|formatBlock/.test(cmd)) {
+      fixNesting();
+      fixLists();
+    }
     changed();
     document.dispatchEvent(new Event('selectionchange'));
   };
@@ -380,7 +412,7 @@ export function RichText({
       list.classList.remove('n-check');
       list.querySelectorAll('li[data-done]').forEach((li) => li.removeAttribute('data-done'));
       changed();
-    } else exec('insertUnorderedList');
+    } else if (!retype('UL')) exec('insertUnorderedList');
     document.dispatchEvent(new Event('selectionchange'));
   };
   const checklist = () => {
@@ -392,6 +424,246 @@ export function RichText({
       document.execCommand('insertUnorderedList');
       fixNesting();
       at()?.closest('ul')?.classList.add('n-check');
+    }
+    changed();
+    document.dispatchEvent(new Event('selectionchange'));
+  };
+
+  /**
+   * Structural list changes (Tab, Shift+Tab, type of a level) are made by hand, so the sub-lists
+   * always sit inside their item. The browser's undo does not know them: they keep their own,
+   * the list as it was before, and "Annulla" (or Ctrl+Z) puts it back while nothing else changed.
+   */
+  const own = useRef<{ before: string; nodes: Node[]; after: string }[]>([]);
+  const outer = (n: Node) => (n instanceof Element ? n.outerHTML : n.textContent ?? '');
+  const structural = (work: () => boolean) => {
+    const node = ed.current!;
+    let top: Node | null = at();
+    while (top && top.parentNode !== node) top = top.parentNode;
+    if (!top) return false;
+    const before = outer(top);
+    const prev = top.previousSibling;
+    const next = top.nextSibling;
+    const sel = document.getSelection()!;
+    const a = sel.anchorNode;
+    const o = sel.anchorOffset;
+    const fo = sel.focusNode;
+    const fOff = sel.focusOffset;
+    if (!work()) return false;
+    const nodes: Node[] = [];
+    for (let n = prev ? prev.nextSibling : node.firstChild; n && n !== next; n = n.nextSibling) nodes.push(n);
+    own.current.push({ before, nodes, after: nodes.map(outer).join('') });
+    if (own.current.length > 50) own.current.shift();
+    // Same text nodes, only moved: the caret (or the chosen text) stays where it was.
+    const r = document.createRange();
+    const put = (n: Node | null, off: number, f: (n: Node, o: number) => void) => n && node.contains(n) && f(n, Math.min(off, n.nodeType === Node.TEXT_NODE ? (n.textContent ?? '').length : n.childNodes.length));
+    put(a, o, (n, x) => r.setStart(n, x));
+    if (fo && fo !== a) put(fo, fOff, (n, x) => r.setEnd(n, x));
+    else r.collapse(true);
+    if (r.startContainer && node.contains(r.startContainer)) {
+      sel.removeAllRanges();
+      sel.addRange(r);
+      range.current = r.cloneRange();
+    }
+    changed();
+    document.dispatchEvent(new Event('selectionchange'));
+    return true;
+  };
+  const undo = () => {
+    const last = own.current.at(-1);
+    const node = ed.current!;
+    if (last && last.nodes.length && last.nodes.every((n) => n.parentNode === node) && last.nodes.map(outer).join('') === last.after) {
+      own.current.pop();
+      const tpl = document.createElement('template');
+      tpl.innerHTML = last.before;
+      const fresh = [...tpl.content.childNodes];
+      last.nodes[0].parentNode!.insertBefore(tpl.content, last.nodes[0]);
+      last.nodes.forEach((n) => n.parentNode?.removeChild(n));
+      node.focus({ preventScroll: true });
+      const r = document.createRange();
+      r.selectNodeContents(fresh.at(-1)!);
+      r.collapse(false);
+      const sel = document.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(r);
+      range.current = r.cloneRange();
+      changed();
+      document.dispatchEvent(new Event('selectionchange'));
+      return;
+    }
+    exec('undo');
+  };
+
+  /** The list items the caret or the chosen text is on (only the outermost ones, in order). */
+  const chosenItems = (): HTMLLIElement[] => {
+    const node = ed.current!;
+    const sel = document.getSelection();
+    const li = at()?.closest('li');
+    if (!sel?.rangeCount || sel.isCollapsed) return li && node.contains(li) ? [li as HTMLLIElement] : [];
+    const r = sel.getRangeAt(0);
+    const all = [...node.querySelectorAll('li')].filter((x) => r.intersectsNode(x));
+    return all.filter((x) => !all.some((y) => y !== x && y.contains(x)));
+  };
+  const sameList = (like: Element) => {
+    const l = document.createElement(like.tagName);
+    if (like.classList.contains('n-check')) l.className = 'n-check';
+    return l;
+  };
+  /** Tab on an item: it becomes the last sub-item of the item above (Word's "increase list level"). */
+  const sink = (li: HTMLLIElement) => {
+    const prev = li.previousElementSibling;
+    if (prev?.tagName !== 'LI') return false;
+    let sub = prev.lastElementChild;
+    if (!sub || !/^(UL|OL)$/.test(sub.tagName)) {
+      sub = sameList(li.parentElement!);
+      prev.append(sub);
+    }
+    sub.append(li);
+    return true;
+  };
+  /** Shift+Tab on an item: back up one level (the items after it become its sub-items); from the main list, plain text. */
+  const lift = (li: HTMLLIElement) => {
+    const list = li.parentElement!;
+    const after: Element[] = [];
+    for (let n = li.nextElementSibling; n; n = n.nextElementSibling) after.push(n);
+    if (list.parentElement?.tagName === 'LI') {
+      if (after.length) {
+        let sub = li.lastElementChild;
+        if (!sub || !/^(UL|OL)$/.test(sub.tagName)) {
+          sub = sameList(list);
+          li.append(sub);
+        }
+        sub.append(...after);
+      }
+      list.parentElement.after(li);
+      if (!list.children.length) list.remove();
+      return true;
+    }
+    // Main list → a paragraph between the two halves of the list.
+    const p = document.createElement('p');
+    const rest = sameList(list);
+    if (list.classList.contains('n-multi')) rest.classList.add('n-multi');
+    for (const c of [...li.childNodes]) {
+      if (c instanceof Element && /^(UL|OL)$/.test(c.tagName)) rest.append(...c.children);
+      else p.append(c);
+    }
+    if (!p.childNodes.length) p.append(document.createElement('br'));
+    rest.append(...after);
+    list.after(p);
+    if (rest.children.length) p.after(rest);
+    li.remove();
+    if (!list.children.length) list.remove();
+    const sel = document.getSelection()!;
+    if (!sel.anchorNode || !ed.current!.contains(sel.anchorNode)) {
+      const r = document.createRange();
+      r.setStart(p, 0);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    return true;
+  };
+  /** This level of the list becomes bullets or numbers (the levels above and below stay as they are). */
+  const retype = (tag: 'UL' | 'OL'): boolean => {
+    const list = at()?.closest('li')?.parentElement;
+    if (!list || !ed.current!.contains(list) || list.tagName === tag) return false;
+    return structural(() => {
+      const l = document.createElement(tag);
+      l.append(...list.childNodes);
+      list.replaceWith(l);
+      return true;
+    });
+  };
+  /** Numbered list (or this level of a list turned into numbers); `multi` picks 1, 2, 3 or 1.1, 1.2 for the whole list. */
+  const numbers = () => {
+    restore();
+    const list = at()?.closest('li')?.parentElement;
+    if (list && list.tagName !== 'OL' && retype('OL')) return;
+    const wasList = !!list;
+    exec('insertOrderedList');
+    // From the toolbar the preferred style goes only on a new list, never on one already there.
+    const top = outerOl(at(), ed.current!);
+    if (top && !wasList && prefersMulti()) {
+      top.classList.add('n-multi');
+      changed();
+      document.dispatchEvent(new Event('selectionchange'));
+    }
+  };
+  const numberStyle = (multi: boolean) => {
+    try {
+      localStorage.setItem(MULTI_KEY, multi ? '1' : '0');
+    } catch {
+      /* private mode */
+    }
+    restore();
+    if (!at()?.closest('li')?.parentElement?.matches('ol')) retype('OL');
+    const top = outerOl(at(), ed.current!);
+    if (!top || top.classList.contains('n-multi') === multi) return;
+    structural(() => {
+      top.classList.toggle('n-multi', multi);
+      top.querySelectorAll('ol.n-multi').forEach((o) => o.classList.remove('n-multi'));
+      if (!top.classList.length) top.removeAttribute('class');
+      return true;
+    });
+  };
+  const levelBullets = () => {
+    restore();
+    const list = at()?.closest('li')?.parentElement;
+    if (list?.classList.contains('n-check')) return bullets();
+    retype('UL');
+  };
+  /**
+   * Tab / Shift+Tab, as in Word: in a list the item becomes a sub-item (or goes back up a level);
+   * in a table it moves to the next (previous) cell; in the text it leaves a gap (or removes it).
+   */
+  const tab = (back: boolean) => {
+    restore();
+    const node = ed.current!;
+    const items = chosenItems();
+    if (items.length) {
+      structural(() => {
+        let done = false;
+        for (const li of items) done = (back ? lift(li) : sink(li)) || done;
+        return done;
+      });
+      return;
+    }
+    const here = at();
+    const sel = document.getSelection()!;
+    const cell = here?.closest('td, th');
+    if (cell && node.contains(cell)) {
+      const cells = [...cell.closest('table')!.querySelectorAll('td, th')];
+      const next = cells[cells.indexOf(cell) + (back ? -1 : 1)];
+      if (next) {
+        const r = document.createRange();
+        r.selectNodeContents(next);
+        r.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        range.current = r.cloneRange();
+      }
+      return;
+    }
+    if (!back) document.execCommand('insertText', false, TAB);
+    else if (sel.rangeCount) {
+      // Removes the gap just before the caret, or else the one at the start of the line.
+      const r = sel.getRangeAt(0);
+      let t: Node | null = r.startContainer;
+      let end = r.startOffset;
+      let m = t.nodeType === Node.TEXT_NODE ? (t.textContent ?? '').slice(0, end).match(/ {1,2}$/) : null;
+      if (!m) {
+        const blk = here?.closest('p, h2, h3, blockquote, div');
+        const first = blk && node.contains(blk) ? document.createTreeWalker(blk, NodeFilter.SHOW_TEXT).nextNode() : null;
+        m = first ? (first.textContent ?? '').match(/^ {1,2}/) : null;
+        t = first;
+        end = m ? m[0].length : 0;
+      }
+      if (!m || !t) return;
+      const del = document.createRange();
+      del.setStart(t, end - m[0].length);
+      del.setEnd(t, end);
+      sel.removeAllRanges();
+      sel.addRange(del);
+      document.execCommand('delete');
     }
     changed();
     document.dispatchEvent(new Event('selectionchange'));
@@ -448,6 +720,35 @@ export function RichText({
         moved = true;
       }
     });
+    if (moved && a && node.contains(a)) {
+      const r = document.createRange();
+      r.setStart(a, Math.min(o, a.nodeType === Node.TEXT_NODE ? (a.textContent ?? '').length : a.childNodes.length));
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+  };
+
+  /**
+   * The browser puts a sub-list next to the item it belongs to (<ol><li>a</li><ol>…</ol></ol>):
+   * it goes inside that item, as Word and the export expect, and two sub-lists of one item become one.
+   */
+  const fixLists = () => {
+    const node = ed.current!;
+    const sel = document.getSelection()!;
+    const a = sel.anchorNode;
+    const o = sel.anchorOffset;
+    let moved = false;
+    for (const list of [...node.querySelectorAll<HTMLElement>(':is(ul, ol) > :is(ul, ol)')]) {
+      const prev = list.previousElementSibling;
+      if (prev?.tagName !== 'LI') continue;
+      const last = prev.lastElementChild;
+      if (last && last.tagName === list.tagName && last.className === list.className) {
+        last.append(...list.childNodes);
+        list.remove();
+      } else prev.append(list);
+      moved = true;
+    }
     if (moved && a && node.contains(a)) {
       const r = document.createRange();
       r.setStart(a, Math.min(o, a.nodeType === Node.TEXT_NODE ? (a.textContent ?? '').length : a.childNodes.length));
@@ -674,6 +975,25 @@ export function RichText({
         spellCheck
         onInput={changed}
         onKeyDown={(e) => {
+          if (e.key === 'Tab' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            tab(e.shiftKey);
+            return;
+          }
+          if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            undo();
+            return;
+          }
+          // Enter on an empty sub-item goes back up one level, as in Word.
+          if (e.key === 'Enter' && !e.shiftKey) {
+            const li = at()?.closest('li');
+            if (li && li.parentElement?.parentElement?.tagName === 'LI' && !li.textContent?.trim() && !li.querySelector('ul, ol, img')) {
+              e.preventDefault();
+              tab(true);
+              return;
+            }
+          }
           // A new line of a checklist starts unticked.
           if (e.key === 'Enter' && at()?.closest('ul.n-check'))
             window.setTimeout(() => {
@@ -790,6 +1110,24 @@ export function RichText({
               </button>
             </div>
           )}
+          {!!active.level && !active.table && !pop && (
+            <div className="rt-table rt-listbar" role="toolbar" aria-label="Elenco">
+              <span className="rt-level">Livello {active.level}</span>
+              <button type="button" aria-label="Shift+Tab: sali di un livello" title="Shift+Tab" onPointerDown={(e) => e.preventDefault()} onClick={() => tab(true)}>
+                <Sym name="format_indent_decrease" size={18} />
+              </button>
+              <button type="button" aria-label="Tab: sotto-elenco" title="Tab" onPointerDown={(e) => e.preventDefault()} onClick={() => tab(false)}>
+                <Sym name="format_indent_increase" size={18} />
+              </button>
+              {!active.check && (
+                <>
+                  <button type="button" className={active.ul ? 'on' : ''} aria-pressed={!!active.ul} aria-label="Questo livello a punti" onPointerDown={(e) => e.preventDefault()} onClick={levelBullets}>• ◦</button>
+                  <button type="button" className={active.ol && !active.multi ? 'on' : ''} aria-pressed={!!active.ol && !active.multi} aria-label="Numeri 1, 2, 3" onPointerDown={(e) => e.preventDefault()} onClick={() => numberStyle(false)}>1 2 3</button>
+                  <button type="button" className={active.ol && active.multi ? 'on' : ''} aria-pressed={!!active.ol && !!active.multi} aria-label="Numeri 1.1, 1.2, 1.3" onPointerDown={(e) => e.preventDefault()} onClick={() => numberStyle(true)}>1.1 1.2</button>
+                </>
+              )}
+            </div>
+          )}
           {active.table && (
             <div className="rt-table" role="toolbar" aria-label="Tabella">
               <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => tableOp('row')}>+ Riga</button>
@@ -861,11 +1199,11 @@ export function RichText({
             <Btn icon="format_color_text" label="Colore del testo" on={pop === 'color'} run={() => setPop(pop === 'color' ? null : 'color')} />
             <Btn icon="checklist" label="Checklist" on={active.check} run={checklist} />
             <Btn icon="format_list_bulleted" label="Elenco puntato" on={active.ul} run={bullets} />
-            <Btn icon="format_list_numbered" label="Elenco numerato" on={active.ol} run={() => exec('insertOrderedList')} />
+            <Btn icon="format_list_numbered" label="Elenco numerato" on={active.ol} run={numbers} />
+            <Btn icon="format_indent_increase" label="Tab (rientro o sotto-elenco)" run={() => tab(false)} />
+            <Btn icon="format_indent_decrease" label="Shift+Tab (riduci rientro o sali di livello)" run={() => tab(true)} />
             <Btn icon="strikethrough_s" label="Barrato" on={active.strike} run={() => exec('strikeThrough')} />
-            <Btn icon="format_indent_increase" label="Aumenta rientro" run={() => exec('indent')} />
-            <Btn icon="format_indent_decrease" label="Riduci rientro" run={() => exec('outdent')} />
-            <Btn icon="undo" label="Annulla" run={() => exec('undo')} />
+            <Btn icon="undo" label="Annulla" run={undo} />
             <Btn icon="redo" label="Ripeti" run={() => exec('redo')} />
           </div>
         </div>
