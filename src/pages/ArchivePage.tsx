@@ -565,7 +565,7 @@ function firstLines(html: string, max = 7): { kind: 'h' | 'li' | 'check' | 'done
   return out;
 }
 
-/** First image of the note filling the card, else a small white page with the title and the first lines. */
+/** First image of the note filling the card (with its tags), else a small white page with the title, the tags and the first lines. */
 function Preview({ r, tone, mini }: { r: NoteRow; tone?: string; mini?: boolean }) {
   const { repo } = useStore();
   const html = bodyOf(r.m);
@@ -580,23 +580,43 @@ function Preview({ r, tone, mini }: { r: NoteRow; tone?: string; mini?: boolean 
   }, [repo, img?.src]);
   const lines = useMemo(() => firstLines(html), [html]);
   const pdf = (r.m.attachments ?? []).some((a) => a.kind === 'pdf');
+  const tags = (r.m.tags ?? []).slice(0, 4);
+  const tagRow = tags.length > 0 && (
+    <span className="np-tags">
+      {tags.map((t) => (
+        <span key={t} className="np-chip">
+          #{t}
+        </span>
+      ))}
+    </span>
+  );
+  if (img && url && !mini)
+    return (
+      <>
+        <img className="nc-img" src={url} alt="" />
+        {tagRow && <span className="nc-img-tags">{tagRow}</span>}
+      </>
+    );
   if (img && url) return <img className="nc-img" src={url} alt="" />;
   if (mini) return lines.length ? <span className="nc-text">{lines.map((l) => l.text).join('\n')}</span> : pdf ? <span className="nc-pdf">PDF</span> : <span className="nc-text muted">Nota vuota</span>;
   return (
     <span className="nc-page" aria-hidden="true">
       <i className="np-bar" style={{ background: toneColor(tone) }} />
       <strong className="np-title">{noteTitle(r)}</strong>
+      {tagRow}
       <i className="np-rule" />
-      {lines.length ? (
-        lines.map((l, i) => (
-          <span key={i} className={`np-line np-${l.kind}`}>
-            {l.kind === 'li' ? '• ' : l.kind === 'check' ? '☐ ' : l.kind === 'done' ? '☑ ' : ''}
-            {l.text}
-          </span>
-        ))
-      ) : (
-        <span className="np-line np-empty">{pdf ? 'PDF allegato' : 'Nota vuota'}</span>
-      )}
+      <span className="np-body">
+        {lines.length ? (
+          lines.map((l, i) => (
+            <span key={i} className={`np-line np-${l.kind}`}>
+              {l.kind === 'li' ? '• ' : l.kind === 'check' ? '☐ ' : l.kind === 'done' ? '☑ ' : ''}
+              {l.text}
+            </span>
+          ))
+        ) : (
+          <span className="np-line np-empty">{pdf ? 'PDF allegato' : 'Nota vuota'}</span>
+        )}
+      </span>
     </span>
   );
 }

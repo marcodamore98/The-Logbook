@@ -3339,6 +3339,16 @@ button.op-tutor:disabled { opacity: 0.7; cursor: default; }
 .np-h { font-weight: 800; color: #1e1e24; }
 .np-done { text-decoration: line-through; color: #8a8f99; }
 .np-empty { color: #8a8f99; font-style: italic; }
+/* Nothing in the little page shrinks: what does not fit is cut at the bottom (never lines on top of each other). */
+.nc-page > * { flex-shrink: 0; }
+.nc-page { gap: 0.35rem; padding: 0.65rem 0.7rem; }
+.nc-page .np-title { font-size: 0.78rem; line-height: 1.25; -webkit-line-clamp: 3; overflow-wrap: anywhere; }
+.np-tags { display: flex; flex-wrap: wrap; gap: 0.2rem; max-height: 2.6rem; overflow: hidden; }
+.np-chip { font-size: 0.6rem; font-weight: 700; line-height: 1; padding: 0.22rem 0.42rem; border-radius: 999px; background: #e9e6fd; color: #4b3fa8; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.np-body { flex: 1 1 auto; flex-shrink: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0.2rem; }
+.np-body > .np-line { flex-shrink: 0; font-size: 0.6rem; line-height: 1.35; }
+.nc-img-tags { position: absolute; left: 0.5rem; right: 0.5rem; top: 0.5rem; }
+.nc-img-tags .np-chip { background: rgb(19 19 19 / 0.82); color: #e9e6fd; border: 1px solid rgb(255 255 255 / 0.12); }
 .nc-badges { gap: 0.25rem; padding: 0.2rem 0.45rem; background: rgb(19 19 19 / 0.9); border: 1px solid #333335; color: #c8c8c4; }
 .nc-badges .b-star { color: #e9b949 !important; }
 .nc-badges .b-study { color: #a6e9c4; }
