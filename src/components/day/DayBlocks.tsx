@@ -13,6 +13,7 @@ import { runLine } from '../modules/meta';
 import { IconFood, IconWorkout, Sym } from '../icons';
 import { Card } from '../ui';
 import { useUndo } from '../Undo';
+import { MoveButton } from '../MoveSheet';
 
 export function workoutLine(w: WorkoutModule, prs = 0): string {
   return [
@@ -180,6 +181,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           <div className="sheet action-sheet" role="dialog" aria-label="Allenamento" onClick={(e) => e.stopPropagation()}>
             <div className="grabber" />
             <h2 className="sheet-title">{picked.title || 'Allenamento'}</h2>
+            <MoveButton from={day.date} what="l’allenamento" target={{ kind: 'module', id: picked.id }} className="btn-ghost cancel-banner move-banner" onMoved={() => setPicked(null)} />
             <button
               className="danger-banner"
               onClick={async () => {
@@ -201,6 +203,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
           <div className="sheet action-sheet" role="dialog" aria-label="Corsa" onClick={(e) => e.stopPropagation()}>
             <div className="grabber" />
             <h2 className="sheet-title">{pickedRun.title || 'Corsa'}</h2>
+            <MoveButton from={day.date} what="la corsa" target={{ kind: 'module', id: pickedRun.id }} className="btn-ghost cancel-banner move-banner" onMoved={() => setPickedRun(null)} />
             <button
               className="danger-banner"
               onClick={async () => {

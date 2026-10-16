@@ -6,6 +6,7 @@ import { useStore } from '../../lib/store/StoreContext';
 import type { NoteFile } from '../../lib/types';
 import { openFile } from '../files/FileSlot';
 import { attachPlayer, stripPlayers, toWave } from './audioPlayer';
+import './fonts.css';
 import { createPortal } from 'react-dom';
 import { Sym } from '../icons';
 import type { SymName } from '../ms';
@@ -47,6 +48,19 @@ const BLOCKS: [string, string][] = [
   ['p', 'Testo'],
   ['blockquote', 'Citazione'],
 ];
+/** Classic fonts, as in Word: the real one when the device has it, else its open look-alike bundled with the app. */
+export const FONTS: [string, string | null][] = [
+  ['Predefinito', null],
+  ['Arial', 'Arial, Arimo, Helvetica, sans-serif'],
+  ['Calibri', 'Calibri, Carlito, sans-serif'],
+  ['Times New Roman', '"Times New Roman", Tinos, Times, serif'],
+  ['Georgia', 'Georgia, Gelasio, serif'],
+  ['Garamond', 'Garamond, "EB Garamond", serif'],
+  ['Courier New', '"Courier New", Cousine, Courier, monospace'],
+];
+/** Text sizes in points, as in Word (12 pt is the normal text). */
+const SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48];
+const ptOf = (el: Element | null) => (el ? Math.round(parseFloat(getComputedStyle(el).fontSize) * 0.75 * 2) / 2 : 12);
 // Marker colour that means "no colour": spans carrying it lose the property right after.
 const UNSET = 'rgb(1, 2, 3)';
 
@@ -60,6 +74,10 @@ interface Active {
   check?: boolean;
   block?: string;
   table?: boolean;
+  /** Size of the text at the caret, in points. */
+  pt?: number;
+  font?: string;
+  en?: boolean;
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -119,7 +137,7 @@ export function RichText({
   const timer = useRef(0);
   const dirty = useRef(false);
   const [active, setActive] = useState<Active>({});
-  const [pop, setPop] = useState<'block' | 'color' | 'marker' | null>(null);
+  const [pop, setPop] = useState<'block' | 'color' | 'marker' | 'font' | 'size' | null>(null);
   const [busy, setBusy] = useState(false);
   const [caption, setCaption] = useState<{ el: HTMLElement; text: string } | null>(null);
   /** Writes (or takes away) the caption under a photo. */
@@ -233,6 +251,9 @@ export function RichText({
         check: !!ul?.classList.contains('n-check'),
         block,
         table: !!at?.closest('td, th'),
+        pt: at ? ptOf(at) : undefined,
+        font: FONTS.find(([, f]) => f && at?.closest<HTMLElement>('[style*="font-family"]')?.style.fontFamily.replace(/['"]/g, '') === f.replace(/['"]/g, ''))?.[0],
+        en: !!at?.closest('[lang="en"]'),
       });
     };
     document.addEventListener('selectionchange', onSel);
@@ -279,6 +300,74 @@ export function RichText({
     }
     setPop(null);
     changed();
+  };
+  /** Font of the chosen text (or of what is typed next). */
+  const setFont = (family: string | null) => {
+    restore();
+    document.execCommand('styleWithCSS', false, 'true');
+    document.execCommand('fontName', false, family ?? UNSET);
+    document.execCommand('styleWithCSS', false, 'false');
+    if (!family)
+      ed.current!.querySelectorAll<HTMLElement>('[style*="font-family"]').forEach((el) => {
+        if (el.style.fontFamily.includes('rgb')) el.style.removeProperty('font-family');
+        if (!el.getAttribute('style')) el.removeAttribute('style');
+      });
+    setPop(null);
+    changed();
+    document.dispatchEvent(new Event('selectionchange'));
+  };
+  /** Size of the chosen text in points: the browser marks it "xxx-large", then the mark becomes the real size. */
+  const setSize = (pt: number) => {
+    restore();
+    document.execCommand('styleWithCSS', false, 'true');
+    document.execCommand('fontSize', false, '7');
+    document.execCommand('styleWithCSS', false, 'false');
+    ed.current!.querySelectorAll<HTMLElement>('[style*="xxx-large"], font[size="7"]').forEach((el) => {
+      if (el.tagName === 'FONT') {
+        const span = document.createElement('span');
+        span.innerHTML = el.innerHTML;
+        el.replaceWith(span);
+        el = span;
+      }
+      el.style.fontSize = pt === 12 ? '' : `${pt}pt`;
+      if (!el.getAttribute('style')) el.removeAttribute('style');
+    });
+    changed();
+    document.dispatchEvent(new Event('selectionchange'));
+  };
+  const stepSize = (dir: 1 | -1) => {
+    const now = active.pt ?? 12;
+    const next = dir > 0 ? SIZES.find((x) => x > now + 0.1) : [...SIZES].reverse().find((x) => x < now - 0.1);
+    if (next) setSize(next);
+  };
+  /** "EN": the chosen text is English (checked as English); on a caret inside English text, it goes back to Italian. */
+  const toggleEnglish = () => {
+    restore();
+    const sel = document.getSelection();
+    if (!sel?.rangeCount) return;
+    const inside = at()?.closest<HTMLElement>('[lang="en"]');
+    if (inside && ed.current!.contains(inside)) {
+      inside.replaceWith(...inside.childNodes);
+    } else {
+      const r = sel.getRangeAt(0);
+      if (r.collapsed) {
+        // Nothing chosen: the whole paragraph.
+        const blk = at()?.closest('p, li, h2, h3, blockquote, td');
+        if (!blk || !ed.current!.contains(blk)) return;
+        r.selectNodeContents(blk);
+      }
+      const span = document.createElement('span');
+      span.setAttribute('lang', 'en');
+      span.appendChild(r.extractContents());
+      r.insertNode(span);
+      sel.removeAllRanges();
+      const after = document.createRange();
+      after.selectNodeContents(span);
+      sel.addRange(after);
+    }
+    ed.current!.normalize();
+    changed();
+    document.dispatchEvent(new Event('selectionchange'));
   };
   const block = (tag: string) => {
     exec('formatBlock', tag);
@@ -576,6 +665,7 @@ export function RichText({
         ref={ed}
         className={`note-body${readOnly ? ' reading' : ''}`}
         contentEditable={!readOnly}
+        lang="it"
         suppressContentEditableWarning
         role="textbox"
         aria-multiline="true"
@@ -729,6 +819,18 @@ export function RichText({
                     <span style={{ color: c ?? undefined }}>A</span>
                   </button>
                 ))}
+              {pop === 'font' &&
+                FONTS.map(([label, f]) => (
+                  <button key={label} type="button" role="menuitemradio" aria-checked={(active.font ?? 'Predefinito') === label} className={`rt-block rt-font${(active.font ?? 'Predefinito') === label ? ' on' : ''}`} style={{ fontFamily: f ?? undefined }} onPointerDown={(e) => e.preventDefault()} onClick={() => setFont(f)}>
+                    {label}
+                  </button>
+                ))}
+              {pop === 'size' &&
+                SIZES.map((pt) => (
+                  <button key={pt} type="button" role="menuitemradio" aria-checked={active.pt === pt} className={`rt-size${active.pt === pt ? ' on' : ''}`} onPointerDown={(e) => e.preventDefault()} onClick={() => (setSize(pt), setPop(null))}>
+                    {pt}
+                  </button>
+                ))}
               {pop === 'marker' &&
                 MARKERS.map(([label, c]) => (
                   <button key={label} type="button" className={`rt-swatch marker${c ? '' : ' none'}`} aria-label={label} title={label} style={{ background: c ?? undefined }} onPointerDown={(e) => e.preventDefault()} onClick={() => paint('hiliteColor', c)} />
@@ -738,6 +840,19 @@ export function RichText({
           <div className="rt-bar" role="toolbar" aria-label="Formattazione">
             <button type="button" className={`rt-btn rt-aa${pop === 'block' ? ' on' : ''}`} aria-label="Stile del paragrafo" onPointerDown={(e) => e.preventDefault()} onClick={() => setPop(pop === 'block' ? null : 'block')}>
               Aa<span aria-hidden="true">▾</span>
+            </button>
+            <button type="button" className={`rt-btn rt-fontbtn${pop === 'font' ? ' on' : ''}`} aria-label="Carattere" title="Carattere" onPointerDown={(e) => e.preventDefault()} onClick={() => setPop(pop === 'font' ? null : 'font')}>
+              <Sym name="font_download" size={20} />
+              <span>{active.font && active.font !== 'Predefinito' ? active.font.split(' ')[0] : 'Font'}</span>
+            </button>
+            <button type="button" className={`rt-btn rt-sizebtn${pop === 'size' ? ' on' : ''}`} aria-label="Dimensione del testo" title="Dimensione del testo (pt)" onPointerDown={(e) => e.preventDefault()} onClick={() => setPop(pop === 'size' ? null : 'size')}>
+              {active.pt ?? 12}
+              <span aria-hidden="true">▾</span>
+            </button>
+            <Btn icon="text_decrease" label="Testo più piccolo" run={() => stepSize(-1)} />
+            <Btn icon="text_increase" label="Testo più grande" run={() => stepSize(1)} />
+            <button type="button" className={`rt-btn rt-en${active.en ? ' on' : ''}`} aria-pressed={!!active.en} aria-label="Testo in inglese (correttore inglese)" title="Segna il testo scelto come inglese: il correttore lo controlla in inglese" onPointerDown={(e) => e.preventDefault()} onClick={toggleEnglish}>
+              EN
             </button>
             <Btn icon="format_bold" label="Grassetto" on={active.bold} run={() => exec('bold')} />
             <Btn icon="format_italic" label="Corsivo" on={active.italic} run={() => exec('italic')} />

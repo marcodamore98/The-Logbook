@@ -225,7 +225,7 @@ export const COURSE_TYPES: { id: NonNullable<CourseModule['type']>; label: strin
   { id: 'webinar', label: 'Webinar' },
 ];
 
-async function askNotifications() {
+export async function askNotifications() {
   try {
     if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
   } catch {

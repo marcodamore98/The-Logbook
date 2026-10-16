@@ -46,6 +46,19 @@ export function useCourseReminders() {
           }
         }
       }
+      // Reminders ("Da ricordare") with a time and the bell on.
+      for (const t of live.current.day(d).todos) {
+        if (!t.remind || !t.time || t.done) continue;
+        const start = new Date(`${d}T${t.time}:00`).getTime();
+        for (const lead of LEADS) {
+          const at = start - lead * 60_000;
+          const key = `remind:${t.id}:${d}:${lead}`;
+          if (now >= at && now - at < 3 * 60_000 && !localStorage.getItem(key)) {
+            localStorage.setItem(key, '1');
+            notify(`${t.text || 'Promemoria'} tra ${lead} minuti`, `Alle ${t.time}`);
+          }
+        }
+      }
     };
     check();
     const id = window.setInterval(check, 30_000);

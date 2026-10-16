@@ -1,6 +1,6 @@
 import { TimeField } from './WheelPicker';
 import { SearchPicker } from './SearchPicker';
-import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Colleague, ShiftType } from '../lib/types';
 import { grouped, type VocabItem } from '../lib/vocab';
 import { Sym } from './icons';
@@ -379,12 +379,27 @@ export function Card({
 /** Textarea that is always as tall as its text: one line when empty, growing as you type. */
 export function AutoText({ value, onChange, placeholder, className }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  useLayoutEffect(() => {
+  const fit = () => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || !el.offsetParent) return; // hidden (closed card): measured when it shows
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
+  };
+  useLayoutEffect(fit, [value]);
+  // Width changes (a card that opens, a wider window) change the number of lines.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let w = 0;
+    const ro = new ResizeObserver(([e]) => {
+      if (Math.abs(e.contentRect.width - w) < 1) return;
+      w = e.contentRect.width;
+      fit();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return <textarea ref={ref} rows={1} className={`auto-text ${className ?? ''}`} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
 }
 

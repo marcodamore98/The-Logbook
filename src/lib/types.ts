@@ -36,8 +36,10 @@ export interface Todo {
   text: string;
   done: boolean;
   category?: string; // vocab.CATEGORIES
-  time?: HHMM; // with a time it becomes a Google Calendar event
+  time?: HHMM; // with a time it is a timed Google Calendar event, without one an all-day event
   end?: HHMM; // fine dell'evento su Google (predefinita: 30 minuti dopo)
+  /** Avviso 30 e 5 minuti prima (serve l'orario): su Google Calendar e nell'app. */
+  remind?: boolean;
   gcalEventId?: string;
 }
 

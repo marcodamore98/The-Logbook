@@ -25,7 +25,7 @@ export function pendingCount(d: DayEntry): number {
   let n = d.gcalTrash?.length ?? 0;
   for (const k of SHIFT_KEYS) if (d[k] && !d[k]!.gcalEventId && !d[k]!.gcalSkip) n++;
   n += d.appointments.filter((a) => !a.gcalEventId).length;
-  n += d.todos.filter((t) => t.time && !t.gcalEventId).length;
+  n += d.todos.filter((t) => !t.gcalEventId && t.text.trim()).length;
   n += d.modules.filter((m) => (m.kind === 'course' || m.kind === 'travel' || m.kind === 'outing') && !m.gcalEventId).length;
   return n;
 }
@@ -63,9 +63,12 @@ function apptInput(day: DayEntry, a: Appointment): EventInput {
   };
 }
 
+/** A reminder on Google: timed (with its 30 and 5 minute alerts when the bell is on) or, without a time, all-day. */
 function todoInput(day: DayEntry, t: Todo): EventInput {
-  const end = t.end && minutesOf(t.end) > minutesOf(t.time!) ? t.end : plusMinutes(t.time!, 30);
-  return { kind: 'todo', date: day.date, summary: `${t.done ? '✓ ' : '☐ '}${t.text}`, start: t.time, end };
+  const summary = `${t.done ? '✓ ' : '☐ '}${t.text}`;
+  if (!t.time) return { kind: 'todo', date: day.date, summary };
+  const end = t.end && minutesOf(t.end) > minutesOf(t.time) ? t.end : plusMinutes(t.time, 30);
+  return { kind: 'todo', date: day.date, summary, start: t.time, end, reminders: t.remind ? [30, 5] : [] };
 }
 
 const COURSE_LABEL = { course: 'Corso', congress: 'Congresso', webinar: 'Webinar' } as const;
@@ -167,18 +170,12 @@ export async function pushDay(prev: DayEntry | undefined, next: DayEntry, settin
     }
   }
 
-  // Todos with a time
+  // Reminders: all of them, timed or all-day
   for (const t of out.todos) {
     const old = prev?.todos.find((x) => x.id === t.id);
-    if (!t.time) {
-      if (t.gcalEventId) {
-        await deleteEvent(cal, t.gcalEventId);
-        t.gcalEventId = undefined;
-      }
-      continue;
-    }
+    if (!t.text.trim() && !t.gcalEventId) continue; // an empty row just added: not yet
     const input = todoInput(out, t);
-    if (force || !t.gcalEventId || !old || !old.time || !same(input, todoInput(prev!, old))) {
+    if (force || !t.gcalEventId || !old || !same(input, todoInput(prev!, old))) {
       t.gcalEventId = await upsertEvent(cal, t.gcalEventId, { ...input, itemId: t.id });
     }
   }

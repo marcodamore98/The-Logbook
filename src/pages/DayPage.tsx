@@ -3,7 +3,7 @@ import { hasContent } from '../lib/notes';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MODULES, metaOf, summarize } from '../components/modules/meta';
-import { ModuleEditor } from '../components/modules/editors';
+import { askNotifications, ModuleEditor } from '../components/modules/editors';
 import {
   GlyphClose,
   GlyphNext,
@@ -33,7 +33,8 @@ import { ShoppingList } from '../components/day/ShoppingList';
 import { useUndo } from '../components/Undo';
 import { useBlockDrag, useSortableList } from '../components/useBlockDrag';
 import { useSwipeNav } from '../components/useSwipeNav';
-import { Card, CardDecor, ColleaguePicker, DragGrip, Empty, ShiftTypeSelect, TimeTile, uid } from '../components/ui';
+import { AutoText, Card, CardDecor, ColleaguePicker, DragGrip, Empty, ShiftTypeSelect, TimeTile, uid } from '../components/ui';
+import { MoveButton } from '../components/MoveSheet';
 import { PrintButton } from '../components/PrintDialog';
 import { openFile, programOf } from '../components/files/FileSlot';
 import { mapsUrl, webUrl } from '../lib/links';
@@ -300,6 +301,7 @@ export default function DayPage() {
             }
           >
             <ModuleEditor value={m} onChange={setModule} date={date} />
+            <MoveButton from={date} what={`la scheda ${meta.label}`} target={{ kind: 'module', id: m.id }} />
           </Card>
         );
       });
@@ -370,9 +372,12 @@ export default function DayPage() {
                             setShift({ ...base, colleagueIds: [...new Set([...base.colleagueIds, ...ids])] });
                           }}
                         />
-                        <button type="button" className="btn-ghost small wr-delete no-print" onClick={async () => (await confirmDelete('il turno')) && (setEditingWork(null), removeShift('shift'))}>
-                          <GlyphTrash /> Elimina il turno
-                        </button>
+                        <div className="wr-actions">
+                          <MoveButton from={date} what="il turno" target={{ kind: 'shift' }} label="Sposta" onMoved={() => setEditingWork(null)} />
+                          <button type="button" className="btn-ghost small wr-delete no-print" onClick={async () => (await confirmDelete('il turno')) && (setEditingWork(null), removeShift('shift'))}>
+                            <GlyphTrash /> Elimina il turno
+                          </button>
+                        </div>
                       </div>
                     )}
                     {open && r.key === 'guardia' && day.guardia && (
@@ -381,9 +386,12 @@ export default function DayPage() {
                           <TimeTile label="Dalle" value={day.guardia.start} onChange={(start) => setGuardia({ ...day.guardia!, start })} />
                           <TimeTile label="Alle" value={day.guardia.end} onChange={(end) => setGuardia({ ...day.guardia!, end })} />
                         </div>
-                        <button type="button" className="btn-ghost small wr-delete no-print" onClick={async () => (await confirmDelete('la guardia medica')) && (setEditingWork(null), removeShift('guardia'))}>
-                          <GlyphTrash /> Elimina la guardia medica
-                        </button>
+                        <div className="wr-actions">
+                          <MoveButton from={date} what="la guardia medica" target={{ kind: 'guardia' }} label="Sposta" onMoved={() => setEditingWork(null)} />
+                          <button type="button" className="btn-ghost small wr-delete no-print" onClick={async () => (await confirmDelete('la guardia medica')) && (setEditingWork(null), removeShift('guardia'))}>
+                            <GlyphTrash /> Elimina la guardia medica
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -436,11 +444,11 @@ export default function DayPage() {
                   <li key={item.key} className="agenda-row">
                     <TimeField label="Inizio" className="compact" value={item.a.start} onChange={(v) => v && update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, start: v } : x)) }))} />
                     <TimeField label="Fine" className="compact" value={item.a.end} onChange={(v) => v && update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, end: v } : x)) }))} />
-                    <input
-                      className="grow"
+                    <AutoText
+                      className="grow wrap-text"
                       value={item.a.title}
                       placeholder="Impegno"
-                      onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, title: e.target.value } : x)) }))}
+                      onChange={(title) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, title } : x)) }))}
                     />
                     {catSelect(item.a.category, (category) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, category } : x)) })))}
                     {item.a.gcalEventId && (
@@ -453,6 +461,7 @@ export default function DayPage() {
                         <Sym name="location_on" size={18} />
                       </button>
                     )}
+                    <MoveButton iconOnly from={date} what="l’impegno" target={{ kind: 'appointment', id: item.a.id }} />
                     <button className="icon-btn small no-print" aria-label="Elimina impegno" onClick={async () => (await confirmDelete('questo impegno')) && update((d) => ({ ...d, appointments: d.appointments.filter((x) => x.id !== item.a!.id) }))}>
                       <GlyphTrash />
                     </button>
@@ -542,18 +551,36 @@ export default function DayPage() {
                 <li key={t.id} {...todoSort.item(ti)} className={`todo${t.done ? ' done' : ''} ${todoSort.item(ti).className}`}>
                   <DragGrip />
                   <input type="checkbox" checked={t.done} aria-label="Fatto" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, done: e.target.checked } : x)) }))} />
-                  <input className="grow" value={t.text} placeholder="Cosa ricordare…" onChange={(e) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, text: e.target.value } : x)) }))} />
+                  <AutoText className="grow wrap-text" value={t.text} placeholder="Cosa ricordare…" onChange={(text) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, text } : x)) }))} />
+                  <span className="todo-tools">
                   {catSelect(t.category, (category) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, category } : x)) })))}
                   <TimeField
-                    label="Orario (va su Google Calendar)"
+                    label="Orario (su Google Calendar con l’ora; senza, come evento di tutto il giorno)"
                     className="compact"
                     clearable
                     value={t.time}
-                    onChange={(v) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: v, end: undefined } : x)) }))}
+                    onChange={(v) => update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, time: v, end: undefined, ...(v ? {} : { remind: false }) } : x)) }))}
                   />
+                  {t.time && (
+                    <button
+                      type="button"
+                      className={`icon-btn small no-print todo-bell${t.remind ? ' on' : ''}`}
+                      aria-pressed={!!t.remind}
+                      aria-label={t.remind ? 'Avviso 30 e 5 minuti prima: acceso' : 'Avvisami 30 e 5 minuti prima'}
+                      title={t.remind ? 'Avviso 30 e 5 minuti prima (tocca per spegnere)' : 'Avvisami 30 e 5 minuti prima'}
+                      onClick={() => {
+                        if (!t.remind) askNotifications();
+                        update((d) => ({ ...d, todos: d.todos.map((x) => (x.id === t.id ? { ...x, remind: !x.remind } : x)) }));
+                      }}
+                    >
+                      <Sym name={t.remind ? 'notifications_active' : 'notifications_off'} fill={!!t.remind} size={18} />
+                    </button>
+                  )}
+                  <MoveButton iconOnly from={date} what="il promemoria" target={{ kind: 'todo', id: t.id }} />
                   <button className="icon-btn small no-print" aria-label="Elimina" onClick={async () => (await confirmDelete('questo promemoria')) && update((d) => ({ ...d, todos: d.todos.filter((x) => x.id !== t.id) }))}>
                     <GlyphTrash />
                   </button>
+                  </span>
                 </li>
               ))}
             </ul>

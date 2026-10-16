@@ -143,7 +143,7 @@ export const hasContent = (m: StudyModule) => !!(plainOf(bodyOf(m)) || m.attachm
 const KEEP = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL', 'SPAN', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'TABLE', 'TBODY', 'TR', 'TD', 'TH', 'FIGURE', 'FIGCAPTION', 'IMG', 'DIV', 'AUDIO', 'SUB', 'SUP', 'HR']);
 const RENAME: Record<string, string> = { H1: 'H2', H4: 'H3', H5: 'H3', H6: 'H3', THEAD: 'TBODY', MARK: 'SPAN', FONT: 'SPAN' };
 const DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'LINK', 'META', 'TITLE', 'svg', 'SVG', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'NOSCRIPT', 'TEMPLATE', 'VIDEO', 'CANVAS', 'HEAD']);
-const STYLE_OK = /^(color|background-color|font-weight|font-style|text-decoration|text-decoration-line)$/;
+const STYLE_OK = /^(color|background-color|font-weight|font-style|text-decoration|text-decoration-line|font-family|font-size)$/;
 
 export function sanitizeHtml(html: string): string {
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
@@ -171,12 +171,16 @@ export function sanitizeHtml(html: string): string {
         if (v != null) c.setAttribute(a, v.slice(0, 200));
       }
       if (el.getAttribute('color')) c.style.color = el.getAttribute('color')!;
+      // English text: checked by the spell checker as English.
+      if (el.getAttribute('lang') === 'en') c.setAttribute('lang', 'en');
       const style = el.getAttribute('style');
       if (style) {
         for (const decl of style.split(';')) {
           const [k, ...v] = decl.split(':');
           const key = k?.trim().toLowerCase();
           const val = v.join(':').trim();
+          if (key === 'font-size' && !/^\d+(\.\d+)?(pt|px)$/.test(val)) continue;
+          if (key === 'font-family' && !/^[\w\s"',-]{1,120}$/.test(val)) continue;
           if (key && STYLE_OK.test(key) && val && !/url\(|expression|transparent/i.test(val)) c.style.setProperty(key, val);
         }
       }

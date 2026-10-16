@@ -285,12 +285,12 @@ function WeekKcal({ days, goal, current }: { days: { d: string; label: string; v
   );
 }
 
-/** Where the i-th meal disc sits around the + (a gentle arc going up and to the left, as in Stitch); its label is on its left. */
+/** Where the i-th meal disc sits: a column straight above the + (Colazione at the top), labels on the left: nothing overlaps on a narrow phone. */
 const FAN_AT: [number, number][] = [
-  [0, -150],
-  [-55, -92],
-  [-125, -40],
-  [-150, 30],
+  [0, -288],
+  [0, -220],
+  [0, -152],
+  [0, -84],
 ];
 function fanPos(i: number): CSSProperties {
   const [x, y] = FAN_AT[i] ?? [0, 0];
