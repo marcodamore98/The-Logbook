@@ -78,11 +78,23 @@ interface Active {
   pt?: number;
   font?: string;
   en?: boolean;
-  /** Depth of the list item at the caret (1 = main list, 2 = sub-list…); 0 outside lists. */
-  level?: number;
-  /** The numbered list shows 1.1, 1.2 (Word's multilevel numbering). */
-  multi?: boolean;
 }
+
+/** How one level of a list is marked: bullets (• ◦ ▪ –) or numbers (1 2 3, 1.1 1.2, a b c, I II III). */
+type ListStyle = 'disc' | 'circle' | 'square' | 'dash' | 'num' | 'multi' | 'alpha' | 'roman';
+const BULLET_STYLES: [ListStyle, string, string][] = [
+  ['disc', '•', 'Pallino'],
+  ['circle', '◦', 'Cerchio'],
+  ['square', '▪', 'Quadratino'],
+  ['dash', '–', 'Trattino'],
+];
+const NUMBER_STYLES: [ListStyle, string, string][] = [
+  ['num', '1. 2. 3.', 'Numeri'],
+  ['multi', '1.1 1.2', 'Numeri a più livelli'],
+  ['alpha', 'a. b. c.', 'Lettere'],
+  ['roman', 'I. II. III.', 'Numeri romani'],
+];
+const STYLE_CLASSES = ['n-b-disc', 'n-b-circle', 'n-b-square', 'n-b-dash', 'n-alpha', 'n-roman'];
 
 /** Tab outside a list: a gap like Word's tab stop (two em spaces, so it survives saving and export). */
 const TAB = '\u2003\u2003';
@@ -275,12 +287,6 @@ export function RichText({
         pt: at ? ptOf(at) : undefined,
         font: FONTS.find(([, f]) => f && at?.closest<HTMLElement>('[style*="font-family"]')?.style.fontFamily.replace(/['"]/g, '') === f.replace(/['"]/g, ''))?.[0],
         en: !!at?.closest('[lang="en"]'),
-        level: (() => {
-          let n = 0;
-          for (let e = at?.closest('li'); e && node.contains(e); e = e.parentElement?.closest('li')) n++;
-          return n;
-        })(),
-        multi: !!outerOl(at, node)?.classList.contains('n-multi'),
       });
     };
     document.addEventListener('selectionchange', onSel);
@@ -573,14 +579,14 @@ export function RichText({
       return true;
     });
   };
-  /** Numbered list (or this level of a list turned into numbers); `multi` picks 1, 2, 3 or 1.1, 1.2 for the whole list. */
+  /** Numbered list from the toolbar; on a level of bullets it turns that level into numbers. */
   const numbers = () => {
     restore();
     const list = at()?.closest('li')?.parentElement;
     if (list && list.tagName !== 'OL' && retype('OL')) return;
     const wasList = !!list;
     exec('insertOrderedList');
-    // From the toolbar the preferred style goes only on a new list, never on one already there.
+    // The preferred numbering (1.1, 1.2) goes only on a new list, never on one already there.
     const top = outerOl(at(), ed.current!);
     if (top && !wasList && prefersMulti()) {
       top.classList.add('n-multi');
@@ -588,29 +594,74 @@ export function RichText({
       document.dispatchEvent(new Event('selectionchange'));
     }
   };
-  const numberStyle = (multi: boolean) => {
-    try {
-      localStorage.setItem(MULTI_KEY, multi ? '1' : '0');
-    } catch {
-      /* private mode */
+  /** How a level is marked now: its own choice, or the default for its depth (• ◦ ▪, 1 2 3 / 1.1). */
+  const styleOf = (list: Element): ListStyle => {
+    for (const [st] of [...BULLET_STYLES, ...NUMBER_STYLES]) if (list.classList.contains(st === 'alpha' || st === 'roman' ? `n-${st}` : `n-b-${st}`)) return st;
+    if (list.tagName === 'OL') return outerOl(list, ed.current!)?.classList.contains('n-multi') ? 'multi' : 'num';
+    let depth = 0;
+    for (let e = list.parentElement; e && e !== ed.current; e = e.parentElement) if (/^(UL|OL)$/.test(e.tagName)) depth++;
+    return (['disc', 'circle', 'square'] as const)[depth % 3];
+  };
+  /** Tapping a bullet or number: the chosen look for that level of the list. */
+  const setListStyle = (li: HTMLLIElement, st: ListStyle) => {
+    const node = ed.current!;
+    node.focus({ preventScroll: true });
+    const r = document.createRange();
+    r.setStart(li, 0);
+    r.collapse(true);
+    const sel = document.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(r);
+    const bullet = BULLET_STYLES.some(([x]) => x === st);
+    if (st === 'num' || st === 'multi') {
+      try {
+        localStorage.setItem(MULTI_KEY, st === 'multi' ? '1' : '0');
+      } catch {
+        /* private mode */
+      }
     }
-    restore();
-    if (!at()?.closest('li')?.parentElement?.matches('ol')) retype('OL');
-    const top = outerOl(at(), ed.current!);
-    if (!top || top.classList.contains('n-multi') === multi) return;
     structural(() => {
-      top.classList.toggle('n-multi', multi);
-      top.querySelectorAll('ol.n-multi').forEach((o) => o.classList.remove('n-multi'));
-      if (!top.classList.length) top.removeAttribute('class');
+      let list = li.parentElement!;
+      const tag = bullet ? 'UL' : 'OL';
+      if (list.tagName !== tag) {
+        const l = document.createElement(tag);
+        l.className = list.className;
+        l.append(...list.childNodes);
+        list.replaceWith(l);
+        list = l;
+      }
+      list.classList.remove(...STYLE_CLASSES, 'n-multi');
+      if (bullet) list.classList.add(`n-b-${st}`);
+      else if (st === 'alpha' || st === 'roman') list.classList.add(`n-${st}`);
+      else {
+        const top = outerOl(list, node)!;
+        top.classList.toggle('n-multi', st === 'multi');
+        if (st === 'num') top.querySelectorAll('ol.n-multi').forEach((o) => o.classList.remove('n-multi'));
+        if (!top.classList.length) top.removeAttribute('class');
+      }
+      if (!list.classList.length) list.removeAttribute('class');
       return true;
     });
   };
-  const levelBullets = () => {
-    restore();
-    const list = at()?.closest('li')?.parentElement;
-    if (list?.classList.contains('n-check')) return bullets();
-    retype('UL');
+  const [listMenu, setListMenu] = useState<{ li: HTMLLIElement; top: number; left: number } | null>(null);
+  /** The list item whose bullet or number is under the finger (not checklists: their box ticks). */
+  const markerAt = (t: HTMLElement, x: number, y: number): HTMLLIElement | null => {
+    const node = ed.current!;
+    const near = (li: Element) => {
+      const r = li.getBoundingClientRect();
+      const line = parseFloat(getComputedStyle(li).lineHeight) || 24;
+      return x < r.left + 4 && x > r.left - 48 && y >= r.top - 4 && y <= r.top + line + 4;
+    };
+    let cand: Element | null = null;
+    if (/^(UL|OL)$/.test(t.tagName)) cand = [...t.children].find((c) => c.tagName === 'LI' && near(c)) ?? null;
+    else {
+      const li = t.closest('li');
+      if (li && near(li)) cand = li;
+    }
+    if (!cand || !node.contains(cand) || cand.parentElement?.classList.contains('n-check')) return null;
+    return cand as HTMLLIElement;
   };
+
   /**
    * Tab / Shift+Tab, as in Word: in a list the item becomes a sub-item (or goes back up a level);
    * in a table it moves to the next (previous) cell; in the text it leaves a gap (or removes it).
@@ -985,6 +1036,21 @@ export function RichText({
             undo();
             return;
           }
+          // Backspace at the very start of a sub-item: back up one level, as in Word.
+          if (e.key === 'Backspace') {
+            const sel = document.getSelection();
+            const li = at()?.closest('li');
+            if (sel?.isCollapsed && sel.anchorNode && li && li.parentElement?.parentElement?.tagName === 'LI') {
+              const r = document.createRange();
+              r.setStart(li, 0);
+              r.setEnd(sel.anchorNode, sel.anchorOffset);
+              if (!r.toString() && !r.cloneContents().querySelector('img, br + *')) {
+                e.preventDefault();
+                tab(true);
+                return;
+              }
+            }
+          }
           // Enter on an empty sub-item goes back up one level, as in Word.
           if (e.key === 'Enter' && !e.shiftKey) {
             const li = at()?.closest('li');
@@ -1039,6 +1105,15 @@ export function RichText({
             } else if (media.classList.contains('n-file') && f) void openFile(repo, f);
             return;
           }
+          const mark = !readOnly && markerAt(t, e.clientX, e.clientY);
+          if (mark) {
+            e.preventDefault();
+            const r = mark.getBoundingClientRect();
+            const line = parseFloat(getComputedStyle(mark).lineHeight) || 24;
+            const below = r.top + line + 8;
+            setListMenu({ li: mark, top: below + 300 > window.innerHeight ? Math.max(8, r.top - 300) : below, left: Math.max(8, Math.min(r.left - 40, window.innerWidth - 300)) });
+            return;
+          }
           const li = t.closest('ul.n-check > li') as HTMLElement | null;
           if (li && e.clientX - li.getBoundingClientRect().left < 34) {
             e.preventDefault();
@@ -1054,6 +1129,59 @@ export function RichText({
       <input ref={(el) => void (inputs.current.pdf = el)} type="file" accept="application/pdf,.pdf" multiple hidden onChange={(e) => (upload([...(e.target.files ?? [])], 'pdf'), (e.target.value = ''))} />
       <input ref={(el) => void (inputs.current.audio = el)} type="file" accept="audio/*" hidden onChange={(e) => (upload([...(e.target.files ?? [])], 'audio'), (e.target.value = ''))} />
 
+      {listMenu &&
+        createPortal(
+          <div className="lm-backdrop" onPointerDown={() => setListMenu(null)}>
+            <div className="lm-pop" role="menu" aria-label="Stile dell’elenco" style={{ top: listMenu.top, left: listMenu.left }} onPointerDown={(e) => e.stopPropagation()}>
+              {(() => {
+                const now = styleOf(listMenu.li.parentElement!);
+                const item = ([st, sample, label]: [ListStyle, string, string]) => (
+                  <button key={st} type="button" role="menuitemradio" aria-checked={now === st} aria-label={label} title={label} className={`lm-opt${now === st ? ' on' : ''}${BULLET_STYLES.some(([x]) => x === st) ? ' bullet' : ''}`} onClick={() => (setListStyle(listMenu.li, st), setListMenu(null))}>
+                    {sample}
+                  </button>
+                );
+                const nested = listMenu.li.parentElement?.parentElement?.tagName === 'LI';
+                return (
+                  <>
+                    <span className="lm-label">Punti</span>
+                    <div className="lm-row">{BULLET_STYLES.map(item)}</div>
+                    <span className="lm-label">Numeri</span>
+                    <div className="lm-grid">{NUMBER_STYLES.map(item)}</div>
+                    <div className="lm-levels">
+                      <button type="button" disabled={!nested} onClick={() => {
+                        const li = listMenu.li;
+                        setListMenu(null);
+                        ed.current!.focus({ preventScroll: true });
+                        const r = document.createRange();
+                        r.setStart(li, 0);
+                        const sel = document.getSelection()!;
+                        sel.removeAllRanges();
+                        sel.addRange(r);
+                        tab(true);
+                      }}>
+                        <Sym name="format_indent_decrease" size={18} /> Sali di livello
+                      </button>
+                      <button type="button" disabled={!listMenu.li.previousElementSibling} onClick={() => {
+                        const li = listMenu.li;
+                        setListMenu(null);
+                        ed.current!.focus({ preventScroll: true });
+                        const r = document.createRange();
+                        r.setStart(li, 0);
+                        const sel = document.getSelection()!;
+                        sel.removeAllRanges();
+                        sel.addRange(r);
+                        tab(false);
+                      }}>
+                        <Sym name="format_indent_increase" size={18} /> Sotto-elenco
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>,
+          document.body,
+        )}
       {caption &&
         createPortal(
           <div className="sheet-backdrop" onClick={() => setCaption(null)}>
@@ -1108,24 +1236,6 @@ export function RichText({
               <button type="button" className="icon-btn small" aria-label="Annulla la registrazione" onClick={async () => (await confirmDelete('questa registrazione')) && stopRecording(true)}>
                 <Sym name="close" size={18} />
               </button>
-            </div>
-          )}
-          {!!active.level && !active.table && !pop && (
-            <div className="rt-table rt-listbar" role="toolbar" aria-label="Elenco">
-              <span className="rt-level">Livello {active.level}</span>
-              <button type="button" aria-label="Shift+Tab: sali di un livello" title="Shift+Tab" onPointerDown={(e) => e.preventDefault()} onClick={() => tab(true)}>
-                <Sym name="format_indent_decrease" size={18} />
-              </button>
-              <button type="button" aria-label="Tab: sotto-elenco" title="Tab" onPointerDown={(e) => e.preventDefault()} onClick={() => tab(false)}>
-                <Sym name="format_indent_increase" size={18} />
-              </button>
-              {!active.check && (
-                <>
-                  <button type="button" className={active.ul ? 'on' : ''} aria-pressed={!!active.ul} aria-label="Questo livello a punti" onPointerDown={(e) => e.preventDefault()} onClick={levelBullets}>• ◦</button>
-                  <button type="button" className={active.ol && !active.multi ? 'on' : ''} aria-pressed={!!active.ol && !active.multi} aria-label="Numeri 1, 2, 3" onPointerDown={(e) => e.preventDefault()} onClick={() => numberStyle(false)}>1 2 3</button>
-                  <button type="button" className={active.ol && active.multi ? 'on' : ''} aria-pressed={!!active.ol && !!active.multi} aria-label="Numeri 1.1, 1.2, 1.3" onPointerDown={(e) => e.preventDefault()} onClick={() => numberStyle(true)}>1.1 1.2</button>
-                </>
-              )}
             </div>
           )}
           {active.table && (
@@ -1200,8 +1310,7 @@ export function RichText({
             <Btn icon="checklist" label="Checklist" on={active.check} run={checklist} />
             <Btn icon="format_list_bulleted" label="Elenco puntato" on={active.ul} run={bullets} />
             <Btn icon="format_list_numbered" label="Elenco numerato" on={active.ol} run={numbers} />
-            <Btn icon="format_indent_increase" label="Tab (rientro o sotto-elenco)" run={() => tab(false)} />
-            <Btn icon="format_indent_decrease" label="Shift+Tab (riduci rientro o sali di livello)" run={() => tab(true)} />
+            <Btn icon="format_indent_increase" label="Tab (spazio o sotto-elenco)" run={() => tab(false)} />
             <Btn icon="strikethrough_s" label="Barrato" on={active.strike} run={() => exec('strikeThrough')} />
             <Btn icon="undo" label="Annulla" run={undo} />
             <Btn icon="redo" label="Ripeti" run={() => exec('redo')} />

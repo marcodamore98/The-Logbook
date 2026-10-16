@@ -39,7 +39,7 @@ interface Run {
 }
 type Block =
   | { t: 'h2' | 'h3' | 'p' | 'quote'; runs: Run[] }
-  | { t: 'li'; runs: Run[]; level: number; mark: 'bullet' | 'number' | 'todo' | 'done'; n: number; list: number; label: string; multi: boolean }
+  | { t: 'li'; runs: Run[]; level: number; mark: 'bullet' | 'number' | 'todo' | 'done'; n: number; list: number; label: string; multi: boolean; look: string }
   | { t: 'image'; id: string }
   | { t: 'file'; id: string; name: string; kind: string }
   | { t: 'table'; rows: Run[][][] };
@@ -71,6 +71,22 @@ function runsOf(el: Node, style: Omit<Run, 'text'> = {}): Run[] {
   return out;
 }
 
+/** a, b, … z, aa … */
+const alphaOf = (n: number): string => (n > 26 ? alphaOf(Math.floor((n - 1) / 26)) : '') + String.fromCharCode(97 + ((n - 1) % 26));
+const romanOf = (n: number): string => {
+  let out = '';
+  for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']] as const)
+    while (n >= v) (out += r), (n -= v);
+  return out;
+};
+/** The look of a list level, as the note shows it: chosen by the user or the default for its depth. */
+function lookOf(list: Element, level: number): string {
+  for (const c of ['disc', 'circle', 'square', 'dash']) if (list.classList.contains(`n-b-${c}`)) return c;
+  if (list.classList.contains('n-alpha')) return 'alpha';
+  if (list.classList.contains('n-roman')) return 'roman';
+  return list.tagName === 'OL' ? 'num' : ['disc', 'circle', 'square'][level % 3];
+}
+
 function blocksOf(html: string): Block[] {
   const root = document.createElement('div');
   root.innerHTML = sanitizeHtml(html);
@@ -98,7 +114,8 @@ function blocksOf(html: string): Block[] {
         case 'OL': {
           const list = ++lists;
           const ol = e.tagName === 'OL';
-          const m = ol && (multi || e.classList.contains('n-multi')) ? { list: multi?.list ?? list, pre: multi?.pre ?? '' } : null;
+          const look = lookOf(e, level);
+          const m = ol && look === 'num' && (multi || e.classList.contains('n-multi')) ? { list: multi?.list ?? list, pre: multi?.pre ?? '' } : null;
           let n = 0;
           for (const li of e.children) {
             // A sub-list left beside its item (older notes) still comes out one level deeper.
@@ -106,8 +123,8 @@ function blocksOf(html: string): Block[] {
             if (li.tagName !== 'LI') continue;
             n++;
             const mark = ol ? 'number' : e.classList.contains('n-check') ? (li.hasAttribute('data-done') ? 'done' : 'todo') : 'bullet';
-            const label = m ? (m.pre ? `${m.pre}${n}` : `${n}.`) : `${n}.`;
-            out.push({ t: 'li', runs: runsOf(li), level, mark, n, list: m?.list ?? list, label, multi: !!m });
+            const label = m?.pre ? `${m.pre}${n}` : look === 'alpha' ? `${alphaOf(n)}.` : look === 'roman' ? `${romanOf(n)}.` : `${n}.`;
+            out.push({ t: 'li', runs: runsOf(li), level, mark, n, list: m?.list ?? list, label, multi: !!m, look });
             for (const sub of li.children) if (/^(UL|OL)$/.test(sub.tagName)) walk({ children: [sub] } as unknown as Element, level + 1, m && { list: m.list, pre: `${m.pre}${n}.` });
           }
           break;
@@ -288,7 +305,15 @@ export async function notePdf(n: ExportNote, repo: Repo): Promise<Blob> {
       room(6);
       doc.setTextColor(...ink);
       doc.setFont('helvetica', 'normal');
-      if (b.mark === 'bullet') doc.text('•', x, y);
+      if (b.mark === 'bullet') {
+        doc.setFillColor(...ink);
+        doc.setDrawColor(...ink);
+        doc.setLineWidth(0.3);
+        if (b.look === 'circle') doc.circle(x + 0.9, y - 1.3, 0.75, 'S');
+        else if (b.look === 'square') doc.rect(x + 0.2, y - 2.1, 1.5, 1.5, 'F');
+        else if (b.look === 'dash') doc.text('–', x, y);
+        else doc.text('•', x, y);
+      }
       else if (b.mark === 'number') doc.text(b.label, x, y);
       else {
         doc.setDrawColor(...ink);
@@ -399,8 +424,8 @@ export async function noteDocx(n: ExportNote, repo: Repo): Promise<Blob> {
     else if (b.t === 'p') children.push(new d.Paragraph({ children: runs(b.runs) }));
     else if (b.t === 'quote') children.push(new d.Paragraph({ indent: { left: 567 }, border: { left: { style: d.BorderStyle.SINGLE, size: 12, color: 'B9B0F5', space: 8 } }, children: runs(b.runs, { i: true }) }));
     else if (b.t === 'li') {
-      if (b.mark === 'bullet') children.push(new d.Paragraph({ bullet: { level: b.level }, children: runs(b.runs) }));
-      else if (b.mark === 'number') children.push(new d.Paragraph({ numbering: { reference: b.multi ? 'multi' : 'num', level: b.level, instance: b.list }, children: runs(b.runs) }));
+      if (b.mark === 'bullet') children.push(new d.Paragraph({ numbering: { reference: `b-${b.look}`, level: b.level, instance: b.list }, children: runs(b.runs) }));
+      else if (b.mark === 'number') children.push(new d.Paragraph({ numbering: { reference: b.multi ? 'multi' : b.look === 'alpha' || b.look === 'roman' ? b.look : 'num', level: b.level, instance: b.list }, children: runs(b.runs) }));
       else children.push(new d.Paragraph({ indent: { left: 360 + b.level * 360 }, children: [new d.TextRun(b.mark === 'done' ? '☑ ' : '☐ '), ...runs(b.runs, b.mark === 'done' ? { s: true } : {})] }));
     } else if (b.t === 'image') {
       const f = byId.get(b.id);
@@ -438,6 +463,27 @@ export async function noteDocx(n: ExportNote, repo: Repo): Promise<Blob> {
           reference: 'num',
           levels: [0, 1, 2, 3].map((level) => ({ level, format: d.LevelFormat.DECIMAL, text: `%${level + 1}.`, alignment: d.AlignmentType.START, style: { paragraph: { indent: { left: 720 + level * 360, hanging: 360 } } } })),
         },
+        // Bullets and letters exactly as chosen in the note (• ◦ ▪ –, a. b. c., I. II. III.).
+        ...(
+          [
+            ['b-disc', '•'],
+            ['b-circle', '◦'],
+            ['b-square', '▪'],
+            ['b-dash', '–'],
+          ] as const
+        ).map(([reference, text]) => ({
+          reference,
+          levels: [0, 1, 2, 3].map((level) => ({ level, format: d.LevelFormat.BULLET, text, alignment: d.AlignmentType.START, style: { paragraph: { indent: { left: 720 + level * 360, hanging: 360 } } } })),
+        })),
+        ...(
+          [
+            ['alpha', d.LevelFormat.LOWER_LETTER],
+            ['roman', d.LevelFormat.UPPER_ROMAN],
+          ] as const
+        ).map(([reference, format]) => ({
+          reference,
+          levels: [0, 1, 2, 3].map((level) => ({ level, format, text: `%${level + 1}.`, alignment: d.AlignmentType.START, style: { paragraph: { indent: { left: 720 + level * 360, hanging: 360 } } } })),
+        })),
         {
           // 1. → 1.1 → 1.1.1, as the note shows it.
           reference: 'multi',

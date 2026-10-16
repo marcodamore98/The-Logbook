@@ -3036,7 +3036,15 @@ button.op-tutor:disabled { opacity: 0.7; cursor: default; }
 .note-body ol.n-multi, .note-body ol.n-multi ol { counter-reset: n-li; }
 .note-body ol.n-multi > li, .note-body ol.n-multi ol > li { counter-increment: n-li; }
 .note-body ol.n-multi > li::marker { content: counter(n-li) ".  "; }
-.note-body ol.n-multi ol > li::marker { content: counters(n-li, ".") "  "; }
+.note-body ol.n-multi ol:not(.n-alpha):not(.n-roman) > li::marker { content: counters(n-li, ".") "  "; }
+/* The look chosen by tapping a bullet or a number. */
+.note-body ul.n-b-disc { list-style-type: disc; }
+.note-body ul.n-b-circle { list-style-type: circle; }
+.note-body ul.n-b-square { list-style-type: square; }
+.note-body ul.n-b-dash { list-style-type: '–  '; }
+.note-body ol.n-alpha { list-style-type: lower-alpha; }
+.note-body ol.n-roman { list-style-type: upper-roman; }
+.note-body:not(.reading) li::marker { cursor: pointer; }
 .note-body ol.n-multi ol { padding-left: 2.3rem; }
 .note-body ol.n-multi ol ol { padding-left: 2.9rem; }
 .note-body li::marker { font-variant-numeric: tabular-nums; }
@@ -3108,8 +3116,17 @@ button.op-tutor:disabled { opacity: 0.7; cursor: default; }
 .rt-table .danger { color: var(--coral); }
 .rt-table button { display: inline-flex; align-items: center; gap: 0.3rem; }
 .rt-table button.on { background: var(--lime); color: #1d1d1f; }
-.rt-listbar { align-self: flex-start; }
-.rt-level { flex: none; align-self: center; padding: 0 0.4rem 0 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.lm-backdrop { position: fixed; inset: 0; z-index: 60; }
+.lm-pop { position: fixed; width: min(292px, calc(100vw - 16px)); display: flex; flex-direction: column; gap: 0.35rem; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 0.6rem; box-shadow: 0 10px 30px rgb(0 0 0 / 0.3); }
+.lm-label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0.1rem 0.2rem 0; }
+.lm-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.35rem; }
+.lm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; }
+.lm-opt { height: 2.6rem; border: none; border-radius: 12px; background: var(--surface-2); color: var(--ink); font: inherit; font-weight: 800; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.lm-opt.bullet { font-size: 1.35rem; line-height: 1; }
+.lm-opt.on { background: var(--lime); color: #1d1d1f; }
+.lm-levels { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.2rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
+.lm-levels button { display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; height: 2.5rem; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink); font: inherit; font-size: 0.8rem; font-weight: 700; }
+.lm-levels button:disabled { opacity: 0.35; }
 .rt-busy { align-self: center; background: #1d1d1f; color: #fff; border-radius: 999px; padding: 0.4rem 0.9rem; font-size: 0.85rem; font-weight: 600; }
 .rt-rec { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; background: #1d1d1f; color: #fff; border-radius: 18px; padding: 0.5rem 0.6rem 0.5rem 0.9rem; box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); }
 .rt-rec strong { font-variant-numeric: tabular-nums; }
