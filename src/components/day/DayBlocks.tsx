@@ -7,6 +7,7 @@ import { bestsBefore, prsOf, workingSets, workoutVolume } from '../../lib/traini
 import { exerciseDef } from '../../lib/training/exercises';
 import { addDays, startOfWeek, today } from '../../lib/dates';
 import type { DayEntry, ISODate, RunModule, WorkoutModule } from '../../lib/types';
+import { levelLabel } from '../../lib/running/program';
 import { fmtDuration, fmtKm, fmtPace } from '../../lib/running/geo';
 import { fmt } from '../charts';
 import { runLine } from '../modules/meta';
@@ -14,6 +15,13 @@ import { IconFood, IconWorkout, Sym } from '../icons';
 import { Card } from '../ui';
 import { useUndo } from '../Undo';
 import { MoveButton } from '../MoveSheet';
+
+/** The judgement given at the end of a treadmill programme ("Com'è andata?"). */
+const FEEL = {
+  easy: ['sentiment_satisfied', 'Troppo facile'],
+  ok: ['check_circle', 'Giusto così'],
+  hard: ['local_fire_department', 'Troppo duro'],
+} as const;
 
 export function workoutLine(w: WorkoutModule, prs = 0): string {
   return [
@@ -150,6 +158,15 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             <div key={m.id} className="ws-wrap">
             <button type="button" onClick={() => nav('/corsa')} className="workout-summary run">
               <strong className="ws-name">{m.title || (m.mode === 'intervals' ? m.planName ?? 'Corsa a intervalli' : m.mode === 'treadmill' ? m.planName ?? 'Tapis roulant' : 'Corsa')}</strong>
+              {m.feel && (
+                <span className="run-feel-row">
+                  <span className={`run-feel f-${m.feel}`}>
+                    <Sym name={FEEL[m.feel][0]} size={16} />
+                    {FEEL[m.feel][1]}
+                  </span>
+                  {!!m.level && <span className="run-feel-level">{levelLabel(m.level)}</span>}
+                </span>
+              )}
               <dl className="ws-stats">
                 <div>
                   <dt>Distanza</dt>

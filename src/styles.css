@@ -1168,17 +1168,25 @@ html.modal-open { overflow: hidden; }
 .check-cell { position: relative; }
 
 /* Bottom bar: running workout and rest countdown */
-.active-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.9rem calc(0.55rem + env(safe-area-inset-bottom)); background: #1d1d1f; color: #fff; border-top: 1px solid #38383b; overflow: hidden; touch-action: manipulation; }
-.active-bar .rest-bar { position: absolute; left: 0; top: 0; height: 3px; background: var(--lime); transition: width 0.25s linear; }
+.active-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; display: flex; align-items: center; gap: 0.5rem; min-height: 2.7rem; box-sizing: border-box; padding: 0.3rem 0.5rem calc(0.3rem + env(safe-area-inset-bottom)) 0.9rem; background: #1d1d1f; color: #fff; border-top: 1px solid #38383b; overflow: hidden; touch-action: manipulation; }
+.active-bar .rest-bar { position: absolute; left: 0; top: 0; height: 2px; background: var(--lime); transition: width 0.25s linear; }
 .active-bar.done { background: var(--lime); color: #1d1d1f; }
 .active-bar.done .rest-bar { display: none; }
-.active-main { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; background: none; border: none; color: inherit; padding: 0.15rem 0; }
-.active-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.active-sub { font-size: 0.85rem; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.active-rest { background: var(--lime); color: #1d1d1f; border: none; border-radius: 999px; padding: 0.45rem 0.9rem; font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 0.35rem; flex: none; }
+.active-main { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 0.45rem; text-align: left; background: none; border: none; color: inherit; padding: 0.1rem 0; font-size: 0.85rem; line-height: 1.2; }
+.active-title { flex: none; max-width: 55%; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.active-sub { flex: 1; min-width: 0; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.active-sub:not(:empty)::before { content: '· '; }
+.active-rest { background: var(--lime); color: #1d1d1f; border: none; border-radius: 999px; padding: 0.2rem 0.7rem; font-weight: 800; font-size: 0.95rem; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 0.35rem; flex: none; }
 .active-bar.done .active-rest { background: #1d1d1f; color: var(--lime); }
-.active-go { flex: none; font-weight: 700; color: var(--lime); }
-body.has-bar main { padding-bottom: 6.5rem; }
+.active-go { flex: none; font-weight: 700; font-size: 0.85rem; color: var(--lime); padding-right: 0.3rem; }
+.active-bar.done .active-go { color: #1d1d1f; }
+/* The bar is a thin line at the bottom: what is fixed at the bottom of the page goes up above it. */
+body.has-bar { --bar-h: calc(2.7rem + env(safe-area-inset-bottom)); }
+body.has-bar main { padding-bottom: calc(5.5rem + var(--bar-h)); }
+body.has-bar .fab { bottom: calc(1rem + var(--bar-h)); }
+body.has-bar .meal-fan { bottom: calc(1rem + 29px + var(--bar-h)); }
+body.has-bar .select-bar { bottom: calc(0.7rem + var(--bar-h)); }
+body.has-bar .rt-dock { bottom: var(--bar-h); padding-bottom: 0.4rem; }
 .rest-big { position: fixed; inset: 0; z-index: 70; background: #1d1d1f; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.4rem; padding: 1.5rem; touch-action: pan-y; }
 .rest-big-close { position: absolute; top: calc(0.6rem + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: none; border: none; color: #fff; font-size: 2rem; padding: 0.3rem 1.5rem; }
 .rest-big-label { margin: 0; font-size: 1.1rem; opacity: 0.8; text-align: center; }
@@ -1315,7 +1323,7 @@ button.workout-summary { width: 100%; border: none; text-align: left; font: inhe
 .snackbar { position: fixed; left: 0.75rem; right: 0.75rem; bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 90; display: flex; align-items: center; gap: 0.8rem; background: #1d1d1f; color: #fff; border-radius: 16px; padding: 0.75rem 0.9rem 0.75rem 1.1rem; box-shadow: 0 10px 30px rgb(0 0 0 / 0.3); animation: snack-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); max-width: 520px; margin: 0 auto; }
 .snackbar span { flex: 1; }
 .snackbar button { background: none; border: none; color: var(--lime); font: inherit; font-weight: 800; padding: 0.4rem 0.6rem; }
-body.has-bar .snackbar { bottom: calc(5.2rem + env(safe-area-inset-bottom)); }
+body.has-bar .snackbar { bottom: calc(0.8rem + var(--bar-h)); }
 @keyframes snack-in { from { transform: translate3d(0, 120%, 0); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* Merged cards: switch kind; course time + reminder */
@@ -3831,3 +3839,11 @@ section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; ali
 .feel-next p { margin: 0; }
 .feel-next ul { margin: 0.35rem 0 0; padding-left: 1.1rem; }
 .feel-next li { margin: 0.12rem 0; }
+
+/* Giudizio della corsa nella pagina del giorno */
+.run-feel-row { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+.run-feel { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.22rem 0.6rem 0.22rem 0.45rem; border-radius: 999px; font-size: 0.75rem; font-weight: 800; color: #1d1d1f; }
+.run-feel.f-easy { background: #a6e9c4; }
+.run-feel.f-ok { background: var(--lime); }
+.run-feel.f-hard { background: #ffab91; }
+.run-feel-level { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
