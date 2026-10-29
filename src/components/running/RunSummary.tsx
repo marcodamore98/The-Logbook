@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { IconRun } from '../icons';
+import { confirmDelete } from '../Confirm';
+import { IconRun, Sym } from '../icons';
 import { Field } from '../ui';
 import { fmtDuration, fmtKm, fmtPaceSec, kmh, kmSplits, maxSpeedKmh } from '../../lib/running/geo';
 import type { RunLap, RunModule, TrackPoint } from '../../lib/types';
 
 export interface RunResult {
+  /** "Com'è andata?": the programme gets harder (easy) or easier (hard) next time. */
+  feel?: 'easy' | 'ok' | 'hard';
   title?: string;
   notes?: string;
   distanceM: number;
@@ -20,13 +23,16 @@ interface Props {
   laps: RunLap[];
   mode: 'continuous' | 'intervals' | 'treadmill';
   planName?: string;
+  /** For a treadmill programme: what would change next time after "easy" or "hard". */
+  adapt?: (feel: 'easy' | 'hard') => string[];
   previous: RunModule[];
   onSave: (r: RunResult) => void;
   onDiscard: () => void;
 }
 
 /** The "well done" screen at the end of a run: numbers, records and splits. */
-export function RunSummary({ elapsed, gpsDistanceM, useGps, track, laps, mode, planName, previous, onSave, onDiscard }: Props) {
+export function RunSummary({ elapsed, gpsDistanceM, useGps, track, laps, mode, planName, adapt, previous, onSave, onDiscard }: Props) {
+  const [feel, setFeel] = useState<'easy' | 'ok' | 'hard'>();
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [manualKm, setManualKm] = useState('');
@@ -167,6 +173,47 @@ export function RunSummary({ elapsed, gpsDistanceM, useGps, track, laps, mode, p
           </section>
         )}
 
+        {adapt && (
+          <section className="rs-feel">
+            <h3 className="rs-title">
+              <i className="rs-dot" aria-hidden="true" /> Com’è andata?
+            </h3>
+            <div className="feel-row" role="radiogroup" aria-label="Com’è andata?">
+              {(
+                [
+                  ['easy', 'sentiment_satisfied', 'Troppo facile'],
+                  ['ok', 'check_circle', 'Giusto così'],
+                  ['hard', 'local_fire_department', 'Troppo duro'],
+                ] as const
+              ).map(([k, icon, label]) => (
+                <button key={k} type="button" role="radio" aria-checked={feel === k} className={`feel-btn f-${k}${feel === k ? ' on' : ''}`} onClick={() => setFeel(feel === k ? undefined : k)}>
+                  <Sym name={icon} size={26} />
+                  {label}
+                </button>
+              ))}
+            </div>
+            {feel && (
+              <div className="feel-next">
+                {feel === 'ok' ? (
+                  <p>La prossima volta resta uguale.</p>
+                ) : (
+                  <>
+                    <p>
+                      <strong>La prossima volta {feel === 'easy' ? 'un po’ più dura' : 'un po’ più leggera'}:</strong>
+                    </p>
+                    <ul>
+                      {adapt(feel).map((c) => (
+                        <li key={c}>{c}</li>
+                      ))}
+                      {!adapt(feel).length && <li>già al limite: resta uguale</li>}
+                    </ul>
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
         <section className="run-save">
           <div className="grid">
             <Field label="Titolo">
@@ -180,10 +227,10 @@ export function RunSummary({ elapsed, gpsDistanceM, useGps, track, laps, mode, p
             </Field>
           </div>
           <div className="row">
-            <button className="btn run-btn" onClick={() => onSave({ title: title.trim() || undefined, notes: notes.trim() || undefined, distanceM, maxSpeedKmh: maxKmh || undefined, splits: splits.length ? splits.map((x) => Math.round(x)) : undefined })}>
+            <button className="btn run-btn" onClick={() => onSave({ feel, title: title.trim() || undefined, notes: notes.trim() || undefined, distanceM, maxSpeedKmh: maxKmh || undefined, splits: splits.length ? splits.map((x) => Math.round(x)) : undefined })}>
               Salva la corsa
             </button>
-            <button className="btn-ghost" onClick={() => window.confirm('Scartare questa corsa?') && onDiscard()}>
+            <button className="btn-ghost" onClick={async () => (await confirmDelete('questa corsa', { detail: 'Non verrà salvata.', action: 'Scarta' })) && onDiscard()}>
               Scarta
             </button>
           </div>

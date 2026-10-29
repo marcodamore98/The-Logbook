@@ -183,6 +183,7 @@ export interface RunStep {
   kmh?: number; // tapis roulant: velocità in km/h
   incline?: number; // tapis roulant: inclinazione in %
   paceSec?: number; // (prime sessioni tapis roulant: passo in secondi al km)
+  label?: string; // nome della fase ("Riscaldamento", "Salita", "Picco"…)
 }
 
 export interface RunPlan {
@@ -190,6 +191,7 @@ export interface RunPlan {
   name: string;
   steps: RunStep[];
   treadmill?: boolean; // sessione per tapis roulant (passo e pendenza per fase)
+  notes?: string; // consigli del programma (postura, varianti…)
 }
 
 /** [lat, lon, seconds from start] */
@@ -223,6 +225,11 @@ export interface RunModule {
   splits?: number[]; // seconds per completed km
   laps?: RunLap[];
   notes?: string;
+  /** Programma da cui è partita (per adattarlo al giudizio) e livello usato. */
+  planId?: string;
+  level?: number;
+  /** Giudizio a fine allenamento: la prossima volta il programma diventa più facile o più duro. */
+  feel?: 'easy' | 'ok' | 'hard';
 }
 
 export interface PhotoItem {
@@ -539,6 +546,10 @@ export interface Settings {
   shopping?: ShopItem[]; // lista della spesa: unica, la stessa in tutti i giorni
   dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno
   runPlans?: RunPlan[]; // sessioni a intervalli salvate
+  /** Livello di ogni programma del tapis roulant, cambiato dai giudizi a fine allenamento (0 = com'è scritto). */
+  runLevels?: Record<string, number>;
+  /** Pendenza massima del tapis roulant (%): i programmi non la superano. */
+  treadmillMaxIncline?: number;
   hiddenBlocks?: string[]; // blocchi eliminati dalla pagina del giorno (es. il tabellone)
   seed?: number; // versione dei dati predefiniti già applicata (vedi migrateSettings)
   /** Cartelle degli appunti, in ordine; senza, quelle delle aree di studio. */

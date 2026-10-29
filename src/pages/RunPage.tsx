@@ -1,16 +1,19 @@
-import { confirmDelete } from '../components/Confirm';
+import { confirmAction, confirmDelete } from '../components/Confirm';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fmt } from '../components/charts';
 import { GlyphTrash, IconRun, NavRun } from '../components/icons';
 import { PlanBuilder } from '../components/running/PlanBuilder';
 import { TreadmillBuilder } from '../components/running/TreadmillBuilder';
+import { ImportProgram } from '../components/running/ImportProgram';
 import { RunSummary, type RunResult } from '../components/running/RunSummary';
 import { Card, Field, uid } from '../components/ui';
+import { Sym } from '../components/icons';
 import { fromISO, today } from '../lib/dates';
 import { useRunSession } from '../lib/running/engine';
 import { fmtDuration, fmtKm, fmtPace, fmtPaceSec, KIND_LABEL, stepLabel } from '../lib/running/geo';
 import { presetPlans } from '../lib/running/plans';
+import { atLevel, changes, DEFAULT_MAX_INCLINE, levelLabel } from '../lib/running/program';
 import { doneMeters, fmtIncline, fmtKmh, kmhOf, lapMeters, paceFromKmh, treadmillPresets, treadmillSettings } from '../lib/running/treadmill';
 import { useStore } from '../lib/store/StoreContext';
 import type { RunModule, RunPlan, RunStep } from '../lib/types';
@@ -22,6 +25,11 @@ export default function RunPage() {
   const tm = mode === 'treadmill';
   const [steps, setSteps] = useState<RunStep[]>([]);
   const [planName, setPlanName] = useState<string>('Personalizzata');
+  // The programme the steps come from, and at which level (treadmill: it follows the judgements).
+  const [planId, setPlanId] = useState<string>();
+  const [importing, setImporting] = useState(false);
+  const maxIncline = settings.treadmillMaxIncline ?? DEFAULT_MAX_INCLINE;
+  const levels = settings.runLevels ?? {};
   const [useGps, setUseGps] = useState(true);
   const plans: RunPlan[] = useMemo(
     () => (tm ? [...treadmillPresets(), ...(settings.runPlans ?? []).filter((p) => p.treadmill)] : [...presetPlans(), ...(settings.runPlans ?? []).filter((p) => !p.treadmill)]),
@@ -51,8 +59,16 @@ export default function RunPage() {
       splits: r.splits,
       laps: mode !== 'continuous' && laps.length ? laps : undefined,
       notes: r.notes,
+      ...(adaptive && planId ? { planId, level: levels[planId] ?? 0, ...(r.feel ? { feel: r.feel } : {}) } : {}),
     };
     await store.updateDay(today(), (d) => ({ ...d, modules: [...d.modules, m] }));
+    // The judgement moves the programme one notch for next time.
+    if (adaptive && planId && r.feel && r.feel !== 'ok') {
+      const next = (levels[planId] ?? 0) + (r.feel === 'easy' ? 1 : -1);
+      await store.saveSettings({ ...store.settings, runLevels: { ...(store.settings.runLevels ?? {}), [planId]: next } });
+      const p = plans.find((x) => x.id === planId);
+      if (p) setSteps(atLevel(p.steps, next, maxIncline));
+    }
     run.reset();
   };
 
@@ -76,12 +92,37 @@ export default function RunPage() {
     const plan: RunPlan = { id: uid(), name, steps: steps.map((s) => ({ ...s })), treadmill: tm || undefined };
     store.saveSettings({ ...settings, runPlans: [...(settings.runPlans ?? []), plan] });
     setPlanName(name);
+    setPlanId(plan.id);
   };
   const choosePlan = (id: string) => {
     const p = plans.find((x) => x.id === id);
+    setPlanId(p?.id);
     if (!p) return;
-    setSteps(p.steps.map((s) => ({ ...s, id: uid() })));
+    setSteps(p.treadmill ? atLevel(p.steps, levels[p.id] ?? 0, maxIncline) : p.steps.map((s) => ({ ...s, id: uid() })));
     setPlanName(p.name);
+  };
+  const edited = (s: RunStep[]) => {
+    setSteps(s);
+    setPlanName('Personalizzata');
+    setPlanId(undefined);
+  };
+  const plan = plans.find((p) => p.id === planId);
+  const level = planId ? levels[planId] ?? 0 : 0;
+  // Only a treadmill programme left as chosen follows the judgements.
+  const adaptive = tm && !!plan;
+  const preview = (feel: 'easy' | 'hard') => (plan ? changes(atLevel(plan.steps, level, maxIncline), atLevel(plan.steps, level + (feel === 'easy' ? 1 : -1), maxIncline)) : []);
+  const resetLevel = async () => {
+    if (!plan || !(await confirmAction('Tornare al programma originale?', { detail: `“${plan.name}” torna com’è scritto, senza gli adattamenti dei tuoi giudizi.`, action: 'Torna all’originale' }))) return;
+    const { [plan.id]: _, ...rest } = levels;
+    await store.saveSettings({ ...settings, runLevels: rest });
+    setSteps(atLevel(plan.steps, 0, maxIncline));
+  };
+  const importPlan = async (p: RunPlan) => {
+    await store.saveSettings({ ...settings, runPlans: [...(settings.runPlans ?? []), p] });
+    setImporting(false);
+    setPlanId(p.id);
+    setPlanName(p.name);
+    setSteps(atLevel(p.steps, 0, maxIncline));
   };
   const isSaved = (id: string) => (settings.runPlans ?? []).some((p) => p.id === id);
 
@@ -111,10 +152,10 @@ export default function RunPage() {
           <button role="tab" aria-selected={mode === 'continuous'} className={mode === 'continuous' ? 'on' : ''} disabled={active} onClick={() => setMode('continuous')}>
             Continua
           </button>
-          <button role="tab" aria-selected={mode === 'intervals'} className={mode === 'intervals' ? 'on' : ''} disabled={active} onClick={() => { if (tm) { setSteps([]); setPlanName('Personalizzata'); } setMode('intervals'); }}>
+          <button role="tab" aria-selected={mode === 'intervals'} className={mode === 'intervals' ? 'on' : ''} disabled={active} onClick={() => { if (tm) edited([]); setMode('intervals'); }}>
             A intervalli
           </button>
-          <button role="tab" aria-selected={tm} className={tm ? 'on' : ''} disabled={active} onClick={() => { if (!tm) { setSteps([]); setPlanName('Personalizzata'); } setMode('treadmill'); }}>
+          <button role="tab" aria-selected={tm} className={tm ? 'on' : ''} disabled={active} onClick={() => { if (!tm) edited([]); setMode('treadmill'); }}>
             Tapis roulant
           </button>
         </div>
@@ -125,27 +166,66 @@ export default function RunPage() {
         )}
         {mode !== 'continuous' && !active && (
           <>
-            <Field label="Sessione preimpostata o salvata">
-              <select value={plans.find((p) => p.name === planName)?.id ?? ''} onChange={(e) => choosePlan(e.target.value)}>
+            <Field label={tm ? 'Programma' : 'Sessione preimpostata o salvata'}>
+              <select value={planId ?? ''} onChange={(e) => choosePlan(e.target.value)}>
                 <option value="">Personalizzata (da zero)</option>
                 {plans.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
+                    {tm && levels[p.id] ? ` · ${levelLabel(levels[p.id])}` : ''}
                   </option>
                 ))}
               </select>
             </Field>
-            {tm ? (
-              <TreadmillBuilder steps={steps} onChange={(s) => { setSteps(s); setPlanName('Personalizzata'); }} />
-            ) : (
-              <PlanBuilder steps={steps} onChange={(s) => { setSteps(s); setPlanName('Personalizzata'); }} />
+            {tm && (
+              <div className="tm-tools">
+                <button type="button" className="btn-ghost small" onClick={() => setImporting(true)}>
+                  <Sym name="content_paste" size={18} /> Importa programma
+                </button>
+                <label className="tm-max">
+                  <span>Pendenza max del tapis roulant</span>
+                  <select value={maxIncline} onChange={(e) => { const v = Number(e.target.value); store.saveSettings({ ...settings, treadmillMaxIncline: v }); if (plan) setSteps(atLevel(plan.steps, level, v)); }}>
+                    {[10, 12, 15, 18, 20, 25, 30].map((v) => (
+                      <option key={v} value={v}>
+                        {v}%
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             )}
+            {adaptive && (
+              <div className={`tm-level${level ? ' on' : ''}`}>
+                <Sym name="tune" size={18} />
+                <span>
+                  {level ? (
+                    <>
+                      <strong>{level > 0 ? 'Più dura' : 'Più leggera'} dell’originale</strong> ({levelLabel(level)}), adattata ai tuoi giudizi.
+                    </>
+                  ) : (
+                    'Com’è scritto. A fine allenamento dimmi com’è andata: la prossima volta si adatta.'
+                  )}
+                </span>
+                {level !== 0 && (
+                  <button type="button" className="link-quiet" onClick={resetLevel}>
+                    Originale
+                  </button>
+                )}
+              </div>
+            )}
+            {tm && plan?.notes && (
+              <div className="run-tips">
+                <span className="stat-label">Consigli</span>
+                <p>{plan.notes}</p>
+              </div>
+            )}
+            {tm ? <TreadmillBuilder steps={steps} onChange={edited} /> : <PlanBuilder steps={steps} onChange={edited} />}
             <div className="row">
               <button className="btn-ghost small" disabled={!steps.length} onClick={savePlan}>
                 Salva questa sessione
               </button>
               {plans.filter((p) => isSaved(p.id) && p.name === planName).map((p) => (
-                <button key={p.id} className="btn-ghost small" onClick={async () => (await confirmDelete(`“${p.name}”`)) && store.saveSettings({ ...settings, runPlans: (settings.runPlans ?? []).filter((x) => x.id !== p.id) })}>
+                <button key={p.id} className="btn-ghost small" onClick={async () => { if (!(await confirmDelete(`“${p.name}”`))) return; await store.saveSettings({ ...settings, runPlans: (settings.runPlans ?? []).filter((x) => x.id !== p.id) }); edited([]); }}>
                   <GlyphTrash /> Elimina “{p.name}”
                 </button>
               ))}
@@ -153,12 +233,13 @@ export default function RunPage() {
           </>
         )}
       </Card>
+      {importing && <ImportProgram maxIncline={maxIncline} onSave={importPlan} onClose={() => setImporting(false)} />}
 
       <section ref={liveRef} className={`card run-live phase-${state.phase}${state.stepKind ? ` kind-${state.stepKind}` : ''}`}>
         {mode !== 'continuous' && cur && state.phase !== 'idle' && state.phase !== 'done' && (
           <div className="run-step" aria-live="polite">
             <span className="run-step-top">
-              <span className="run-step-kind">{tm ? `Serie ${state.stepIdx + 1}` : KIND_LABEL[cur.kind]}</span>
+              <span className="run-step-kind">{tm ? cur.label ?? `Serie ${state.stepIdx + 1}` : cur.label ?? KIND_LABEL[cur.kind]}</span>
               <span className="run-step-left">{stepText}</span>
             </span>
             <span className="run-step-bar">
@@ -179,7 +260,7 @@ export default function RunPage() {
             <span className="muted small">
               {tm ? 'Serie' : 'Fase'} {state.stepIdx + 1} di {steps.length}
               {steps[state.stepIdx + 1]
-                ? ` · poi ${tm ? `serie ${state.stepIdx + 2}: ${treadmillSettings(steps[state.stepIdx + 1])}` : stepLabel(steps[state.stepIdx + 1])}`
+                ? ` · poi ${tm ? `${steps[state.stepIdx + 1].label?.toLowerCase() ?? `serie ${state.stepIdx + 2}`}: ${treadmillSettings(steps[state.stepIdx + 1])}` : stepLabel(steps[state.stepIdx + 1])}`
                 : tm ? ' · ultima serie' : ' · ultima fase'}
             </span>
           </div>
@@ -222,7 +303,7 @@ export default function RunPage() {
             <button className="btn run-btn run-main" onClick={run.pause}>❚❚ Pausa</button>
             <div className="run-sub">
               {mode !== 'continuous' && <button className="btn-ghost" onClick={run.skip}>⏭ Salta fase</button>}
-              <button className="btn-ghost run-stop" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>■ Termina</button>
+              <button className="btn-ghost run-stop" onClick={async () => (await confirmAction('Terminare la corsa?', { action: 'Termina' })) && run.stop()}>■ Termina</button>
             </div>
           </div>
         )}
@@ -230,7 +311,7 @@ export default function RunPage() {
           <div className="run-controls">
             <button className="btn run-btn run-main" onClick={run.resume}>▶ Riprendi</button>
             <div className="run-sub">
-              <button className="btn-ghost run-stop" onClick={() => window.confirm('Terminare la corsa?') && run.stop()}>■ Termina</button>
+              <button className="btn-ghost run-stop" onClick={async () => (await confirmAction('Terminare la corsa?', { action: 'Termina' })) && run.stop()}>■ Termina</button>
             </div>
           </div>
         )}
@@ -251,6 +332,7 @@ export default function RunPage() {
           laps={laps}
           mode={mode}
           planName={planName !== 'Personalizzata' ? planName : undefined}
+          adapt={adaptive ? preview : undefined}
           previous={history.map((h) => h.m)}
           onSave={save}
           onDiscard={run.reset}

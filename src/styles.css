@@ -3793,3 +3793,41 @@ section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; ali
 .move-go:disabled { opacity: 0.45; }
 .move-go span:first-child::first-letter { text-transform: uppercase; }
 .move-banner { display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+
+/* ---- Corsa: programmi del tapis roulant importati e adattati al giudizio ---- */
+.tm-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0.2rem 0 0.6rem; }
+.tm-tools .btn-ghost { display: inline-flex; align-items: center; gap: 0.35rem; }
+.tm-max { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.tm-max select { width: auto; padding: 0.35rem 0.6rem; font-weight: 800; }
+.tm-level { display: flex; align-items: center; gap: 0.55rem; padding: 0.6rem 0.75rem; border-radius: 14px; background: var(--surface-2); font-size: 0.82rem; line-height: 1.35; color: var(--muted); margin-bottom: 0.6rem; }
+.tm-level > .sym { flex: none; color: var(--lav-ink, #6c5fd3); }
+.tm-level.on { color: var(--ink); }
+.tm-level span { flex: 1; }
+.tm-level .link-quiet { flex: none; font: inherit; font-weight: 800; background: none; border: none; padding: 0.3rem 0.2rem; color: var(--lav-ink, #5b4fc9); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.run-tips { border-left: 3px solid var(--lavender); padding: 0.35rem 0 0.35rem 0.75rem; margin: 0 0 0.7rem; }
+.run-tips p { margin: 0.25rem 0 0; font-size: 0.85rem; line-height: 1.45; white-space: pre-line; }
+.import-sheet { max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.65rem; }
+.import-text { width: 100%; box-sizing: border-box; font: inherit; font-size: 0.9rem; line-height: 1.4; padding: 0.7rem 0.8rem; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); resize: vertical; min-height: 9rem; }
+.import-phases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.import-phases li { display: grid; grid-template-columns: 6.6rem 1fr auto auto; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border-radius: 12px; background: var(--surface-2); border-left: 4px solid var(--lime); font-size: 0.85rem; }
+.import-phases li.k-warmup, .import-phases li.k-cooldown { border-left-color: var(--sky, #9ccbf2); }
+.import-phases li.k-rest { border-left-color: var(--lavender); }
+.ip-time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.78rem; font-weight: 700; }
+.ip-label { overflow-wrap: anywhere; line-height: 1.25; }
+.ip-val { font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; min-width: 3.2rem; }
+.import-warn { margin: 0; font-size: 0.8rem; color: var(--amber-ink, #b07b00); }
+:root[data-theme='dark'] .import-warn { color: #e9b949; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .import-warn { color: #e9b949; } }
+.rs-feel { display: flex; flex-direction: column; gap: 0.6rem; }
+.feel-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.feel-btn { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.8rem 0.3rem; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 0.82rem; font-weight: 800; text-align: center; }
+.feel-btn .sym { color: var(--muted); }
+.feel-btn.on { border-color: transparent; color: #1d1d1f; }
+.feel-btn.on .sym { color: #1d1d1f; }
+.feel-btn.f-easy.on { background: #a6e9c4; }
+.feel-btn.f-ok.on { background: var(--lime); }
+.feel-btn.f-hard.on { background: #ffab91; }
+.feel-next { border-radius: 14px; background: var(--surface-2); padding: 0.65rem 0.8rem; font-size: 0.85rem; }
+.feel-next p { margin: 0; }
+.feel-next ul { margin: 0.35rem 0 0; padding-left: 1.1rem; }
+.feel-next li { margin: 0.12rem 0; }

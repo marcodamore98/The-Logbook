@@ -5,7 +5,9 @@ import { uid } from '../../components/ui';
 import type { RunLap, RunPlan, RunStep } from '../types';
 import { fmtDuration } from './geo';
 
-export const tStep = (sec: number, kmh: number, incline = 0): RunStep => ({ id: uid(), kind: 'work', by: 'time', value: sec, kmh, incline });
+export const tStep = (sec: number, kmh: number, incline = 0, label?: string, kind: RunStep['kind'] = 'work'): RunStep => ({ id: uid(), kind, by: 'time', value: sec, kmh, incline, ...(label ? { label } : {}) });
+const warm = (sec: number, kmh: number, incline: number, label = 'Riscaldamento') => tStep(sec, kmh, incline, label, 'warmup');
+const cool = (sec: number, kmh: number, incline: number, label = 'Defaticamento') => tStep(sec, kmh, incline, label, 'cooldown');
 
 /** Speed of a series; the first treadmill sessions stored a pace instead. */
 export const kmhOf = (s: { kmh?: number; paceSec?: number }) => s.kmh ?? (s.paceSec ? 3600 / s.paceSec : 0);
@@ -36,18 +38,58 @@ export function doneMeters(laps: RunLap[], cur: RunStep | undefined, stepLeft: n
 
 export const lapMeters = (l: RunLap) => Math.round(metersFor(l.seconds, kmhOf(l)));
 
+const POSTURE = 'Postura: niente maniglie, busto eretto, passo deciso.';
+
 export const treadmillPresets = (): RunPlan[] => [
-  { id: 't-12-3-30', name: 'Camminata in salita 12% · 30′', treadmill: true, steps: [tStep(300, 4.5, 3), tStep(1800, 5, 12), tStep(300, 4.5, 0)] },
+  {
+    id: 'tm-salita-10',
+    name: 'Camminata in salita 10′ (cambio ogni 2′)',
+    treadmill: true,
+    notes: POSTURE,
+    steps: [warm(120, 4.5, 5), tStep(120, 5, 9, 'Salita'), tStep(120, 4.5, 12, 'Duro'), tStep(120, 4, 15, 'Picco'), cool(120, 4.5, 6, 'Recupero e defaticamento')],
+  },
+  {
+    id: 'tm-salita-10-facile',
+    name: 'Camminata in salita 10′ · più leggera',
+    treadmill: true,
+    notes: POSTURE,
+    steps: [warm(120, 4, 3), tStep(120, 4.5, 6, 'Salita'), tStep(120, 4.5, 8, 'Duro'), tStep(120, 4, 10, 'Picco'), cool(120, 4, 3)],
+  },
+  {
+    id: 'tm-salita-10-dura',
+    name: 'Camminata in salita 10′ · più impegnativa',
+    treadmill: true,
+    notes: `Velocità un po' più alta nelle prime fasi e 4 minuti tra 12% e 15%, con un ultimo blocco duro. ${POSTURE}`,
+    steps: [warm(120, 4.8, 6), tStep(120, 5.2, 10, 'Salita'), tStep(120, 5, 12, 'Duro'), tStep(120, 4.5, 15, 'Picco'), tStep(60, 5, 15, 'Ultimo blocco duro'), cool(60, 4.5, 5)],
+  },
+  {
+    id: 'tm-salita-20',
+    name: 'Camminata in salita 20′ (due giri)',
+    treadmill: true,
+    notes: POSTURE,
+    steps: [
+      warm(180, 4.5, 3),
+      tStep(120, 5, 9, 'Salita'),
+      tStep(120, 4.5, 12, 'Duro'),
+      tStep(120, 4, 15, 'Picco'),
+      tStep(120, 4.5, 5, 'Recupero', 'rest'),
+      tStep(120, 5, 9, 'Salita'),
+      tStep(120, 4.5, 12, 'Duro'),
+      tStep(120, 4, 15, 'Picco'),
+      cool(180, 4.5, 2),
+    ],
+  },
+  { id: 't-12-3-30', name: 'Camminata in salita 12% · 30′', treadmill: true, steps: [warm(300, 4.5, 3), tStep(1800, 5, 12, 'Salita costante'), cool(300, 4.5, 0)] },
   {
     id: 't-salite',
     name: 'Salite progressive (2 → 10%)',
     treadmill: true,
-    steps: [tStep(300, 5, 1), ...[2, 4, 6, 8, 10, 8, 6, 4, 2].map((inc) => tStep(180, 5.5, inc)), tStep(300, 5, 0)],
+    steps: [warm(300, 5, 1), ...[2, 4, 6, 8, 10, 8, 6, 4, 2].map((inc) => tStep(180, 5.5, inc, `Salita ${inc}%`)), cool(300, 5, 0)],
   },
   {
     id: 't-alterna',
     name: 'Corsa e camminata 5 × (2′ + 2′)',
     treadmill: true,
-    steps: [tStep(300, 6, 1), ...Array.from({ length: 5 }, () => [tStep(120, 10, 1), tStep(120, 6, 1)]).flat(), tStep(300, 5.5, 0)],
+    steps: [warm(300, 6, 1), ...Array.from({ length: 5 }, () => [tStep(120, 10, 1, 'Corsa'), tStep(120, 6, 1, 'Camminata', 'rest')]).flat(), cool(300, 5.5, 0)],
   },
 ];

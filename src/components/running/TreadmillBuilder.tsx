@@ -14,9 +14,9 @@ function SeriesRow({ s, n, onChange, onRemove, sortProps }: { s: RunStep; n: num
     <li {...sortProps} className={`plan-step tm-step ${sortProps.className}`}>
       <div className="tm-step-top">
         <DragGrip />
-        <strong className="tm-series">Serie {n}</strong>
+        <strong className="tm-series">{s.label ?? `Serie ${n}`}</strong>
         <span className="tm-pace">{paceFromKmh(kmh)} /km</span>
-        <button type="button" className="icon-btn small" aria-label={`Elimina la serie ${n}`} onClick={async () => (await confirmDelete(`la serie ${n}`)) && onRemove()}>
+        <button type="button" className="icon-btn small" aria-label={`Elimina la serie ${n}`} onClick={async () => (await confirmDelete(s.label ? `la fase “${s.label}”` : `la serie ${n}`)) && onRemove()}>
           <GlyphTrash />
         </button>
       </div>
