@@ -1,4 +1,5 @@
 import { confirmDelete } from '../components/Confirm';
+import { ManualEntryButtons } from '../components/ManualEntry';
 import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -139,6 +140,7 @@ function Routines() {
           }}
         />
       </div>
+      <ManualEntryButtons only="workout" />
       {msg && <p className="muted small">{msg}</p>}
       {routines.length === 0 && (
         <Empty>

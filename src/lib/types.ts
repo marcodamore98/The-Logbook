@@ -229,7 +229,8 @@ export interface RunModule {
   planId?: string;
   level?: number;
   /** Giudizio a fine allenamento: la prossima volta il programma diventa più facile o più duro. */
-  feel?: 'easy' | 'ok' | 'hard';
+  feel?: 'easy' | 'ok' | 'hard';  /** Inserita a mano dopo (non registrata con l'app). */
+  manual?: boolean;
 }
 
 export interface PhotoItem {
@@ -333,6 +334,8 @@ export interface WorkoutModule {
   distanceKm?: number;
   exercises: WorkoutExercise[];
   notes?: string;
+  /** Inserito a mano dopo (non registrato con l'app). */
+  manual?: boolean;
 }
 
 // ---- Libreria esercizi e schede ----

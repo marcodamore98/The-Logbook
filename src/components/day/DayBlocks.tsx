@@ -1,4 +1,5 @@
 import { confirmDelete } from '../Confirm';
+import { ManualEntryButtons } from '../ManualEntry';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { dayFoodTotals, dayIntake } from '../../lib/nutrition/foods';
@@ -192,6 +193,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             </div>
           ))
         )}
+        <ManualEntryButtons date={day.date} />
         <WeekTraining date={day.date} />
       </Card>
       {picked && (

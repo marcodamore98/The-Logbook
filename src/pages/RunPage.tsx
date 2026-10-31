@@ -1,4 +1,5 @@
 import { confirmAction, confirmDelete } from '../components/Confirm';
+import { ManualEntryButtons } from '../components/ManualEntry';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fmt } from '../components/charts';
@@ -322,6 +323,7 @@ export default function RunPage() {
             Cerca percorsi vicino a te su Google Maps
           </a>
         )}
+        {state.phase === 'idle' && <ManualEntryButtons only="run" />}
         {state.phase === 'idle' && <p className="muted small">Lo schermo resta acceso durante la corsa. Il GPS e i segnali funzionano finché l’app è aperta in primo piano.</p>}
       </section>
 

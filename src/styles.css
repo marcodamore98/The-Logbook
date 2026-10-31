@@ -3863,3 +3863,12 @@ section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; ali
 .kg-burn > summary::-webkit-details-marker { display: none; }
 .kg-burn > summary::after { content: '›'; margin-left: auto; transition: transform 0.15s; }
 .kg-burn[open] > summary::after { transform: rotate(90deg); }
+
+/* Allenamento o corsa già fatti, inseriti a mano */
+.manual-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.6rem 0 0.2rem; }
+.manual-btns .btn-ghost { display: inline-flex; align-items: center; gap: 0.35rem; }
+.manual-sheet { max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.7rem; }
+.manual-sheet > .btn { justify-content: center; margin-top: 0.3rem; }
+.manual-when { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.manual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; align-items: end; }
+.manual-grid .field input { width: 100%; box-sizing: border-box; }
