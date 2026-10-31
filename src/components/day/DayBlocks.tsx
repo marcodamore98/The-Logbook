@@ -8,6 +8,7 @@ import { exerciseDef } from '../../lib/training/exercises';
 import { addDays, startOfWeek, today } from '../../lib/dates';
 import type { DayEntry, ISODate, RunModule, WorkoutModule } from '../../lib/types';
 import { levelLabel } from '../../lib/running/program';
+import { useBurned } from '../useBurned';
 import { fmtDuration, fmtKm, fmtPace } from '../../lib/running/geo';
 import { fmt } from '../charts';
 import { runLine } from '../modules/meta';
@@ -249,7 +250,8 @@ export function NutritionBlock({ day }: { day: DayEntry }) {
   const t = dayFoodTotals(day.food);
   const kcal = intake.kcal ?? 0;
   const logged = intake.kcal !== undefined;
-  const target = goals.kcalIn ? goals.kcalIn + (day.body?.kcalOut ?? 0) : 0;
+  const burned = useBurned(day.date);
+  const target = goals.kcalIn ? goals.kcalIn + burned.total : 0;
   const over = target > 0 && kcal > target;
   const water = day.body?.waterL ?? 0;
   const glasses = Math.round(water / 0.25);
@@ -280,7 +282,7 @@ export function NutritionBlock({ day }: { day: DayEntry }) {
           </span>
         )}
         <div className="ne-foot">
-          <span>{target ? `${fmt(kcal)} assunte` : logged ? '' : 'Ancora niente registrato'}</span>
+          <span>{target ? `${fmt(kcal)} assunte${burned.total ? ` · ${fmt(burned.total)} bruciate` : ''}` : logged ? '' : 'Ancora niente registrato'}</span>
           {goals.kcalIn ? <span>Obiettivo {fmt(target)} kcal</span> : null}
         </div>
       </div>

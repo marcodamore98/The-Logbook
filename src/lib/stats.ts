@@ -1,4 +1,5 @@
 import { diaryOf } from './diary';
+import { burnedOn } from './energy';
 import { shiftMinutes } from './dates';
 import { dayFoodTotals, dayIntake } from './nutrition/foods';
 import { countsSet, setsPerMuscle, setVolume } from './training/analytics';
@@ -295,7 +296,7 @@ export function metricOf(day: DayEntry | undefined, metric: Metric, settings: Se
     case 'volume':
       return day.modules.reduce((n, m) => n + (m.kind === 'workout' ? m.exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + setVolume(s), 0), 0) : 0), 0);
     case 'kcal':
-      return day.body?.kcalOut ?? 0;
+      return burnedOn(day, settings.profile?.weightKg).total;
   }
 }
 

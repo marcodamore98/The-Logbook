@@ -1,4 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
+import { useBurned } from './useBurned';
+import type { Burned } from '../lib/energy';
 import { Link, useLocation } from 'react-router-dom';
 import { addDays, formatLong, fromISO, shiftMinutes, today } from '../lib/dates';
 import { useStore } from '../lib/store/StoreContext';
@@ -202,7 +204,13 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
     store.loadRange(addDays(date, -35), date);
   }, [date]);
 
-  const setBody = (p: Partial<BodyLog>) => store.updateDay(date, (d) => ({ ...d, body: { ...d.body, ...p } }));
+  const setBody = (p: Partial<BodyLog>) => {
+    // The latest weight is also kept with the settings: the calories burned use it on any day.
+    const prof = store.settings.profile ?? {};
+    if (p.weightKg && date >= (prof.weightDate ?? '')) store.saveSettings({ ...store.settings, profile: { ...prof, weightKg: p.weightKg, weightDate: date } });
+    return store.updateDay(date, (d) => ({ ...d, body: { ...d.body, ...p } }));
+  };
+  const burned = useBurned(date);
   const body = day.body ?? {};
 
   const recent = useMemo(() => {
@@ -233,7 +241,7 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
   const clinical = clinicalTotals(day.modules).activities;
   const study = day.modules.reduce((n, m) => n + (m.kind === 'study' ? m.durationMin : 0), 0);
   const intake = dayIntake(day);
-  const balance = intake.kcal !== undefined && body.kcalOut !== undefined ? intake.kcal - body.kcalOut : undefined;
+  const balance = intake.kcal !== undefined ? intake.kcal - burned.total : undefined;
 
   return (
     <aside className="sidebar" aria-label="Riepilogo del giorno">
@@ -357,7 +365,7 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
 
       <section className="side-section side-card">
         <h3 className="sub">Bilancio energetico</h3>
-        <KcalRing eaten={intake.kcal ?? 0} goal={goals.kcalIn} burned={body.kcalOut} />
+        <KcalRing eaten={intake.kcal ?? 0} goal={goals.kcalIn} burned={burned.total} />
         <div className="bal-tiles">
           {intake.fromLog ? (
             <>
@@ -386,20 +394,19 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
               </label>
             </>
           )}
-          <label className="bal-tile act">
-            <small>
-              Attive <Sym name="edit" size={11} />
-            </small>
-            <NumberInput value={body.kcalOut} step={50} placeholder="–" onChange={(v) => setBody({ kcalOut: v })} />
+          <div className="bal-tile act">
+            <small>Bruciate</small>
+            <strong>{fmt(burned.total)}</strong>
             <span>kcal</span>
-          </label>
+          </div>
         </div>
+        <BurnList burned={burned} manual={body.kcalOut} onManual={(v) => setBody({ kcalOut: v })} />
         <Link className="link-lime small" to={`/alimentazione/${date}`}>
           {intake.fromLog ? 'apri il diario alimentare ›' : 'oppure registra i pasti nel diario alimentare ›'}
         </Link>
         {balance !== undefined && (
           <p className="small">
-            Bilancio: <strong>{balance > 0 ? '+' : ''}{fmt(balance)} kcal</strong> <span className="muted">(assunte − attive)</span>
+            Bilancio: <strong>{balance > 0 ? '+' : ''}{fmt(balance)} kcal</strong> <span className="muted">(assunte − bruciate)</span>
           </p>
         )}
       </section>
@@ -467,6 +474,45 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
 }
 
 /** Calories left today: a big lime ring with the number inside. */
+/** Where the calories burned come from: each workout and run, the steps, and the other activities written by hand. */
+export function BurnList({ burned, manual, onManual }: { burned: Burned; manual?: number; onManual?: (v: number | undefined) => void }) {
+  return (
+    <div className="burn-list">
+      {burned.items.map((i) => (
+        <div key={i.id} className="burn-row">
+          <span>{i.label}</span>
+          <strong>{fmt(i.kcal)} kcal</strong>
+        </div>
+      ))}
+      {burned.stepsCounted > 0 && (
+        <div className="burn-row">
+          <span>Passi ({fmt(burned.stepsCounted)})</span>
+          <strong>{fmt(burned.steps)} kcal</strong>
+        </div>
+      )}
+      {onManual ? (
+        <label className="burn-row burn-manual">
+          <span>
+            Altre attività <Sym name="edit" size={11} />
+          </span>
+          <span className="burn-input">
+            <NumberInput value={manual} step={50} placeholder="–" onChange={onManual} />
+            <small>kcal</small>
+          </span>
+        </label>
+      ) : (
+        burned.manual > 0 && (
+          <div className="burn-row">
+            <span>Altre attività</span>
+            <strong>{fmt(burned.manual)} kcal</strong>
+          </div>
+        )
+      )}
+      {burned.guessed && (burned.exercise > 0 || burned.steps > 0) && <p className="burn-hint">Calcolate con {burned.kg} kg: scrivi il tuo peso in Corpo per un valore preciso.</p>}
+    </div>
+  );
+}
+
 function KcalRing({ eaten, goal, burned }: { eaten: number; goal?: number; burned?: number }) {
   if (!goal) return null;
   const target = goal + (burned ?? 0);

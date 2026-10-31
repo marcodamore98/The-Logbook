@@ -534,7 +534,7 @@ export interface Settings {
   exercises?: ExerciseDef[]; // esercizi personalizzati
   routines?: Routine[];
   goals?: BodyGoals;
-  profile?: { sex?: 'f' | 'm'; heightCm?: number }; // per il calcolo della massa grassa
+  profile?: { sex?: 'f' | 'm'; heightCm?: number; weightKg?: number; weightDate?: ISODate }; // massa grassa; ultimo peso scritto (per le calorie bruciate)
   mealPlans?: MealPlan[];
   foods?: Food[]; // alimenti personali e salvati da Open Food Facts
   favoriteFoods?: string[]; // preferiti di prima, senza cartella

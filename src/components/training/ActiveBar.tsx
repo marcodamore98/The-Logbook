@@ -4,6 +4,9 @@ import { today } from '../../lib/dates';
 import { useStore } from '../../lib/store/StoreContext';
 import { runningWorkout, workoutProgress } from '../../lib/training/analytics';
 import { fmtRest, useRestTimer } from './RestTimer';
+import { restoreRun, runSession, useRunSession } from '../../lib/running/engine';
+import { fmtDuration, fmtKm } from '../../lib/running/geo';
+import { doneMeters } from '../../lib/running/treadmill';
 
 const clock = (ms: number) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -12,11 +15,21 @@ const clock = (ms: number) => {
   return `${h ? `${h}:` : ''}${String(m).padStart(h ? 2 : 1, '0')}:${String(s % 60).padStart(2, '0')}`;
 };
 
+// A run left going (or not saved) when the app was closed comes back as soon as the app opens.
+restoreRun();
+
 /**
- * Bar fixed at the very bottom of the screen. While a workout is running it shows where you
- * are (exercise, set, rest) and takes you back to it with one tap. The rest countdown lives
- * here too: tap it, or swipe it up, for a big stopwatch.
+ * Bar fixed at the very bottom of the screen. While a workout or a run is going it shows where
+ * you are (exercise, set, rest; time and distance) and takes you back to it with one tap. The
+ * rest countdown lives here too: tap it, or swipe it up, for a big stopwatch.
  */
+/** "1,24 km" so far: GPS distance outdoors, speed × time on the treadmill. */
+function runKm(run: ReturnType<typeof useRunSession>['state'], treadmill: boolean) {
+  const steps = runSession.config?.steps ?? [];
+  const m = treadmill ? doneMeters(run.laps, steps[run.stepIdx], run.stepLeft) : run.distance;
+  return m > 0 ? `${fmtKm(m)} km` : '';
+}
+
 export function ActiveBar() {
   const store = useStore();
   const nav = useNavigate();
@@ -31,7 +44,9 @@ export function ActiveBar() {
   const onWorkoutPage = loc.pathname.startsWith('/palestra/allenamento/');
   const showWorkout = !!w && !onWorkoutPage;
   const showRest = rest.state.left !== null;
-  const visible = showWorkout || showRest;
+  const run = useRunSession().state;
+  const showRun = run.phase !== 'idle' && !loc.pathname.startsWith('/corsa');
+  const visible = showWorkout || showRest || showRun;
 
   useEffect(() => {
     store.loadRange(date, date);
@@ -70,7 +85,18 @@ export function ActiveBar() {
     <>
       <div className={`active-bar${rest.state.done ? ' done' : ''}`} role="status" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {showRest && <div className="rest-bar" style={{ width: `${pct}%` }} />}
-        {showWorkout && p ? (
+        {showRun && !(showWorkout && p) ? (
+          <button type="button" className="active-main" onClick={() => nav('/corsa')} aria-label="Torna alla corsa">
+            <span className="active-title">
+              {runSession.config?.mode === 'treadmill' ? 'Tapis roulant' : 'Corsa'} · {fmtDuration(run.elapsed)}
+            </span>
+            <span className="active-sub">
+              {run.phase === 'done'
+                ? 'finita: da salvare'
+                : [run.phase === 'paused' ? 'in pausa' : '', runKm(run, runSession.config?.mode === 'treadmill'), runSession.config?.steps[run.stepIdx]?.label ?? ''].filter(Boolean).join(' · ')}
+            </span>
+          </button>
+        ) : showWorkout && p ? (
           <button type="button" className="active-main" onClick={go} aria-label="Riprendi l'allenamento">
             <span className="active-title">{w!.title || 'Allenamento'} · {clock(Date.now() - w!.startedAt!)}</span>
             <span className="active-sub">
@@ -83,7 +109,11 @@ export function ActiveBar() {
             <span className="active-sub">{rest.state.label ?? ''}</span>
           </button>
         )}
-        {showRest ? (
+        {showRun && !showRest && !(showWorkout && p) ? (
+          <span className="active-go" aria-hidden="true">
+            {run.phase === 'done' ? 'Salva ›' : 'Riprendi ›'}
+          </span>
+        ) : showRest ? (
           <button type="button" className="active-rest" onClick={() => setBig(true)} aria-label="Apri il cronometro">
             {fmtRest(left)}
             <span aria-hidden="true">⌃</span>

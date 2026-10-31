@@ -3847,3 +3847,19 @@ section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; ali
 .run-feel.f-ok { background: var(--lime); }
 .run-feel.f-hard { background: #ffab91; }
 .run-feel-level { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+
+/* Calorie bruciate: da dove vengono (allenamenti, corse, passi, altre attività) */
+.burn-list { display: flex; flex-direction: column; gap: 0.15rem; margin: 0.5rem 0 0.4rem; }
+.burn-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.4rem 0.1rem; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
+.burn-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-weight: 600; }
+.burn-row strong { flex: none; font-variant-numeric: tabular-nums; }
+.burn-manual { border-bottom: none; }
+.burn-input { display: inline-flex; align-items: center; gap: 0.3rem; flex: none; }
+.burn-input input { width: 4.6rem; text-align: right; padding: 0.3rem 0.5rem; font-weight: 800; }
+.burn-input small { color: var(--muted); }
+.burn-hint { margin: 0.3rem 0 0; font-size: 0.75rem; color: var(--muted); }
+.kg-burn { margin-top: 0.7rem; border-top: 1px solid var(--line); padding-top: 0.55rem; }
+.kg-burn > summary { cursor: pointer; font-size: 0.82rem; font-weight: 700; color: var(--muted); list-style: none; display: flex; align-items: center; gap: 0.35rem; }
+.kg-burn > summary::-webkit-details-marker { display: none; }
+.kg-burn > summary::after { content: '›'; margin-left: auto; transition: transform 0.15s; }
+.kg-burn[open] > summary::after { transform: rotate(90deg); }

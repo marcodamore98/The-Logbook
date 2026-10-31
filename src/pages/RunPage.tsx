@@ -10,7 +10,7 @@ import { RunSummary, type RunResult } from '../components/running/RunSummary';
 import { Card, Field, uid } from '../components/ui';
 import { Sym } from '../components/icons';
 import { fromISO, today } from '../lib/dates';
-import { useRunSession } from '../lib/running/engine';
+import { runSession, useRunSession } from '../lib/running/engine';
 import { fmtDuration, fmtKm, fmtPace, fmtPaceSec, KIND_LABEL, stepLabel } from '../lib/running/geo';
 import { presetPlans } from '../lib/running/plans';
 import { atLevel, changes, DEFAULT_MAX_INCLINE, levelLabel } from '../lib/running/program';
@@ -21,16 +21,18 @@ import type { RunModule, RunPlan, RunStep } from '../lib/types';
 export default function RunPage() {
   const store = useStore();
   const { settings } = store;
-  const [mode, setMode] = useState<'continuous' | 'intervals' | 'treadmill'>('continuous');
+  // A run already going (or finished and not saved yet) brings back what it was started with.
+  const cfg = runSession.config;
+  const [mode, setMode] = useState<'continuous' | 'intervals' | 'treadmill'>(cfg?.mode ?? 'continuous');
   const tm = mode === 'treadmill';
-  const [steps, setSteps] = useState<RunStep[]>([]);
-  const [planName, setPlanName] = useState<string>('Personalizzata');
+  const [steps, setSteps] = useState<RunStep[]>(cfg?.steps ?? []);
+  const [planName, setPlanName] = useState<string>(cfg?.planName ?? 'Personalizzata');
   // The programme the steps come from, and at which level (treadmill: it follows the judgements).
-  const [planId, setPlanId] = useState<string>();
+  const [planId, setPlanId] = useState<string | undefined>(cfg?.planId);
   const [importing, setImporting] = useState(false);
   const maxIncline = settings.treadmillMaxIncline ?? DEFAULT_MAX_INCLINE;
   const levels = settings.runLevels ?? {};
-  const [useGps, setUseGps] = useState(true);
+  const [useGps, setUseGps] = useState(cfg ? cfg.useGps : true);
   const plans: RunPlan[] = useMemo(
     () => (tm ? [...treadmillPresets(), ...(settings.runPlans ?? []).filter((p) => p.treadmill)] : [...presetPlans(), ...(settings.runPlans ?? []).filter((p) => !p.treadmill)]),
     [settings.runPlans, tm],
@@ -38,7 +40,7 @@ export default function RunPage() {
 
   const activeSteps = mode !== 'continuous' ? steps : undefined;
   const gps = useGps && !tm; // no GPS indoors: the distance comes from speed × time
-  const run = useRunSession(activeSteps, gps);
+  const run = useRunSession();
   const { state } = run;
   const liveRef = useRef<HTMLElement>(null);
   const active = state.phase === 'running' || state.phase === 'paused';
@@ -294,7 +296,7 @@ export default function RunPage() {
         )}
 
         {state.phase === 'idle' && (
-          <button className="btn run-btn" disabled={mode !== 'continuous' && steps.length === 0} onClick={() => { run.start(); setTimeout(() => liveRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}>
+          <button className="btn run-btn" disabled={mode !== 'continuous' && steps.length === 0} onClick={() => { run.start({ mode, steps: activeSteps ?? [], useGps: gps, planName, planId }); setTimeout(() => liveRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}>
             Avvia
           </button>
         )}

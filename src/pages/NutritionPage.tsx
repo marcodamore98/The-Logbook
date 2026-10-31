@@ -1,4 +1,6 @@
 import { confirmDelete } from '../components/Confirm';
+import { useBurned } from '../components/useBurned';
+import { BurnList } from '../components/BodySidebar';
 import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -13,7 +15,7 @@ import { useStore } from '../lib/store/StoreContext';
 import type { FoodEntry, FoodLog, MealId } from '../lib/types';
 
 /** Half-circle gauge like Lifesum: remaining kcal in the middle, eaten on the left, burned on the right. */
-function Gauge({ eaten, goal, burned }: { eaten: number; goal?: number; burned?: number }) {
+function Gauge({ eaten, goal, burned, children }: { eaten: number; goal?: number; burned?: number; children?: ReactNode }) {
   const target = goal ? goal + (burned ?? 0) : 0;
   const pct = target ? Math.min(1, eaten / target) : 0;
   const over = target > 0 && eaten > target;
@@ -58,6 +60,7 @@ function Gauge({ eaten, goal, burned }: { eaten: number; goal?: number; burned?:
           Bruciate
         </span>
       </div>
+      {children}
       {!goal && <p className="muted small kg-hint">Imposta gli obiettivi di calorie e macronutrienti nel “Riepilogo del giorno” (scorri dal bordo destro) → Obiettivi.</p>}
     </section>
   );
@@ -350,7 +353,8 @@ export default function NutritionPage() {
   const setLog = (fn: (l: FoodLog) => FoodLog) => store.updateDay(date, (d) => ({ ...d, food: fn(d.food ?? { meals: {} }) }));
   const all = Object.values(log.meals).flat().filter(Boolean) as FoodEntry[];
   const t = totalsOf(all);
-  const burned = day.body?.kcalOut;
+  const burn = useBurned(date);
+  const burned = burn.total;
 
   /** Remove foods by id from every meal, with "Annulla" in the snackbar. */
   const remove = (ids: Set<string>) => {
@@ -413,7 +417,12 @@ export default function NutritionPage() {
         </button>
       </header>
 
-      <Gauge eaten={t.kcal} goal={goals.kcalIn} burned={burned} />
+      <Gauge eaten={t.kcal} goal={goals.kcalIn} burned={burned}>
+        <details className="kg-burn">
+          <summary>{burned ? `Da dove vengono le ${fmt(burned)} kcal bruciate` : 'Calorie bruciate: allenamenti, corse, passi e altre attività'}</summary>
+          <BurnList burned={burn} manual={day.body?.kcalOut} onManual={(v) => store.updateDay(date, (d) => ({ ...d, body: { ...d.body, kcalOut: v } }))} />
+        </details>
+      </Gauge>
 
       <div className="macro-cards">
         <MacroCard tone="lime" label="Carboidrati" value={t.carbs} goal={goals.carbsG} />
