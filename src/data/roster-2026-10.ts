@@ -6,8 +6,10 @@
 import type { RosterMonth } from '../lib/roster';
 
 export const ROSTER_2026_10: RosterMonth = {
+  id: '2026-10',
+  name: 'Ginecologia e Ostetricia · ottobre 2026',
   from: '2026-10-01',
-  to: '2026-11-01',
+  to: '2026-10-31',
   residents: {
     '2026-10-05': { "Covino": ["smonto"], "Carignano": ["eco"], "Pascotto": ["riposo", "gn"], "Viale": ["eco"], "Costa Torro": ["ost"], "D'Amore": ["sor"], "Mucciacito": ["istop"], "Paradiso": ["vulvo", "caressflow"], "Brusa": ["ost"], "Hussein": ["uro"], "Moretto": ["vulvo", "istom", "rep", "gp"], "Taha": ["sor"], "Albano": ["dh"], "Ballesio": ["ost", "istop"], "Buggea": ["riposo", "gn"], "Iannelli": ["oncm"], "Labbate": ["sor"], "Quinteri": ["uro", "gp"], "Ricossa": ["oncm", "istom"], "Varricchio": ["gin"], "Ostoni": ["ferie"] },
     '2026-10-06': { "Covino": ["ost"], "Pascotto": ["smonto"], "Suraci": ["eco"], "Viale": ["ambost", "ecop", "rep", "gp"], "Costa Torro": ["eco"], "D'Amore": ["riposo", "gn"], "Mucciacito": ["cas"], "Paradiso": ["colpo"], "Brusa": ["agin"], "Hussein": ["ost"], "Moretto": ["colpo"], "Taha": ["ambost"], "Albano": ["ost"], "Ballesio": ["cas"], "Buggea": ["smonto"], "Iannelli": ["riposo", "gn"], "Labbate": ["dh"], "Quinteri": ["gin"], "Ricossa": ["sen"], "Varricchio": ["sen", "gp"], "Ostoni": ["ferie"] },
@@ -36,7 +38,6 @@ export const ROSTER_2026_10: RosterMonth = {
     '2026-10-29': { "Carignano": ["ost"], "Suraci": ["so"], "Costa Torro": ["dh"], "Mucciacito": ["smonto"], "Paradiso": ["riposo", "gn"], "Bisconte": ["eco"], "Brusa": ["ost"], "Hussein": ["uro", "rep", "gp"], "Taha": ["eco"], "Ballesio": ["gin"], "Buggea": ["ost"], "Iannelli": ["oncm"], "Ostoni": ["dh"], "Quinteri": ["uro"], "Ricossa": ["oncm"], "Varricchio": ["so", "gp"], "D'Amore": ["ferie"], "Pascotto": ["ferie"], "Viale": ["ferie"] },
     '2026-10-30': { "Carignano": ["so", "sop"], "Costa Torro": ["ost", "rep", "gp"], "Mucciacito": ["dh"], "Paradiso": ["smonto"], "Bisconte": ["riposo", "gn"], "Brusa": ["brca"], "Hussein": ["ost"], "Taha": ["oncp"], "Albano": ["oncp"], "Ballesio": ["ost"], "Buggea": ["dh"], "Iannelli": ["brca"], "Labbate": ["ost", "gp"], "Ostoni": ["gin"], "Ricossa": ["preric"], "Varricchio": ["preric"], "D'Amore": ["ferie"], "Pascotto": ["ferie"], "Suraci": ["ferie"], "Viale": ["ferie"] },
     '2026-10-31': { "Bisconte": ["smonto"], "Brusa": ["gg"], "Hussein": ["riposo", "gn"], "Albano": ["gg"], "Ostoni": ["riposo", "gn"], "D'Amore": ["ferie"], "Pascotto": ["ferie"], "Viale": ["ferie"] },
-    '2026-11-01': { "Costa Torro": ["riposo", "gn"], "Hussein": ["smonto"], "Taha": ["gg"], "Iannelli": ["gg"], "Ostoni": ["smonto"], "D'Amore": ["ferie"], "Pascotto": ["ferie"], "Viale": ["ferie"] },
   },
   staff: {
     '2026-10-01': { "Bounous": ["ost"], "Jacomuzzi": ["oncm", "ps"], "Mancarella": ["eco", "gp", "rn"], "Mariani": ["ferie"], "Moggio": ["ferie"], "Novara": ["gn"], "Pecchio": ["eco"], "Perrini": ["isc"], "Roagna": ["gin"], "Sgro": ["so", "uro"], "Spanu": ["dh"] },
@@ -70,6 +71,5 @@ export const ROSTER_2026_10: RosterMonth = {
     '2026-10-29': { "Bounous": ["esame"], "Cacciari": ["agg"], "Fuso": ["dh"], "Jacomuzzi": ["oncm", "ps"], "Mancarella": ["uro"], "Mariani": ["eco"], "Moggio": ["ost"], "Novara": ["so", "extra"], "Pecchio": ["eco", "extra"], "Perrini": ["isc", "gp", "rn"], "Roagna": ["gin"], "Spanu": ["gn"] },
     '2026-10-30': { "Cacciari": ["gn"], "D'Alonzo": ["brca"], "Fuso": ["cong"], "Jacomuzzi": ["dh", "oncp"], "Mancarella": ["eco"], "Mariani": ["eco"], "Moggio": ["ost", "ps"], "Novara": ["cong"], "Pace": ["cong"], "Pecchio": ["ost", "gp", "rn"], "Perrini": ["isc"], "Roagna": ["gin"], "Sgro": ["so", "sop"] },
     '2026-10-31': { "Moggio": ["gg", "rn"], "Pecchio": ["rg", "gn"] },
-    '2026-11-01': { "Jacomuzzi": ["gg", "rn"], "Moggio": ["rg", "gn"] },
   },
 };

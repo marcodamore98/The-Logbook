@@ -202,6 +202,12 @@ export function ShiftTypeSelect({
   );
 }
 
+/** Colleagues offered in a chooser: the current ones, plus archived ones only where already chosen. */
+export const pickable = (colleagues: Colleague[], selected: string[]) =>
+  colleagues
+    .filter((c) => !c.archived || selected.includes(c.id))
+    .map((c) => ({ id: c.id, label: c.name, sub: c.archived ? `${c.role ? `${c.role} · ` : ''}archiviato` : c.role, group: c.role || 'Altri' }));
+
 /** Selected colleagues as removable chips, plus a full-page chooser with search to add more. */
 export function ColleaguePicker({
   colleagues,
@@ -234,7 +240,7 @@ export function ColleaguePicker({
           multi
           title="In turno con"
           placeholder="Cerca un collega o uno strutturato"
-          items={colleagues.map((c) => ({ id: c.id, label: c.name, sub: c.role, group: c.role || 'Altri' }))}
+          items={pickable(colleagues, selected)}
           selected={selected}
           onPick={(id) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id])}
           onCreate={onCreate && ((name) => onChange([...selected, onCreate(name)]))}

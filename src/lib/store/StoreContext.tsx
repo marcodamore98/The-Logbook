@@ -5,7 +5,7 @@ import { linkedIds, pendingCount, pullFromGoogle, pushDay, trashRemoved } from '
 import { emptyDay, type DayEntry, type ISODate, type Settings } from '../types';
 import type { ImportedWorkout } from '../hevy';
 import { buildHistory, type History } from '../training/analytics';
-import { myRosterDays, shiftFromCodes } from '../roster';
+import { myRosterDays, ROSTERS, shiftFromCodes } from '../roster';
 import { defaultSettings, migrateSettings } from '../vocab';
 import type { Repo } from './repo';
 import { mergeDay } from './merge';
@@ -28,7 +28,8 @@ interface Store {
   syncAll(): Promise<number>;
   loadAll(): Promise<DayEntry[]>;
   /** Fills the user's shift from the department roster on days that have none. */
-  importRoster(): Promise<{ added: number; kept: number }>;
+  /** Copies the user's own roster shifts (of some months, or all) into the days without a shift. */
+  importRoster(months?: string[]): Promise<{ added: number; kept: number }>;
   /** Adds Hevy workouts to their days; a workout imported again replaces its earlier copy. */
   importWorkouts(list: ImportedWorkout[]): Promise<{ added: number; updated: number }>;
   /** Every loaded day (call ensureAllLoaded for the full archive). */
@@ -166,8 +167,10 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     };
   }, [repo, saveToRepo]);
 
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   useEffect(() => {
     repo.getSettings().then((s) => {
+      setSettingsLoaded(true);
       if (!s) return;
       const migrated = migrateSettings(s);
       const next = { ...defaultSettings(), ...migrated, gcal: { ...defaultSettings().gcal, ...migrated.gcal } };
@@ -352,8 +355,8 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     };
   }, [connected, settings.gcal.enabled, syncAll]);
 
-  const importRoster = useCallback(async () => {
-    const mine = myRosterDays();
+  const importRoster = useCallback(async (months?: string[]) => {
+    const mine = myRosterDays(months);
     if (!mine.length) return { added: 0, kept: 0 };
     await loadRange(mine[0].date, mine[mine.length - 1].date);
     let added = 0;
@@ -370,6 +373,21 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
     }
     return { added, kept };
   }, [loadRange, saveDay]);
+
+  // A new month of the roster: the user's shifts go into the days by themselves, once
+  // (days that already have a shift are left as they are).
+  const rosterRunning = useRef(false);
+  useEffect(() => {
+    if (!settingsLoaded || rosterRunning.current) return;
+    const done = settings.rosterImports ?? [];
+    const months = ROSTERS.map((r) => r.id).filter((id) => !done.includes(id));
+    if (!months.length) return;
+    rosterRunning.current = true;
+    void importRoster(months).then(() => {
+      saveSettings({ ...settingsRef.current, rosterImports: [...(settingsRef.current.rosterImports ?? []), ...months] });
+      rosterRunning.current = false;
+    });
+  }, [settingsLoaded, settings.rosterImports, importRoster, saveSettings]);
 
   const importWorkouts = useCallback(
     async (list: ImportedWorkout[]) => {

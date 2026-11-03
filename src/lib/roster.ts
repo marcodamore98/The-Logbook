@@ -3,10 +3,17 @@
 // with the shift types, so the user's own shifts can be imported directly.
 
 import { ROSTER_2026_10 } from '../data/roster-2026-10';
+import { ROSTER_2026_11 } from '../data/roster-2026-11';
 import { minutesOf } from './dates';
 import type { Colleague, HHMM, ISODate, ShiftAssignment, ShiftType } from './types';
 
 export interface RosterMonth {
+  /** "2026-11": also remembers in the settings that its shifts were copied into the days. */
+  id: string;
+  /** Shown in Impostazioni: "Endoscopica · novembre 2026". */
+  name: string;
+  /** Where the shifts take place: goes into each shift ("Endoscopica"). */
+  place?: string;
   from: ISODate;
   to: ISODate;
   /** date → surname → codes (top row first) */
@@ -14,7 +21,7 @@ export interface RosterMonth {
   staff: Record<ISODate, Record<string, string[]>>;
 }
 
-export const ROSTERS: RosterMonth[] = [ROSTER_2026_10];
+export const ROSTERS: RosterMonth[] = [ROSTER_2026_10, ROSTER_2026_11];
 
 /** How the user appears in the residents' sheet. */
 export const ROSTER_SELF = "D'Amore";
@@ -25,18 +32,24 @@ export const RESIDENTS = [
   'Ostoni', 'Quinteri', 'Ricossa', 'Varricchio',
 ];
 
+/** Ginecologia e Ostetricia (ottobre 2026): archived colleagues now. */
 export const STAFF = [
   'Bounous', 'Cacciari', "D'Alonzo", 'Ferrero', 'Fuso', 'Jacomuzzi', 'Mancarella', 'Mariani', 'Moggio', 'Novara',
   'Pace', 'Pecchio', 'Perrini', 'Roagna', 'Sgro', 'Spanu',
 ];
 
+/** Endoscopica (from novembre 2026): the current colleagues, all strutturati. */
+export const ENDO_STAFF = ['Casarella', 'Coppola', 'Falcone', 'Farnetano', 'Iuzzolino', 'Rasile'];
+
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
 export const residentId = (name: string) => `spec-${slug(name)}`;
 export const staffId = (name: string) => `strut-${slug(name)}`;
 
+/** The colleagues of the earlier rotation stay (for past shifts and operations) but archived. */
 export const ROSTER_COLLEAGUES: Colleague[] = [
-  ...STAFF.map((name) => ({ id: staffId(name), name, role: 'Strutturato' })),
-  ...RESIDENTS.map((name) => ({ id: residentId(name), name, role: 'Specializzando' })),
+  ...ENDO_STAFF.map((name) => ({ id: staffId(name), name, role: 'Strutturato' })),
+  ...STAFF.map((name) => ({ id: staffId(name), name, role: 'Strutturato', archived: true })),
+  ...RESIDENTS.map((name) => ({ id: residentId(name), name, role: 'Specializzando', archived: true })),
 ];
 
 type Group = 'Reparto e sala' | 'Ambulatori e diagnostica' | 'Guardie e reperibilità' | 'Formazione e altro' | 'Assenze';
@@ -64,6 +77,7 @@ export const ROSTER_CODES: Code[] = [
   C('ps', 'PS', 'Pronto soccorso', 'Reparto e sala'),
   C('preric', 'preric', 'Prericovero', 'Reparto e sala'),
   C('falconi', 'Falconi', 'Falconi', 'Reparto e sala'),
+  C('endo', 'Endo', 'Reparto Endoscopica', 'Reparto e sala'),
 
   C('eco', 'Eco', 'Ecografia', 'Ambulatori e diagnostica'),
   C('ecop', 'EcoP', 'Ecografie pomeriggio', 'Ambulatori e diagnostica', '14:00', '20:00'),
@@ -100,6 +114,7 @@ export const ROSTER_CODES: Code[] = [
   C('esame', 'Es', 'Esame', 'Formazione e altro', '08:00', '14:00', false),
   C('concorso', 'concorso', 'Concorso', 'Formazione e altro', '08:00', '14:00', false),
   C('extra', 'Extra', 'Attività extra ospedale', 'Formazione e altro', '08:00', '14:00', false),
+  C('gom', 'GOM', 'GOM', 'Formazione e altro', '08:00', '14:00', false),
 
   C('smonto', 's', 'Smonto notte', 'Assenze', '08:00', '08:00', false),
   C('riposo', '/', 'Riposo', 'Assenze', '00:00', '00:00', false),
@@ -117,7 +132,7 @@ const GROUP_COLORS: Record<Group, string> = {
 };
 
 const SPECIFIC_COLORS: Record<string, string> = {
-  so: '#c7613f', sop: '#c7613f', sor: '#c7613f', ost: '#d9798a', gin: '#b56576',
+  so: '#c7613f', sop: '#c7613f', sor: '#c7613f', ost: '#d9798a', gin: '#b56576', endo: '#b56576',
   eco: '#3f9c9a', ecop: '#3f9c9a', gg: '#6d78b3', gn: '#4a4e69', gp: '#7a8fa6',
   ferie: '#b7d3c0',
 };
@@ -175,10 +190,12 @@ export function shiftFromCodes(codes: string[], date: ISODate, colleagues: Colle
     end = fmt(e);
   }
   const others = real.slice(1).map(codeShort);
+  const place = ROSTERS.find((r) => date >= r.from && date <= r.to)?.place;
   return {
     shiftTypeId: primary,
     start,
     end,
+    ...(place ? { place } : {}),
     colleagueIds: idsForNames(colleaguesSharing(date, real), colleagues),
     note: others.length ? `Tabellone: ${real.map(codeShort).join(' · ')}` : undefined,
   };
@@ -186,7 +203,7 @@ export function shiftFromCodes(codes: string[], date: ISODate, colleagues: Colle
 
 /** Maps roster surnames to saved colleagues (by name, so user-added entries are reused). */
 export function idsForNames(names: string[], colleagues: Colleague[]): string[] {
-  return names.map((n) => colleagues.find((c) => c.name.trim().toLowerCase() === n.toLowerCase())?.id ?? (STAFF.includes(n) ? staffId(n) : residentId(n)));
+  return names.map((n) => colleagues.find((c) => c.name.trim().toLowerCase() === n.toLowerCase())?.id ?? (STAFF.includes(n) || ENDO_STAFF.includes(n) ? staffId(n) : residentId(n)));
 }
 
 /** Surnames of residents sharing any of the codes, plus staff on the same primary activity. */
@@ -205,18 +222,19 @@ export function colleaguesSharing(date: ISODate, codes: string[]): string[] {
   return ids;
 }
 
-/** The user's own codes for every rostered day. */
-export function myRosterDays(): { date: ISODate; codes: string[] }[] {
-  const out: { date: ISODate; codes: string[] }[] = [];
+/** The user's own codes for every rostered day (of some months only, when given). */
+export function myRosterDays(months?: string[]): { date: ISODate; codes: string[]; month: string }[] {
+  const out: { date: ISODate; codes: string[]; month: string }[] = [];
   for (const m of ROSTERS) {
+    if (months && !months.includes(m.id)) continue;
     for (const [date, row] of Object.entries(m.residents)) {
-      if (row[ROSTER_SELF]?.length) out.push({ date, codes: row[ROSTER_SELF] });
+      if (date >= m.from && date <= m.to && row[ROSTER_SELF]?.length) out.push({ date, codes: row[ROSTER_SELF], month: m.id });
     }
   }
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-const ORDER = ['gn', 'gg', 'gp', 'rg', 'rn', 'rep', 'so', 'sop', 'sor', 'ost', 'gin', 'ps'];
+const ORDER = ['gn', 'gg', 'gp', 'rg', 'rn', 'rep', 'so', 'sop', 'sor', 'ost', 'gin', 'endo', 'ps', 'gom'];
 
 /** Groups a roster row by code: [[code, names], ...], guards and theatre first, idle codes last. */
 export function byCode(row: Record<string, string[]>): [string, string[]][] {

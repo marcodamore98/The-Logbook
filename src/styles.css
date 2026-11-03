@@ -3872,3 +3872,8 @@ section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; ali
 .manual-when { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .manual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; align-items: end; }
 .manual-grid .field input { width: 100%; box-sizing: border-box; }
+
+/* Colleghi archiviati (reparti precedenti) */
+.archived-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
+.archived-list li .grow { flex: 1; min-width: 0; font-weight: 700; color: var(--muted); }
+.archived-list .btn-ghost { display: inline-flex; align-items: center; gap: 0.3rem; flex: none; }

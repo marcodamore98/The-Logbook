@@ -8,6 +8,8 @@ export interface Colleague {
   id: string;
   name: string;
   role?: string; // es. "Dirigente medico", "Specializzando", "Ostetrica"
+  /** Collega di un reparto precedente: resta nei turni e negli interventi già scritti, ma non si propone più. */
+  archived?: boolean;
 }
 
 export interface ShiftType {
@@ -549,6 +551,8 @@ export interface Settings {
   shopping?: ShopItem[]; // lista della spesa: unica, la stessa in tutti i giorni
   dayLayout?: string[]; // ordine dei blocchi nella pagina del giorno
   runPlans?: RunPlan[]; // sessioni a intervalli salvate
+  /** Mesi del tabellone (es. "2026-11") i cui turni sono già stati copiati nelle giornate. */
+  rosterImports?: string[];
   /** Livello di ogni programma del tapis roulant, cambiato dai giudizi a fine allenamento (0 = com'è scritto). */
   runLevels?: Record<string, number>;
   /** Pendenza massima del tapis roulant (%): i programmi non la superano. */

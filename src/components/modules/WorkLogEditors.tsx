@@ -23,7 +23,7 @@ import { caseTitle, clinicalCases, clinicalLabels, surgeryCases } from '../../li
 import { GlyphPlus, GlyphTrash, Sym } from '../icons';
 import { useUndo } from '../Undo';
 import { useBlockDrag } from '../useBlockDrag';
-import { AutoText, ChipChoice, Chevron, DragGrip, NumField, uid, VocabSelect } from '../ui';
+import { AutoText, ChipChoice, Chevron, DragGrip, NumField, pickable, uid, VocabSelect } from '../ui';
 import { DurationField } from '../WheelPicker';
 
 // ---------- Shared pieces ----------
@@ -239,18 +239,19 @@ function useFrequent(collect: (m: Module) => string[], vocab: VocabItem[]) {
 function TutorTile({ colleagues, value, onChange }: { colleagues: Colleague[]; value?: string; onChange: (id: string | undefined) => void }) {
   const [open, setOpen] = useState(false);
   const name = colleagues.find((c) => c.id === value)?.name;
+  const any = colleagues.some((c) => !c.archived);
   return (
     <>
-      <button type="button" className="op-tile op-tutor" disabled={!colleagues.length} onClick={() => setOpen(true)} aria-label={`Tutor: ${name ?? 'nessuno'}`}>
+      <button type="button" className="op-tile op-tutor" disabled={!any && !value} onClick={() => setOpen(true)} aria-label={`Tutor: ${name ?? 'nessuno'}`}>
         <span className="op-tile-label">Tutor</span>
-        <span className="op-tile-value">{name ?? (colleagues.length ? 'Nessuno' : 'Aggiungi i colleghi in Impostazioni')}</span>
+        <span className="op-tile-value">{name ?? (any ? 'Nessuno' : 'Aggiungi i colleghi in Impostazioni')}</span>
         <Sym name="chevron_right" size={18} className="op-tile-more" />
       </button>
       {open && (
         <SearchPicker
           title="Tutor"
           placeholder="Cerca uno strutturato"
-          items={colleagues.map((c) => ({ id: c.id, label: c.name, sub: c.role, group: c.role || 'Altri' }))}
+          items={pickable(colleagues, value ? [value] : [])}
           selected={value ? [value] : []}
           onPick={(id) => onChange(id === value ? undefined : id)}
           onClose={() => setOpen(false)}

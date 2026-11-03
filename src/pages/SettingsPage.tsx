@@ -8,7 +8,7 @@ import { firebaseConfigured, logOut } from '../lib/firebase';
 import { CoachCard } from '../components/coach/CoachCard';
 import { DuplicateCleaner } from '../components/DuplicateCleaner';
 import { Sym } from '../components/icons';
-import { myRosterDays, ROSTER_SELF } from '../lib/roster';
+import { myRosterDays, ROSTERS, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
 import { TimeField } from '../components/WheelPicker';
 import { BUILD_TIME, checkForUpdate } from '../lib/update';
@@ -79,6 +79,8 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
     if (gcal.connected) listCalendars().then(setCalendars).catch(() => setCalendars([]));
   }, [gcal.connected]);
 
+  const active = settings.colleagues.filter((c) => !c.archived);
+  const archived = settings.colleagues.filter((c) => c.archived).sort((a, b) => (a.role ?? '').localeCompare(b.role ?? '') || a.name.localeCompare(b.name, 'it'));
   const setColleague = (c: Colleague) => save({ colleagues: settings.colleagues.map((x) => (x.id === c.id ? c : x)) });
   const setShiftType = (t: ShiftType) => save({ shiftTypes: settings.shiftTypes.map((x) => (x.id === t.id ? t : x)) });
 
@@ -86,7 +88,10 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
     const names = bulk.split(/[\n,;]/).map((s) => s.trim()).filter(Boolean);
     const existing = new Set(settings.colleagues.map((c) => c.name.toLowerCase()));
     const add = names.filter((n) => !existing.has(n.toLowerCase())).map((name) => ({ id: uid(), name }));
-    save({ colleagues: [...settings.colleagues, ...add].sort((a, b) => a.name.localeCompare(b.name, 'it')) });
+    // A name already there but archived comes back among the current colleagues.
+    const back = new Set(names.map((n) => n.toLowerCase()));
+    const kept = settings.colleagues.map((c) => (c.archived && back.has(c.name.toLowerCase()) ? { ...c, archived: undefined } : c));
+    save({ colleagues: [...kept, ...add].sort((a, b) => a.name.localeCompare(b.name, 'it')) });
     setBulk('');
   }
 
@@ -237,13 +242,13 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
         icon={<IconRoster />}
         className="set-card"
         title="Tabellone di reparto"
-        sub={`${myDays} tuoi turni da importare`}
+        sub={`${ROSTERS.at(-1)!.name} · ${myDays} tuoi turni`}
         defaultOpen={false}
       >
         <p>
-          Contiene i turni di ottobre 2026 di specializzandi e strutturati. Ogni pagina giorno mostra chi fa cosa; qui puoi copiare i tuoi turni
-          ({ROSTER_SELF}, {myDays} giorni) nel logbook, con i colleghi che fanno la stessa attività. I giorni in cui hai già inserito un turno non
-          vengono toccati{gcal.connected ? ' e i nuovi turni vengono aggiunti a Google Calendar' : ''}.
+          Contiene {ROSTERS.map((r) => r.name).join(' e ')}. Ogni pagina giorno mostra chi fa cosa; i tuoi turni ({ROSTER_SELF}, {myDays} giorni)
+          vengono copiati nel logbook con i colleghi che fanno la stessa attività (quelli di un mese nuovo da soli, una volta). I giorni in cui hai
+          già inserito un turno non vengono toccati{gcal.connected ? ' e i nuovi turni vengono aggiunti a Google Calendar' : ''}.
         </p>
         <div className="row">
           <button
@@ -269,7 +274,7 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
         icon={<IconColleagues />}
         className="set-card"
         title="Colleghi"
-        sub={`${settings.colleagues.length} colleghi · per ruolo`}
+        sub={`${active.length} colleghi · ${archived.length} archiviati`}
         defaultOpen={false}
         actions={
           <button className="icon-btn" aria-label="Aggiungi collega" onClick={() => save({ colleagues: [...settings.colleagues, { id: uid(), name: '' }] })}>
@@ -277,9 +282,9 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
           </button>
         }
       >
-        {settings.colleagues.length === 0 && <Empty>Nessun collega. Aggiungili uno per uno o incolla un elenco qui sotto.</Empty>}
-        {[...new Set(settings.colleagues.map((c) => c.role || 'Altri'))].map((role, gi) => {
-          const list = settings.colleagues.filter((c) => (c.role || 'Altri') === role);
+        {active.length === 0 && <Empty>Nessun collega. Aggiungili uno per uno o incolla un elenco qui sotto.</Empty>}
+        {[...new Set(active.map((c) => c.role || 'Altri'))].map((role, gi) => {
+          const list = active.filter((c) => (c.role || 'Altri') === role);
           const names = list.map((c) => c.name).filter(Boolean);
           const preview = names.slice(0, 3).join(', ') + (names.length > 3 ? ` +${names.length - 3}` : '');
           return (
@@ -289,6 +294,9 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
                   <li key={c.id}>
                     <input className="grow" value={c.name} placeholder="Cognome Nome" onChange={(e) => setColleague({ ...c, name: e.target.value })} />
                     <input value={c.role ?? ''} placeholder="Ruolo" onChange={(e) => setColleague({ ...c, role: e.target.value })} />
+                    <button className="icon-btn small" aria-label={`Archivia ${c.name || 'il collega'}`} title="Archivia: resta nei turni e negli interventi già scritti, ma non si propone più" onClick={() => setColleague({ ...c, archived: true })}>
+                      <Sym name="archive" size={18} />
+                    </button>
                     <button className="icon-btn small" aria-label="Elimina collega" onClick={async () => (await confirmDelete(`“${c.name || 'questo collega'}”`)) && save({ colleagues: settings.colleagues.filter((x) => x.id !== c.id) })}>
                       <GlyphTrash />
                     </button>
@@ -298,6 +306,22 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
             </Group>
           );
         })}
+        {archived.length > 0 && (
+          <Group id="settings.colleagues.archived" title="Archiviati" count={archived.length} unit={archived.length === 1 ? 'collega' : 'colleghi'} preview="reparti precedenti: restano nei turni e negli interventi già scritti" index={99}>
+            <p className="muted small">Non compaiono più tra i colleghi del turno né tra i tutor; restano nei turni, negli interventi e nelle statistiche passati.</p>
+            <ul className="list-edit archived-list">
+              {archived.map((c) => (
+                <li key={c.id}>
+                  <span className="grow">{c.name}</span>
+                  <span className="muted small">{c.role}</span>
+                  <button className="btn-ghost small" onClick={() => setColleague({ ...c, archived: undefined })}>
+                    <Sym name="unarchive" size={16} /> Ripristina
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Group>
+        )}
         <Field label="Aggiungi più colleghi (uno per riga o separati da virgola)" wide>
           <textarea rows={2} value={bulk} onChange={(e) => setBulk(e.target.value)} />
         </Field>

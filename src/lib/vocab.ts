@@ -2,7 +2,7 @@
 // lists, so weekly/monthly/yearly statistics group reliably. Labels can be
 // reworded freely; ids must never change once data exists.
 
-import { ROSTER_COLLEAGUES, ROSTER_SHIFT_TYPES } from './roster';
+import { ENDO_STAFF, ROSTER_COLLEAGUES, ROSTER_SHIFT_TYPES } from './roster';
 import type { Settings, ShiftType } from './types';
 
 export interface VocabItem {
@@ -540,7 +540,7 @@ const SEED1_SHIFT_IDS = new Set([
   'reperibilita', 'ca-notturno', 'ca-prefestivo', 'ca-festivo', 'smonto', 'riposo', 'ferie',
 ]);
 
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
 
 export function defaultSettings(): Settings {
   return {
@@ -548,6 +548,7 @@ export function defaultSettings(): Settings {
     shiftTypes: DEFAULT_SHIFT_TYPES,
     gcal: { enabled: false, calendarId: 'primary', readCalendarIds: ['primary'] },
     seed: SEED_VERSION,
+    rosterImports: [],
     updatedAt: 0,
   };
 }
@@ -558,11 +559,27 @@ export function defaultSettings(): Settings {
  * are kept) and adds the roster colleagues missing by name.
  */
 export function migrateSettings(s: Settings): Settings {
-  if ((s.seed ?? 1) >= SEED_VERSION) return s;
-  const custom = s.shiftTypes.filter((t) => !SEED1_SHIFT_IDS.has(t.id) && !DEFAULT_SHIFT_TYPES.some((d) => d.id === t.id));
-  const known = new Set(s.colleagues.map((c) => c.name.trim().toLowerCase()));
-  const extra = ROSTER_COLLEAGUES.filter((c) => !known.has(c.name.toLowerCase()));
-  return { ...s, shiftTypes: [...DEFAULT_SHIFT_TYPES, ...custom], colleagues: [...extra, ...s.colleagues], seed: SEED_VERSION };
+  const seed = s.seed ?? 1;
+  if (seed >= SEED_VERSION) return s;
+  let out = s;
+  if (seed < 2) {
+    const custom = out.shiftTypes.filter((t) => !SEED1_SHIFT_IDS.has(t.id) && !DEFAULT_SHIFT_TYPES.some((d) => d.id === t.id));
+    const known = new Set(out.colleagues.map((c) => c.name.trim().toLowerCase()));
+    const extra = ROSTER_COLLEAGUES.filter((c) => !known.has(c.name.toLowerCase()));
+    out = { ...out, shiftTypes: [...DEFAULT_SHIFT_TYPES, ...custom], colleagues: [...extra, ...out.colleagues] };
+  }
+  if (seed < 3) {
+    // Seed 3, rotation in Endoscopica (novembre 2026): every earlier colleague is archived (kept for
+    // past shifts and operations), the new ones are added, and the new shift types too. The October
+    // roster was already copied into the days by hand: only the new months are copied automatically.
+    const endo = new Set(ENDO_STAFF.map((n) => n.toLowerCase()));
+    const colleagues = out.colleagues.map((c) => (endo.has(c.name.trim().toLowerCase()) ? { ...c, archived: undefined } : { ...c, archived: true }));
+    const known = new Set(colleagues.map((c) => c.name.trim().toLowerCase()));
+    const fresh = ROSTER_COLLEAGUES.filter((c) => !c.archived && !known.has(c.name.toLowerCase()));
+    const types = DEFAULT_SHIFT_TYPES.filter((d) => !out.shiftTypes.some((t) => t.id === d.id));
+    out = { ...out, colleagues: [...fresh, ...colleagues], shiftTypes: [...out.shiftTypes, ...types], rosterImports: out.rosterImports ?? ['2026-10'] };
+  }
+  return { ...out, seed: SEED_VERSION };
 }
 
 /** Exercise label: standardized Italian name, or the Hevy name for unmapped exercises. */
