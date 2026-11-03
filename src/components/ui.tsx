@@ -3,7 +3,7 @@ import { SearchPicker } from './SearchPicker';
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Colleague, ShiftType } from '../lib/types';
 import { grouped, type VocabItem } from '../lib/vocab';
-import { Sym } from './icons';
+import { GlyphSheriff, Sym } from './icons';
 
 export function uid(): string {
   return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -206,7 +206,7 @@ export function ShiftTypeSelect({
 export const pickable = (colleagues: Colleague[], selected: string[]) =>
   colleagues
     .filter((c) => !c.archived || selected.includes(c.id))
-    .map((c) => ({ id: c.id, label: c.name, sub: c.archived ? `${c.role ? `${c.role} · ` : ''}archiviato` : c.role, group: c.role || 'Altri' }));
+    .map((c) => ({ id: c.id, label: c.name, star: c.star, sub: c.archived ? `${c.role ? `${c.role} · ` : ''}archiviato` : c.role, group: c.role || 'Altri' }));
 
 /** Selected colleagues as removable chips, plus a full-page chooser with search to add more. */
 export function ColleaguePicker({
@@ -228,6 +228,7 @@ export function ColleaguePicker({
         const c = colleagues.find((x) => x.id === id);
         return (
           <button type="button" key={id} className="person-pill" aria-label={`Rimuovi ${c?.name ?? id}`} onClick={() => onChange(selected.filter((x) => x !== id))}>
+            {c?.star && <GlyphSheriff />}
             {c?.name ?? '—'} <span aria-hidden="true">×</span>
           </button>
         );

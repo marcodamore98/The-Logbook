@@ -1,3 +1,4 @@
+import { GlyphSheriff } from '../icons';
 import { clinicalCases, clinicalLabels, surgeryCases } from '../../lib/worklog';
 import { CLINICAL_ACTIVITIES, labelOf, PROCEDURES, SURGICAL_ROLES } from '../../lib/vocab';
 import type { ClinicalModule, Colleague, SurgeryModule } from '../../lib/types';
@@ -15,7 +16,8 @@ export function SurgeryPeek({ m, colleagues }: { m: SurgeryModule; colleagues: C
         const ps = c.procedures.filter((p) => p.procedureId);
         const roles = [...new Set(ps.map((p) => p.role))];
         const role = roles.length === 1 ? roles[0] : roles.find((r) => r.startsWith('first')) ?? roles[0];
-        const tutor = colleagues.find((x) => x.id === c.tutorId)?.name;
+        const tc = colleagues.find((x) => x.id === c.tutorId);
+        const tutor = tc?.name;
         return (
           <div key={c.id} className="peek-row">
             <div className="pr-top">
@@ -28,7 +30,11 @@ export function SurgeryPeek({ m, colleagues }: { m: SurgeryModule; colleagues: C
             </div>
             {(tutor || c.durationMin) && (
               <div className="pr-sub">
-                <span>{tutor ? `Tutor: ${tutor}` : ''}</span>
+                <span>
+                  {tutor ? 'Tutor: ' : ''}
+                  {tc?.star && <GlyphSheriff />}
+                  {tutor ?? ''}
+                </span>
                 {c.durationMin ? <strong>{minutes(c.durationMin)}</strong> : null}
               </div>
             )}

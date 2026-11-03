@@ -2,8 +2,8 @@
 // lists, so weekly/monthly/yearly statistics group reliably. Labels can be
 // reworded freely; ids must never change once data exists.
 
-import { ENDO_STAFF, ROSTER_COLLEAGUES, ROSTER_SHIFT_TYPES } from './roster';
-import type { Settings, ShiftType } from './types';
+import { CHIEF, ENDO_STAFF, ROSTER_COLLEAGUES, ROSTER_SHIFT_TYPES, STAFF } from './roster';
+import type { ProcedureGroup, Settings, ShiftType } from './types';
 
 export interface VocabItem {
   id: string;
@@ -122,9 +122,15 @@ export const PROCEDURES: VocabItem[] = [
   { id: 'lps-endometriosi', label: 'Exeresi endometriosi (superficiale/profonda)', group: G.lps, legacy: true },
   { id: 'lps-endometriosi-superficiale', label: 'Endometriosi peritoneale superficiale', group: G.lps },
   { id: 'lps-endometrioma', label: 'Exeresi di endometrioma', group: G.lps },
+  { id: 'lps-endometrioma-laser', label: 'Exeresi di endometrioma con laser a diodo', group: G.lps, kw: 'vaporizzazione diode laser' },
   { id: 'lps-endometriosi-profonda', label: 'Endometriosi profonda (shaving/nodulectomia)', group: G.lps, kw: 'DIE' },
   { id: 'lps-resezione-intestinale-endo', label: 'Resezione intestinale per endometriosi (discoide/segmentaria)', group: G.lps, kw: 'DIE' },
   { id: 'lps-ureterolisi', label: 'Ureterolisi', group: G.lps },
+  { id: 'lps-anastomosi-tl', label: 'Anastomosi termino-laterale', group: G.lps, kw: 'resezione intestinale retto sigma end-to-side colorettale' },
+  { id: 'lps-nose', label: 'Tecnica NOSE (estrazione del pezzo per via naturale)', group: G.lps, kw: 'natural orifice specimen extraction transvaginale' },
+  { id: 'lps-reimpianto-ureterale', label: 'Reimpianto ureterale', group: G.lps, kw: 'ureteroneocistostomia uretere' },
+  { id: 'lps-psoas-hitch', label: 'Psoas-Hitch', group: G.lps, kw: 'reimpianto ureterale vescica psoas' },
+  { id: 'lps-boari', label: 'Lembo di Boari', group: G.lps, kw: 'reimpianto ureterale vescica flap' },
   { id: 'lps-cistectomia-parziale', label: 'Resezione vescicale parziale', group: G.lps },
   { id: 'lps-miomectomia', label: 'Miomectomia', group: G.lps },
   { id: 'lps-isterectomia-totale', label: 'Isterectomia totale (semplice)', group: G.lps, kw: 'TLH LH' },
@@ -540,7 +546,7 @@ const SEED1_SHIFT_IDS = new Set([
   'reperibilita', 'ca-notturno', 'ca-prefestivo', 'ca-festivo', 'smonto', 'riposo', 'ferie',
 ]);
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 
 export function defaultSettings(): Settings {
   return {
@@ -549,6 +555,7 @@ export function defaultSettings(): Settings {
     gcal: { enabled: false, calendarId: 'primary', readCalendarIds: ['primary'] },
     seed: SEED_VERSION,
     rosterImports: [],
+    procedureGroups: [DIE_RECTOSIGMA()],
     updatedAt: 0,
   };
 }
@@ -579,7 +586,31 @@ export function migrateSettings(s: Settings): Settings {
     const types = DEFAULT_SHIFT_TYPES.filter((d) => !out.shiftTypes.some((t) => t.id === d.id));
     out = { ...out, colleagues: [...fresh, ...colleagues], shiftTypes: [...out.shiftTypes, ...types], rosterImports: out.rosterImports ?? ['2026-10'] };
   }
+  if (seed < 4) {
+    // Seed 4, Malzoni Research Hospital: "Malzoni M." is added as the only current colleague with
+    // the star (the archived staff of the old roster keep theirs), and the rectosigmoid DIE group.
+    const old = new Set(STAFF.map((n) => n.toLowerCase()));
+    const colleagues = out.colleagues.map((c) => (old.has(c.name.trim().toLowerCase()) && c.archived ? { ...c, star: true } : c));
+    const hasChief = colleagues.some((c) => /^malzoni\b/i.test(c.name.trim()));
+    const groups = out.procedureGroups ?? [];
+    const g = DIE_RECTOSIGMA();
+    out = {
+      ...out,
+      colleagues: hasChief ? colleagues.map((c) => (/^malzoni\b/i.test(c.name.trim()) ? { ...c, star: true, archived: undefined } : c)) : [CHIEF, ...colleagues],
+      procedureGroups: groups.some((x) => x.name === g.name) ? groups : [...groups, g],
+    };
+  }
   return { ...out, seed: SEED_VERSION };
+}
+
+/** Saved group for a deep endometriosis nodule involving the rectosigmoid (Malzoni Research Hospital). */
+function DIE_RECTOSIGMA(): ProcedureGroup {
+  const p = (procedureId: string) => ({ procedureId, role: 'assistant', approach: 'laparoscopic' });
+  return {
+    id: 'die-rettosigma',
+    name: 'Resezione di nodulo di endometriosi profonda del retto-sigma',
+    procedures: [p('lps-endometriosi-profonda'), p('lps-endometriosi-superficiale'), p('lps-resezione-intestinale-endo'), p('lps-anastomosi-tl'), p('lps-nose')],
+  };
 }
 
 /** Exercise label: standardized Italian name, or the Hevy name for unmapped exercises. */

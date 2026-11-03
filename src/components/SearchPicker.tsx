@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Sym } from './icons';
+import { GlyphSheriff, Sym } from './icons';
 
 export interface PickItem {
   id: string;
@@ -10,6 +10,8 @@ export interface PickItem {
   group?: string;
   /** Colour dot (shift types); without it the initials are shown. */
   color?: string;
+  /** A small star before the name (colleagues marked with the star). */
+  star?: boolean;
 }
 
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -99,7 +101,7 @@ export function SearchPicker({
                       <button type="button" className={`pick-row${on ? ' on' : ''}`} aria-pressed={on} onClick={() => pick(i.id)}>
                         {i.color ? <span className="pick-dot" style={{ '--dot': i.color } as CSSProperties} /> : <span className="pick-avatar">{initials(i.label) || '?'}</span>}
                         <span className="pick-text">
-                          <span className="pick-label">{i.label || 'Senza nome'}</span>
+                          <span className="pick-label">{i.star && <GlyphSheriff />}{i.label || 'Senza nome'}</span>
                           {i.sub && <span className="pick-sub">{i.sub}</span>}
                         </span>
                         <span className="pick-check" aria-hidden="true">{on ? <Sym name="check" size={16} /> : null}</span>

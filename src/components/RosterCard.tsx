@@ -1,5 +1,6 @@
 import { confirmDelete } from './Confirm';
-import { byCode, codeLabel, codeShort, IDLE_CODES, rosterFor, ROSTER_SELF } from '../lib/roster';
+import { byCode, codeLabel, codeShort, IDLE_CODES, rosterFor, ROSTER_SELF, STAFF } from '../lib/roster';
+import { useStore } from '../lib/store/StoreContext';
 import type { ISODate } from '../lib/types';
 import { GlyphPlus, GlyphSheriff, GlyphTrash, IconPeople } from './icons';
 import { Card } from './ui';
@@ -9,9 +10,12 @@ interface Person {
   staff: boolean;
 }
 
-/** Who does what today: one list per activity, staff (★) first, then residents. */
+/** Who does what today: one list per activity, staff (bold, ★ for who has the star) first, then residents. */
 export function RosterCard({ date, onJoin, onDelete }: { date: ISODate; onJoin?: (names: string[]) => void; onDelete?: () => void }) {
+  const { colleagues } = useStore().settings;
   const roster = rosterFor(date);
+  // The star only for colleagues who have it (the head of the team, the staff of the old roster).
+  const starred = (n: string) => colleagues.find((c) => c.name.trim().toLowerCase() === n.toLowerCase())?.star ?? STAFF.includes(n);
   if (!roster) return null;
 
   const people = new Map<string, Person[]>();
@@ -38,7 +42,7 @@ export function RosterCard({ date, onJoin, onDelete }: { date: ISODate; onJoin?:
   const name = (p: Person) =>
     p.staff ? (
       <strong key={p.name} className="staff">
-        <GlyphSheriff />
+        {starred(p.name) && <GlyphSheriff />}
         {p.name}
       </strong>
     ) : (

@@ -45,10 +45,14 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
 export const residentId = (name: string) => `spec-${slug(name)}`;
 export const staffId = (name: string) => `strut-${slug(name)}`;
 
+/** Head of the Malzoni Research Hospital team: the only current colleague with the star. */
+export const CHIEF: Colleague = { id: 'strut-malzoni', name: 'Malzoni M.', role: 'Strutturato', star: true };
+
 /** The colleagues of the earlier rotation stay (for past shifts and operations) but archived. */
 export const ROSTER_COLLEAGUES: Colleague[] = [
+  CHIEF,
   ...ENDO_STAFF.map((name) => ({ id: staffId(name), name, role: 'Strutturato' })),
-  ...STAFF.map((name) => ({ id: staffId(name), name, role: 'Strutturato', archived: true })),
+  ...STAFF.map((name) => ({ id: staffId(name), name, role: 'Strutturato', archived: true, star: true })),
   ...RESIDENTS.map((name) => ({ id: residentId(name), name, role: 'Specializzando', archived: true })),
 ];
 

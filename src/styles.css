@@ -3877,3 +3877,8 @@ section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; ali
 .archived-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
 .archived-list li .grow { flex: 1; min-width: 0; font-weight: 700; color: var(--muted); }
 .archived-list .btn-ghost { display: inline-flex; align-items: center; gap: 0.3rem; flex: none; }
+
+/* Stelletta dei colleghi (es. il primario) */
+.person-pill .sheriff, .pick-label .sheriff, .op-tile-value .sheriff, .peek-row .sheriff, .archived-list .sheriff { vertical-align: -2px; margin-right: 0.25rem; }
+.col-star .sheriff { color: var(--muted); opacity: 0.55; }
+.col-star.on .sheriff { color: var(--amber); opacity: 1; }

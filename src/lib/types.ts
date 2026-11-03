@@ -9,7 +9,8 @@ export interface Colleague {
   name: string;
   role?: string; // es. "Dirigente medico", "Specializzando", "Ostetrica"
   /** Collega di un reparto precedente: resta nei turni e negli interventi già scritti, ma non si propone più. */
-  archived?: boolean;
+  archived?: boolean;  /** Con la stelletta (es. il primario): la stelletta accompagna il nome in turni, tutor e tabellone. */
+  star?: boolean;
 }
 
 export interface ShiftType {

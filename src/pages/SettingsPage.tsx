@@ -1,7 +1,7 @@
 import { confirmDelete } from '../components/Confirm';
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
-import { GlyphDownload, GlyphPlus, GlyphTrash, GlyphUpload, IconAccount, IconColleagues, IconGoogleCal, IconRoster, IconShiftTypes } from '../components/icons';
+import { GlyphDownload, GlyphPlus, GlyphSheriff, GlyphTrash, GlyphUpload, IconAccount, IconColleagues, IconGoogleCal, IconRoster, IconShiftTypes } from '../components/icons';
 import { Card, Chevron, Empty, Field, uid, useCollapsible } from '../components/ui';
 import { listCalendars, type GCalendar } from '../lib/google/calendar';
 import { firebaseConfigured, logOut } from '../lib/firebase';
@@ -294,6 +294,9 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
                   <li key={c.id}>
                     <input className="grow" value={c.name} placeholder="Cognome Nome" onChange={(e) => setColleague({ ...c, name: e.target.value })} />
                     <input value={c.role ?? ''} placeholder="Ruolo" onChange={(e) => setColleague({ ...c, role: e.target.value })} />
+                    <button className={`icon-btn small col-star${c.star ? ' on' : ''}`} aria-pressed={!!c.star} aria-label={c.star ? `Togli la stelletta a ${c.name}` : `Metti la stelletta a ${c.name}`} title="Stelletta (es. il primario)" onClick={() => setColleague({ ...c, star: c.star ? undefined : true })}>
+                      <GlyphSheriff size={16} />
+                    </button>
                     <button className="icon-btn small" aria-label={`Archivia ${c.name || 'il collega'}`} title="Archivia: resta nei turni e negli interventi già scritti, ma non si propone più" onClick={() => setColleague({ ...c, archived: true })}>
                       <Sym name="archive" size={18} />
                     </button>
@@ -312,7 +315,10 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
             <ul className="list-edit archived-list">
               {archived.map((c) => (
                 <li key={c.id}>
-                  <span className="grow">{c.name}</span>
+                  <span className="grow">
+                    {c.star && <GlyphSheriff />}
+                    {c.name}
+                  </span>
                   <span className="muted small">{c.role}</span>
                   <button className="btn-ghost small" onClick={() => setColleague({ ...c, archived: undefined })}>
                     <Sym name="unarchive" size={16} /> Ripristina

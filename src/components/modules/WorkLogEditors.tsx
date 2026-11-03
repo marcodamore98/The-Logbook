@@ -20,7 +20,7 @@ import {
   type VocabItem,
 } from '../../lib/vocab';
 import { caseTitle, clinicalCases, clinicalLabels, surgeryCases } from '../../lib/worklog';
-import { GlyphPlus, GlyphTrash, Sym } from '../icons';
+import { GlyphPlus, GlyphSheriff, GlyphTrash, Sym } from '../icons';
 import { useUndo } from '../Undo';
 import { useBlockDrag } from '../useBlockDrag';
 import { AutoText, ChipChoice, Chevron, DragGrip, NumField, pickable, uid, VocabSelect } from '../ui';
@@ -238,13 +238,15 @@ function useFrequent(collect: (m: Module) => string[], vocab: VocabItem[]) {
 /** Tutor as a small tile: the name and ›; tapping opens the list of colleagues. */
 function TutorTile({ colleagues, value, onChange }: { colleagues: Colleague[]; value?: string; onChange: (id: string | undefined) => void }) {
   const [open, setOpen] = useState(false);
-  const name = colleagues.find((c) => c.id === value)?.name;
+  const chosen = colleagues.find((c) => c.id === value);
+  const name = chosen?.name;
   const any = colleagues.some((c) => !c.archived);
   return (
     <>
       <button type="button" className="op-tile op-tutor" disabled={!any && !value} onClick={() => setOpen(true)} aria-label={`Tutor: ${name ?? 'nessuno'}`}>
         <span className="op-tile-label">Tutor</span>
-        <span className="op-tile-value">{name ?? (any ? 'Nessuno' : 'Aggiungi i colleghi in Impostazioni')}</span>
+        <span className="op-tile-value">{chosen?.star && <GlyphSheriff />}
+          {name ?? (any ? 'Nessuno' : 'Aggiungi i colleghi in Impostazioni')}</span>
         <Sym name="chevron_right" size={18} className="op-tile-more" />
       </button>
       {open && (
