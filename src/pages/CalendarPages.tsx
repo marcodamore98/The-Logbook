@@ -15,8 +15,11 @@ import {
   today,
   WEEKDAYS_SHORT,
 } from '../lib/dates';
-import { eventLocal } from '../lib/google/calendar';
+import { agendaOn, type AgendaItem } from '../lib/agenda';
 import { useStore } from '../lib/store/StoreContext';
+import { AgendaRows, MonthChips } from '../components/AgendaList';
+import { EventSheet } from '../components/EventSheet';
+import { useRangeSelect } from '../components/useRangeSelect';
 import type { DayEntry, ISODate, ModuleKind } from '../lib/types';
 import { surgeryTotals } from '../lib/worklog';
 
@@ -86,8 +89,11 @@ function ShiftTag({ day, withTime }: { day: DayEntry; withTime?: boolean }) {
   );
 }
 
+/** Shown as agenda items (bars and rows), not as dots or activity rows. */
+const AGENDA_KINDS = new Set<ModuleKind>(['course', 'travel', 'outing']);
+
 function Dots({ day }: { day: DayEntry }) {
-  const tones = [...new Set(day.modules.map((m) => DOT[m.kind]).filter(Boolean))] as string[];
+  const tones = [...new Set(day.modules.filter((m) => !AGENDA_KINDS.has(m.kind)).map((m) => DOT[m.kind]).filter(Boolean))] as string[];
   return (
     <span className="cell-dots">
       {tones.map((t) => (
@@ -98,9 +104,11 @@ function Dots({ day }: { day: DayEntry }) {
 }
 
 function DayRows({ day }: { day: DayEntry }) {
+  const list = day.modules.filter((m) => !AGENDA_KINDS.has(m.kind));
+  if (!list.length) return null;
   return (
     <ul className="day-rows">
-      {day.modules.map((m) => {
+      {list.map((m) => {
         const M = metaOf(m.kind);
         return (
           <li key={m.id}>
@@ -123,9 +131,14 @@ export function MonthPage() {
   const grid = monthGrid(anchor);
   const month = anchor.slice(0, 7);
   const [picked, setPicked] = useState<ISODate | null>(null);
+  const [adding, setAdding] = useState<[ISODate, ISODate] | null>(null);
+  // Hold a day and drag over the others: a new appointment over those days.
+  const sel = useRangeSelect<HTMLDivElement>((a, b) => setAdding([a, b]));
+  const agenda = (d: ISODate) => agendaOn(d, store.allDays, store.eventsOn(d));
 
   useEffect(() => {
-    store.loadRange(grid[0], grid[41]);
+    // Also the weeks before: trips and courses that began earlier run into this month.
+    store.loadRange(addDays(grid[0], -45), grid[41]);
   }, [anchor, store.gcal.connected]);
   useEffect(() => setPicked(today().startsWith(month) ? today() : null), [month]);
 
@@ -138,8 +151,9 @@ export function MonthPage() {
     ['sky', count((d) => surgeryTotals(d.modules).patients), 'Interventi'],
     ['amber', count((d) => d.modules.filter((m) => m.kind === 'course').length), 'Corsi e congressi'],
   ];
-  const sel = picked ? store.day(picked) : null;
-  const selEvents = picked ? store.eventsOn(picked).length + (sel?.appointments.length ?? 0) : 0;
+  const selDay = picked ? store.day(picked) : null;
+  const selItems = picked ? agenda(picked) : [];
+  const open = (it: AgendaItem) => nav(`/giorno/${it.kind === 'gcal' ? picked : it.origin}${it.module ? `?apri=${it.module.id}` : ''}`);
 
   const swipeRef = useSwipeNav<HTMLDivElement>(() => nav(`/mese/${addMonths(anchor, -1)}`), () => nav(`/mese/${addMonths(anchor, 1)}`), month);
   return (
@@ -173,7 +187,7 @@ export function MonthPage() {
           ))}
       </div>
       <section className="month-card">
-        <div className="month">
+        <div className="month" ref={sel.ref}>
           {WEEKDAYS_SHORT.map((w, i) => (
             <div key={w} className={`month-dow${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}`}>
               {w}
@@ -186,16 +200,21 @@ export function MonthPage() {
               <button
                 key={d}
                 type="button"
-                onClick={() => (picked === d ? nav(`/giorno/${d}`) : setPicked(d))}
-                className={`month-cell${other ? ' other' : ''}${d === today() ? ' is-today' : ''}${d === picked ? ' picked' : ''}${i % 7 === 5 ? ' sat' : i % 7 === 6 ? ' sun' : ''}`}
+                data-date={d}
+                onClick={() => !sel.justPicked() && (picked === d ? nav(`/giorno/${d}`) : setPicked(d))}
+                className={`month-cell${other ? ' other' : ''}${d === today() ? ' is-today' : ''}${d === picked ? ' picked' : ''}${sel.inRange(d) ? ' in-range' : ''}${i % 7 === 5 ? ' sat' : i % 7 === 6 ? ' sun' : ''}`}
               >
                 <span className="month-num">{fromISO(d).getDate()}</span>
                 <ShiftTag day={day} />
+                {/* Same height with or without a shift, so the bars of several days stay in line. */}
+                {!day.shift && !day.guardia && <span className="shift-tag ghost" aria-hidden="true">{'\u00a0'}</span>}
+                <MonthChips items={agenda(d)} date={d} weekStart={i % 7 === 0} weekEnd={i % 7 === 6} />
                 <Dots day={day} />
               </button>
             );
           })}
         </div>
+        <p className="cal-hint muted small">Tocca un giorno per aggiungere un impegno; tienilo premuto e trascina per sceglierne più di uno.</p>
         <div className="cal-legend">
           {LEGEND.map(([t, label]) => (
             <span key={t}>
@@ -204,23 +223,29 @@ export function MonthPage() {
           ))}
         </div>
       </section>
-      {sel && picked && (
+      {selDay && picked && (
         <section className="day-preview">
           <div className="dp-head">
             <div>
               <strong className="capitalize">{fromISO(picked).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
               {picked === today() && <span className="today-badge">Oggi</span>}
             </div>
-            <ShiftTag day={sel} withTime />
+            <ShiftTag day={selDay} withTime />
           </div>
-          {sel.modules.length > 0 ? <DayRows day={sel} /> : <p className="muted small">Nessuna attività registrata.</p>}
-          {selEvents > 0 && <p className="muted small">{selEvents === 1 ? '1 impegno' : `${selEvents} impegni`} in agenda</p>}
+          <button type="button" className="quick-add" onClick={() => setAdding([picked, picked])}>
+            <span className="qa-plus" aria-hidden="true">+</span>
+            <span>Aggiungi un impegno</span>
+          </button>
+          {selItems.length > 0 && <AgendaRows items={selItems} date={picked} onPick={open} />}
+          <DayRows day={selDay} />
+          {!selItems.length && !selDay.modules.length && <p className="muted small">Niente in programma.</p>}
           <Link className="lime-banner" to={`/giorno/${picked}`}>
             <span>Apri la pagina del giorno</span>
             <span aria-hidden="true">›</span>
           </Link>
         </section>
       )}
+      {adding && <EventSheet from={adding[0]} to={adding[1]} onClose={() => setAdding(null)} />}
     </div>
   );
 }
@@ -231,9 +256,11 @@ export function WeekPage() {
   const nav = useNavigate();
   const store = useStore();
   const days: ISODate[] = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  const [adding, setAdding] = useState<[ISODate, ISODate] | null>(null);
+  const sel = useRangeSelect<HTMLDivElement>((a, b) => setAdding([a, b]));
 
   useEffect(() => {
-    store.loadRange(days[0], days[6]);
+    store.loadRange(addDays(days[0], -45), days[6]);
   }, [start, store.gcal.connected]);
 
   const end = fromISO(days[6]);
@@ -289,18 +316,22 @@ export function WeekPage() {
           <span className="wt-sub">{courses ? `${courses} ${courses === 1 ? 'corso' : 'corsi'}` : 'di studio'}</span>
         </div>
       </div>
-      <div className="week">
+      <p className="cal-hint muted small">Tocca “+ Impegno” in un giorno; tieni premuto un giorno e trascina per sceglierne più di uno.</p>
+      <div className="week" ref={sel.ref}>
         {days.map((d, i) => {
           const day = entries[i];
-          const items = [
-            ...day.appointments.map((a) => ({ k: a.id, t: a.start, label: a.title || 'Impegno', g: false })),
-            ...store.eventsOn(d).map((e) => ({ k: e.id, t: eventLocal(e.start).time ?? '', label: e.summary ?? '', g: true })),
-            ...day.todos.filter((t) => t.time).map((t) => ({ k: t.id, t: t.time!, label: `☐ ${t.text}`, g: false })),
-          ].sort((a, b) => a.t.localeCompare(b.t));
+          const agenda = agendaOn(d, store.allDays, store.eventsOn(d));
+          const items = day.todos.filter((t) => t.time).map((t) => ({ k: t.id, t: t.time!, label: `☐ ${t.text}`, g: false }));
           const openTodos = day.todos.filter((t) => !t.time && !t.done).length;
           const showMonth = i === 0 || d.endsWith('-01');
           return (
-            <Link key={d} to={`/giorno/${d}`} className={`week-day${d === today() ? ' is-today' : ''}`}>
+            <Link
+              key={d}
+              to={`/giorno/${d}`}
+              data-date={d}
+              onClick={(e) => sel.justPicked() && e.preventDefault()}
+              className={`week-day${d === today() ? ' is-today' : ''}${sel.inRange(d) ? ' in-range' : ''}`}
+            >
               <div className="week-head">
                 <span className="week-dow">{WEEKDAYS_SHORT[i]}</span>
                 <span className="week-num">{fromISO(d).getDate()}</span>
@@ -309,6 +340,7 @@ export function WeekPage() {
                 <span className="week-go" aria-hidden="true">›</span>
               </div>
               <ShiftTag day={day} withTime />
+              {agenda.length > 0 && <AgendaRows items={agenda} date={d} compact />}
               {items.length > 0 && (
                 <ul className="week-items">
                   {items.map((it) => (
@@ -319,11 +351,24 @@ export function WeekPage() {
                 </ul>
               )}
               {openTodos > 0 && <span className="muted small">{openTodos} da fare</span>}
-              {day.modules.length > 0 && <DayRows day={day} />}
+              <DayRows day={day} />
+              <button
+                type="button"
+                className="quick-add small"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setAdding([d, d]);
+                }}
+              >
+                <span className="qa-plus" aria-hidden="true">+</span>
+                <span>Impegno</span>
+              </button>
             </Link>
           );
         })}
       </div>
+      {adding && <EventSheet from={adding[0]} to={adding[1]} onClose={() => setAdding(null)} />}
     </div>
   );
 }

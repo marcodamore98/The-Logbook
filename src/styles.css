@@ -3882,3 +3882,67 @@ section.scan-last .scan-last-foot .btn.scan-last-add { display: inline-flex; ali
 .person-pill .sheriff, .pick-label .sheriff, .op-tile-value .sheriff, .peek-row .sheriff, .archived-list .sheriff { vertical-align: -2px; margin-right: 0.25rem; }
 .col-star .sheriff { color: var(--muted); opacity: 0.55; }
 .col-star.on .sheriff { color: var(--amber); opacity: 1; }
+
+/* ---- Impegni come Google Calendar: colori per tipo, barre del mese, righe dell'agenda ---- */
+.k-appt { --kc: var(--sky); }
+.k-course, .k-congress, .k-webinar { --kc: var(--lavender); }
+.k-travel, .k-outing { --kc: var(--sage); }
+.k-gcal { --kc: var(--sand); }
+.ev-chips { display: flex; flex-direction: column; gap: 2px; width: calc(100% + 0.5rem); margin: 0 -0.25rem; min-width: 0; }
+.ev-chip { display: block; font-size: 0.62rem; font-weight: 700; line-height: 1.35; padding: 0 0.3rem; border-radius: 4px; background: var(--kc); color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 0.25rem; }
+/* An event of several days runs on into the next cell (and comes from the one before). */
+.ev-chip.cont-r { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: -3px; }
+.ev-chip.cont-l { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -3px; }
+.ev-more { font-size: 0.6rem; font-weight: 800; color: var(--muted); padding-left: 0.3rem; }
+.month-cell { overflow: visible; -webkit-touch-callout: none; user-select: none; }
+.month-cell.in-range, .week-day.in-range { background: color-mix(in srgb, var(--lime) 30%, var(--surface-2)); border-color: var(--lime); }
+.week-day { -webkit-touch-callout: none; }
+.cal-hint { margin: 0.1rem 0.2rem; }
+@media (max-width: 600px) {
+  .ev-chip { font-size: 0.55rem; padding: 0 0.2rem; }
+}
+
+.ag-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.ag-row .ag-btn { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.55rem; border-radius: 12px; background: var(--surface-2); border: none; border-left: 4px solid var(--kc); color: var(--ink); font: inherit; text-align: left; min-width: 0; }
+.ag-ico { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--kc); color: #1d1d1f; }
+.ag-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ag-text strong { font-size: 0.9rem; line-height: 1.25; overflow-wrap: anywhere; }
+.ag-sub { font-size: 0.75rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-rows.compact { gap: 0.25rem; }
+.ag-rows.compact .ag-btn { padding: 0.3rem 0.45rem; gap: 0.45rem; border-left-width: 3px; }
+.ag-rows.compact .ag-ico { width: 24px; height: 24px; }
+.ag-rows.compact .ag-text strong { font-size: 0.82rem; }
+.ag-rows.compact .ag-sub { font-size: 0.7rem; }
+.week-day .ag-rows { margin: 0.1rem 0; }
+.ag-allday { font-size: 0.78rem; font-weight: 700; }
+.ag-days { background: color-mix(in srgb, var(--sky) 45%, transparent); color: var(--ink); font-weight: 700; }
+.blk[data-block='agenda'] > .card { border-left: 4px solid var(--sky); }
+
+/* "+ Aggiungi un impegno": the quick row of Google Calendar */
+.quick-add { display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.55rem 0.7rem; border-radius: 12px; border: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); background: none; color: var(--muted); font: inherit; font-weight: 700; font-size: 0.9rem; text-align: left; }
+.quick-add .qa-plus { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: #1d1d1f; font-weight: 900; }
+.quick-add.small { padding: 0.3rem 0.5rem; font-size: 0.78rem; margin-top: 0.2rem; }
+.quick-add.small .qa-plus { width: 18px; height: 18px; font-size: 0.8rem; }
+
+/* Nuovo impegno */
+.event-sheet { max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; }
+.ev-title { font: inherit; font-size: 1.25rem; font-weight: 800; border: none; border-bottom: 2px solid var(--line); background: none; color: var(--ink); padding: 0.4rem 0.1rem; border-radius: 0; }
+.ev-title:focus { outline: none; border-bottom-color: var(--lime); }
+.ev-types { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 0.15rem; margin: 0 -0.2rem; padding-left: 0.2rem; }
+.ev-types::-webkit-scrollbar { display: none; }
+.ev-type { flex: none; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.75rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: inherit; font-size: 0.82rem; font-weight: 700; }
+.ev-type.on { color: #1d1d1f; border-color: transparent; }
+.ev-type.on.t-appt { background: var(--sky); }
+.ev-type.on.t-course, .ev-type.on.t-congress, .ev-type.on.t-webinar { background: var(--lavender); }
+.ev-type.on.t-travel, .ev-type.on.t-outing { background: var(--sage); }
+.ev-type.on.t-ferie { background: var(--sand); }
+.ev-dates, .ev-times { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.ev-dates.one { grid-template-columns: 1fr; }
+.ev-days { margin: -0.3rem 0 0; }
+.ev-allday { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.9rem; }
+.ev-allday input { width: 20px; height: 20px; accent-color: var(--lime); }
+.ev-input input, .ev-select { width: 100%; box-sizing: border-box; }
+.ev-hint { margin: 0; }
+.ev-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 0.2rem; }
+.ev-save { min-width: 7rem; justify-content: center; }
+.shift-tag.ghost { visibility: hidden; }

@@ -1,4 +1,7 @@
 import { confirmDelete } from '../components/Confirm';
+import { agendaOn, type AgendaItem } from '../lib/agenda';
+import { AgendaRows } from '../components/AgendaList';
+import { EventSheet } from '../components/EventSheet';
 import { hasContent } from '../lib/notes';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -46,9 +49,8 @@ import { CATEGORIES } from '../lib/vocab';
 import { codeShort, idsForNames, rosterFor, ROSTER_SELF, shiftFromCodes } from '../lib/roster';
 import { addDays, formatLong, isoWeek, today } from '../lib/dates';
 import { diaryOf, withDiary } from '../lib/diary';
-import { eventLocal } from '../lib/google/calendar';
 import { useStore } from '../lib/store/StoreContext';
-import type { DayEntry, FileRef, Module, ModuleKind, ShiftAssignment } from '../lib/types';
+import type { Appointment, DayEntry, FileRef, Module, ModuleKind, ShiftAssignment } from '../lib/types';
 import { clinicalTotals, surgeryTotals } from '../lib/worklog';
 
 /** Cards that can be added by hand; training, food and the diary have their own sections. */
@@ -66,9 +68,9 @@ const BLOCK_KICKER: Record<string, string> = {
 /** Group of each block, for the small headings between groups. */
 const BLOCK_GROUP: Record<string, string> = {
   shift: 'Lavoro',
-  work: 'Lavoro',
-  agenda: 'Agenda e promemoria',
-  todos: 'Agenda e promemoria',
+  work: 'Attività e formazione',
+  agenda: 'Impegni',
+  todos: 'Promemoria',
   training: 'Sport e salute',
   nutrition: 'Sport e salute',
   private: 'Personale',
@@ -137,12 +139,24 @@ export default function DayPage() {
   const myCodes = rosterFor(date)?.residents[ROSTER_SELF] ?? [];
   const suggestion = !day.shift && myCodes.length ? shiftFromCodes(myCodes, date, settings.colleagues) : null;
 
-  // ---- Agenda (appuntamenti + eventi Google) ----
+  // ---- Agenda: appointments (also of several days), courses, trips, outings and Google's events ----
   const gEvents = store.eventsOn(date);
-  const agenda = [
-    ...day.appointments.map((a) => ({ key: a.id, time: a.start, a })),
-    ...gEvents.map((e) => ({ key: e.id, time: eventLocal(e.start).time ?? '00:00', e })),
-  ].sort((x, y) => x.time.localeCompare(y.time));
+  const agendaItems = agendaOn(date, [day, ...store.allDays.filter((d) => d.date !== date)], gEvents);
+  // Appointments saved on this day are edited here; everything else opens where it lives.
+  const ownAppts = agendaItems.filter((it) => it.kind === 'appt' && it.origin === date);
+  const others = agendaItems.filter((it) => !(it.kind === 'appt' && it.origin === date));
+  const [eventSheet, setEventSheet] = useState<{ edit?: { date: string; appt: Appointment } } | null>(null);
+  const openItem = (it: AgendaItem) => {
+    if (it.kind === 'appt' && it.appt) return setEventSheet({ edit: { date: it.origin, appt: it.appt } });
+    if (it.kind === 'gcal') return it.event?.htmlLink && window.open(it.event.htmlLink, '_blank', 'noopener');
+    if (it.origin !== date) return nav(`/giorno/${it.origin}?apri=${it.key}`);
+    setOpenId(it.key);
+    const kind = it.module?.kind;
+    if (kind) window.setTimeout(() => document.querySelector(`[data-block="${MODULE_BLOCK[kind]}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  };
+  // A working day: the appointments right after the shift. Holidays, rest days and weekends
+  // without a shift: the appointments come first, in place of the shift.
+  const working = (!!day.shift && settings.shiftTypes.find((t) => t.id === day.shift!.shiftTypeId)?.countsAsWork !== false) || !!day.guardia;
 
   // ---- Modules ----
   const addModule = (k: ModuleKind) => {
@@ -426,82 +440,75 @@ export default function DayPage() {
             print="agenda"
             icon={<IconAppointment />}
             title="Impegni"
-            summary={agenda.length ? agenda.slice(0, 3).map((x) => `${x.time} ${'a' in x && x.a ? x.a.title || 'Impegno' : 'e' in x && x.e ? x.e.summary ?? '' : ''}`).join(' · ') + (agenda.length > 3 ? ' …' : '') : 'Nessuno'}
+            summary={agendaItems.length ? undefined : 'Nessun impegno'}
+            peek={agendaItems.length ? <AgendaRows items={agendaItems} date={date} onPick={openItem} compact /> : undefined}
             actions={
-              <button
-                className="icon-btn no-print"
-                aria-label="Aggiungi impegno"
-                onClick={() => update((d) => ({ ...d, appointments: [...d.appointments, { id: uid(), title: '', start: '09:00', end: '10:00' }] }))}
-              >
+              <button className="icon-btn no-print" aria-label="Aggiungi impegno" onClick={() => setEventSheet({})}>
                 <GlyphPlus />
               </button>
             }
           >
-            {agenda.length === 0 && <Empty>Nessun impegno.</Empty>}
+            {agendaItems.length === 0 && <Empty>Nessun impegno. Con + ne aggiungi uno (anche di più giorni, un corso, un viaggio…).</Empty>}
+            {others.length > 0 && <AgendaRows items={others} date={date} onPick={openItem} />}
             <ul className="agenda">
-              {agenda.map((item) =>
-                'a' in item && item.a ? (
-                  <li key={item.key} className="agenda-row">
-                    <TimeField label="Inizio" className="compact" value={item.a.start} onChange={(v) => v && update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, start: v } : x)) }))} />
-                    <TimeField label="Fine" className="compact" value={item.a.end} onChange={(v) => v && update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, end: v } : x)) }))} />
+              {ownAppts.map(({ appt: a }) => (
+                  <li key={a!.id} className="agenda-row">
+                    {a!.allDay ? (
+                      <span className="time ag-allday">Tutto il giorno</span>
+                    ) : (
+                      <>
+                        <TimeField label="Inizio" className="compact" value={a!.start} onChange={(v) => v && update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === a!.id ? { ...x, start: v } : x)) }))} />
+                        <TimeField label="Fine" className="compact" value={a!.end} onChange={(v) => v && update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === a!.id ? { ...x, end: v } : x)) }))} />
+                      </>
+                    )}
                     <AutoText
                       className="grow wrap-text"
-                      value={item.a.title}
+                      value={a!.title}
                       placeholder="Impegno"
-                      onChange={(title) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, title } : x)) }))}
+                      onChange={(title) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === a!.id ? { ...x, title } : x)) }))}
                     />
-                    {catSelect(item.a.category, (category) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, category } : x)) })))}
-                    {item.a.gcalEventId && (
+                    {a!.endDate && a!.endDate > date && <span className="badge ag-days">fino al {new Date(`${a!.endDate}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>}
+                    {catSelect(a!.category, (category) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === a!.id ? { ...x, category } : x)) })))}
+                    {a!.gcalEventId && (
                       <span className="badge badge-sync" title="Su Google Calendar">
                         G
                       </span>
                     )}
-                    {item.a.location === undefined && (
-                      <button className="icon-btn small no-print" aria-label="Aggiungi il luogo" title="Aggiungi il luogo" onClick={() => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, location: '' } : x)) }))}>
+                    {a!.location === undefined && (
+                      <button className="icon-btn small no-print" aria-label="Aggiungi il luogo" title="Aggiungi il luogo" onClick={() => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === a!.id ? { ...x, location: '' } : x)) }))}>
                         <Sym name="location_on" size={18} />
                       </button>
                     )}
-                    <MoveButton iconOnly from={date} what="l’impegno" target={{ kind: 'appointment', id: item.a.id }} />
-                    <button className="icon-btn small no-print" aria-label="Elimina impegno" onClick={async () => (await confirmDelete('questo impegno')) && update((d) => ({ ...d, appointments: d.appointments.filter((x) => x.id !== item.a!.id) }))}>
+                    <button className="icon-btn small no-print" aria-label="Giorni, orari e tipo" title="Giorni, orari e tipo (corso, viaggio…)" onClick={() => setEventSheet({ edit: { date, appt: a! } })}>
+                      <Sym name="edit_calendar" size={18} />
+                    </button>
+                    <MoveButton iconOnly from={date} what="l’impegno" target={{ kind: 'appointment', id: a!.id }} />
+                    <button className="icon-btn small no-print" aria-label="Elimina impegno" onClick={async () => (await confirmDelete('questo impegno')) && update((d) => ({ ...d, appointments: d.appointments.filter((x) => x.id !== a!.id) }))}>
                       <GlyphTrash />
                     </button>
-                    {item.a.location !== undefined && (
+                    {a!.location !== undefined && (
                       <div className="appt-place">
                         <span className="icon-input">
                           <Sym name="location_on" size={18} />
                           <input
-                            value={item.a.location}
+                            value={a!.location}
                             placeholder="Luogo (es. Ospedale Sant'Anna, Torino)"
-                            autoFocus={!item.a.location}
-                            onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, location: e.target.value } : x)) }))}
+                            autoFocus={!a!.location}
+                            onChange={(e) => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === a!.id ? { ...x, location: e.target.value } : x)) }))}
                           />
                         </span>
-                        {item.a.location.trim() && (
-                          <a className="btn-ghost link-open" href={mapsUrl(item.a.location)} target="_blank" rel="noopener noreferrer">
+                        {a!.location.trim() && (
+                          <a className="btn-ghost link-open" href={mapsUrl(a!.location)} target="_blank" rel="noopener noreferrer">
                             Maps
                           </a>
                         )}
-                        <button className="icon-btn small no-print" aria-label="Togli il luogo" title="Togli il luogo" onClick={() => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === item.a!.id ? { ...x, location: undefined } : x)) }))}>
+                        <button className="icon-btn small no-print" aria-label="Togli il luogo" title="Togli il luogo" onClick={() => update((d) => ({ ...d, appointments: d.appointments.map((x) => (x.id === a!.id ? { ...x, location: undefined } : x)) }))}>
                           <Sym name="close" size={18} />
                         </button>
                       </div>
                     )}
                   </li>
-                ) : (
-                  <li key={item.key} className="agenda-row gcal">
-                    <span className="time">{'e' in item && item.e && (eventLocal(item.e.start).time ?? 'tutto il giorno')}</span>
-                    <span className="grow">{'e' in item && item.e?.summary}</span>
-                    {'e' in item && item.e?.location?.trim() && (
-                      <a className="btn-ghost link-open small" href={mapsUrl(item.e.location)} target="_blank" rel="noopener noreferrer" title={item.e.location}>
-                        Maps
-                      </a>
-                    )}
-                    <span className="badge badge-sync" title="Evento di Google Calendar">
-                      G
-                    </span>
-                  </li>
-                ),
-              )}
+              ))}
             </ul>
           </Card>
         );
@@ -625,10 +632,13 @@ export default function DayPage() {
 
   const hidden = settings.hiddenBlocks ?? [];
   const saveSettings = store.saveSettings;
-  const { drag, settling, compact, onPointerDown } = useBlockDrag(order, (o) => saveOrder(o), { compact: true });
+  // The appointments always come right after the shift (before it when it is not a working day).
+  const shown = order.filter((id) => id !== 'agenda');
+  shown.splice(Math.max(0, shown.indexOf('shift') + (working ? 1 : 0)), 0, 'agenda');
+  const { drag, settling, compact, onPointerDown } = useBlockDrag(shown, (o) => saveOrder(o), { compact: true });
   const rendered: React.ReactNode[] = [];
   let lastGroup = '';
-  for (const id of order) {
+  for (const id of shown) {
     if (hidden.includes(id)) continue;
     const node = renderBlock(id);
     if (!node) continue;
@@ -697,6 +707,7 @@ export default function DayPage() {
       <button className="btn-add no-print" onClick={() => setAdding(true)}>
         <GlyphPlus /> Aggiungi scheda
       </button>
+      {eventSheet && <EventSheet from={date} edit={eventSheet.edit} onClose={() => setEventSheet(null)} />}
       {adding && (
         <div className="sheet-backdrop no-print" onClick={() => setAdding(false)}>
           <div className="sheet add-sheet" role="dialog" aria-label="Aggiungi una scheda" onClick={(e) => e.stopPropagation()}>

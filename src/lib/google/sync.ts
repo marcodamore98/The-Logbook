@@ -6,6 +6,7 @@
 // che iniziano con "Webinar:", "Corso:" o "Congresso:", che diventano schede Corsi e congressi. Ogni elemento
 // tiene l'id del suo evento, così non ci sono doppioni in nessuna delle due direzioni.
 
+import { eventDays } from '../agenda';
 import { addDays, minutesOf } from '../dates';
 import type { Appointment, CourseModule, DayEntry, ISODate, Module, OutingModule, Settings, ShiftAssignment, Todo, TravelModule } from '../types';
 import { OUTING_TYPES } from '../vocab';
@@ -51,7 +52,10 @@ function shiftInput(day: DayEntry, s: ShiftAssignment, settings: Settings): Even
 }
 
 function apptInput(day: DayEntry, a: Appointment): EventInput {
-  const overnight = minutesOf(a.end) <= minutesOf(a.start);
+  const last = a.endDate && a.endDate > day.date ? a.endDate : undefined;
+  // All day (also over several days): a Google all-day event from the first to the last day.
+  if (a.allDay) return { kind: 'appointment', date: day.date, summary: a.title, location: a.location, endDate: last };
+  const overnight = !last && minutesOf(a.end) <= minutesOf(a.start);
   return {
     kind: 'appointment',
     date: day.date,
@@ -59,7 +63,7 @@ function apptInput(day: DayEntry, a: Appointment): EventInput {
     location: a.location,
     start: a.start,
     end: a.end,
-    endDate: overnight ? addDays(day.date, 1) : undefined,
+    endDate: last ?? (overnight ? addDays(day.date, 1) : undefined),
   };
 }
 
@@ -294,8 +298,10 @@ export async function pullFromGoogle(days: DayEntry[], events: GEvent[], setting
       }
       const a = eventLocal(e.start);
       const b = eventLocal(e.end);
-      if (!a.time || !b.time) continue; // turned into an all-day event: keep it as it is
-      set(date, ap, { start: a.time, end: b.time, title: e.summary || ap.title, location: e.location || undefined });
+      const [, lastDay] = eventDays(e);
+      const endDate = lastDay > a.date && (!a.time || lastDay > addDays(a.date, 1) || (b.time && minutesOf(b.time) > minutesOf(a.time))) ? lastDay : undefined;
+      if (!a.time || !b.time) set(date, ap, { allDay: true, endDate, title: e.summary || ap.title, location: e.location || undefined });
+      else set(date, ap, { start: a.time, end: b.time, allDay: undefined, endDate, title: e.summary || ap.title, location: e.location || undefined });
       const target = a.date !== date ? out.get(a.date) : undefined;
       if (target) {
         day.appointments = day.appointments.filter((x) => x !== ap);

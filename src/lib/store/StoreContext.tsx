@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { eventDays } from '../agenda';
 import { rangeDays } from '../dates';
-import { authorize, disconnect, gcalConfigured, getEvent, hasToken, listEvents, eventLocal, type GEvent } from '../google/calendar';
+import { authorize, disconnect, gcalConfigured, getEvent, hasToken, listEvents, type GEvent } from '../google/calendar';
 import { linkedIds, pendingCount, pullFromGoogle, pushDay, trashRemoved } from '../google/sync';
 import { emptyDay, type DayEntry, type ISODate, type Settings } from '../types';
 import type { ImportedWorkout } from '../hevy';
@@ -268,9 +269,10 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
         const cals = [...new Set([s.gcal.calendarId, ...s.gcal.readCalendarIds])];
         const all = (await Promise.all(cals.map((c) => listEvents(c, from, to)))).flat();
         const byDate: Record<ISODate, GEvent[]> = {};
+        // An event of several days is shown on each of its days (like Google Calendar).
         for (const e of all) {
-          const { date } = eventLocal(e.start);
-          (byDate[date] ??= []).push(e);
+          const [first, last] = eventDays(e);
+          for (const d of rangeDays(first < from ? from : first, last > to ? to : last)) (byDate[d] ??= []).push(e);
         }
         setEvents((prev) => {
           const out = { ...prev };

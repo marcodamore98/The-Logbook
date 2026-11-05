@@ -58,6 +58,10 @@ export interface Appointment {
   category?: string; // vocab.CATEGORIES
   start: HHMM;
   end: HHMM;
+  /** Tutto il giorno (start/end allora non contano). */
+  allDay?: boolean;
+  /** Ultimo giorno di un impegno di più giorni (compreso); senza, finisce il giorno in cui è salvato. */
+  endDate?: ISODate;
   location?: string;
   gcalEventId?: string;
 }
