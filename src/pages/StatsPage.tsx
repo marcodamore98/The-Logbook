@@ -1,6 +1,6 @@
 import { useSwipeNav } from '../components/useSwipeNav';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconCourse, IconFlame, IconOuting, IconRun, IconScale, IconShift, IconSurgery, IconTodo, IconWorkout } from '../components/icons';
+import { GlyphDownload, GlyphNext, GlyphPrev, IconClinical, IconCourse, IconFlame, IconOuting, IconRun, IconScale, IconShift, IconSurgery, IconTodo, IconWorkout, IconGarmin } from '../components/icons';
 import { BarList, Columns, fmt, Kpis, Progress, Stack, Trend, type Bucket } from '../components/charts';
 import { PrintButton } from '../components/PrintDialog';
 import { Card, Empty } from '../components/ui';
@@ -195,6 +195,7 @@ export default function StatsPage() {
         <RunCard {...ctx} />
         <NutritionCard {...ctx} />
         <BodyCard {...ctx} />
+        <RecoveryCard {...ctx} />
         <AgendaCard {...ctx} />
         <LeisureCard {...ctx} />
       </div>
@@ -562,6 +563,41 @@ function BodyCard({ s, p, settings }: Ctx) {
                 Andamento del peso <span className="sub-aside">min {fmt(Math.min(...b.weights.map((w) => w.kg)), 1)} · max {fmt(Math.max(...b.weights.map((w) => w.kg)), 1)}</span>
               </Sub>
               <Trend title="Peso" better="none" minSpan={2} target={goal} noun="pesate" format={(v) => `${fmt(v, 1)} kg`} points={b.weights.map((w) => ({ label: shortDate(w.date), value: w.kg }))} />
+            </>
+          )}
+        </>
+      )}
+    </Section>
+  );
+}
+
+/** Recovery measured by the Garmin watch: resting heart rate, HRV, stress, Body Battery, sleep. */
+function RecoveryCard({ s, p }: Ctx) {
+  const g = s.garmin;
+  if (!g.days && !p.garmin.days) return null;
+  const kpis = [
+    ...(g.restingHr ? [{ label: 'Battito a riposo', value: fmt(g.restingHr), unit: 'bpm', hi: true, delta: { cur: g.restingHr, prev: p.garmin.restingHr, better: 'down', fmtv: (v: number) => `${fmt(v)} bpm` } as const }] : []),
+    ...(g.hrv ? [{ label: 'HRV notte', value: fmt(g.hrv), unit: 'ms', delta: { cur: g.hrv, prev: p.garmin.hrv, better: 'up', fmtv: (v: number) => `${fmt(v)} ms` } as const }] : []),
+    ...(g.bodyBattery ? [{ label: 'Body Battery max', value: fmt(g.bodyBattery), delta: { cur: g.bodyBattery, prev: p.garmin.bodyBattery, better: 'up', fmtv: (v: number) => fmt(v) } as const }] : []),
+    ...(g.stress !== undefined ? [{ label: 'Stress medio', value: fmt(g.stress), delta: { cur: g.stress, prev: p.garmin.stress, better: 'down', fmtv: (v: number) => fmt(v) } as const }] : g.sleepScore ? [{ label: 'Punteggio sonno', value: fmt(g.sleepScore), delta: { cur: g.sleepScore, prev: p.garmin.sleepScore, better: 'up', fmtv: (v: number) => fmt(v) } as const }] : []),
+  ].slice(0, 4);
+  return (
+    <Section id="recupero" kicker="Salute" icon={<IconGarmin />} title="Recupero (Garmin)" print="salute" summary={g.days ? (g.restingHr ? `battito a riposo ${fmt(g.restingHr)} bpm` : `${plural(g.days, 'giorno', 'giorni')} con Garmin`) : 'Nessun dato di Garmin'}>
+      {!g.days ? (
+        <Empty>Nessun dato di Garmin nel periodo.</Empty>
+      ) : (
+        <>
+          {kpis.length > 0 && <Kpis items={kpis} />}
+          {g.rhrPoints.length >= 2 && (
+            <>
+              <Sub>Battito a riposo</Sub>
+              <Trend title="Battito a riposo" better="down" minSpan={3} noun="notti" format={(v) => `${fmt(v)} bpm`} points={g.rhrPoints.map((x) => ({ label: shortDate(x.date), value: x.v }))} />
+            </>
+          )}
+          {g.hrvPoints.length >= 2 && (
+            <>
+              <Sub>HRV della notte</Sub>
+              <Trend title="HRV" better="up" minSpan={5} noun="notti" format={(v) => `${fmt(v)} ms`} points={g.hrvPoints.map((x) => ({ label: shortDate(x.date), value: x.v }))} />
             </>
           )}
         </>

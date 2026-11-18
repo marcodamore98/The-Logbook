@@ -236,8 +236,16 @@ export interface RunModule {
   planId?: string;
   level?: number;
   /** Giudizio a fine allenamento: la prossima volta il programma diventa più facile o più duro. */
-  feel?: 'easy' | 'ok' | 'hard';  /** Inserita a mano dopo (non registrata con l'app). */
+  feel?: 'easy' | 'ok' | 'hard';
+  /** Inserita a mano dopo (non registrata con l'app). */
   manual?: boolean;
+  /** Arrivata da Garmin Connect: id dell'attività e misure dell'orologio. */
+  garminId?: string;
+  avgHr?: number;
+  maxHr?: number;
+  /** Calorie dell'attività misurate da Garmin (al posto della stima dell'app). */
+  kcal?: number;
+  elevationM?: number;
 }
 
 export interface PhotoItem {
@@ -475,6 +483,32 @@ export interface BodyLog {
   hipCm?: number;
 }
 
+/** Metriche del giorno lette da Garmin Connect (passi, sonno, battito a riposo e peso vanno anche in `body`). */
+export interface GarminDay {
+  /** Calorie attive (al netto del metabolismo a riposo): sostituiscono la stima dell'app. */
+  activeKcal?: number;
+  bmrKcal?: number;
+  totalKcal?: number;
+  steps?: number;
+  stepGoal?: number;
+  distanceM?: number;
+  floors?: number;
+  intensityMin?: number;
+  restingHr?: number;
+  minHr?: number;
+  maxHr?: number;
+  stress?: number;
+  bodyBatteryHigh?: number;
+  bodyBatteryLow?: number;
+  sleepSec?: number;
+  sleepScore?: number;
+  deepSec?: number;
+  remSec?: number;
+  hrv?: number;
+  hrvStatus?: string;
+  syncedAt: number;
+}
+
 export interface BodyGoals {
   weightKg?: number;
   kcalIn?: number;
@@ -525,6 +559,7 @@ export interface DayEntry {
   modules: Module[];
   mood?: number; // 1-5
   body?: BodyLog;
+  garmin?: GarminDay;
   food?: FoodLog;
   diary?: DiaryEntry; // diario del giorno: solo testo libero e foto
   gcalTrash?: string[]; // eventi Google da eliminare alla prossima sincronizzazione

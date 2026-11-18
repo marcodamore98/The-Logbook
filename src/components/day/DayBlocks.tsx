@@ -160,6 +160,7 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
             <div key={m.id} className="ws-wrap">
             <button type="button" onClick={() => nav('/corsa')} className="workout-summary run">
               <strong className="ws-name">{m.title || (m.mode === 'intervals' ? m.planName ?? 'Corsa a intervalli' : m.mode === 'treadmill' ? m.planName ?? 'Tapis roulant' : 'Corsa')}</strong>
+              {m.garminId && <span className="badge badge-garmin ws-badge">Garmin</span>}
               {m.feel && (
                 <span className="run-feel-row">
                   <span className={`run-feel f-${m.feel}`}>
@@ -186,6 +187,21 @@ export function TrainingBlock({ day }: { day: DayEntry }) {
                   <small>{m.durationSec && m.durationSec >= 3600 ? 'h:min:s' : 'min:s'}</small>
                 </div>
               </dl>
+              {(m.avgHr || m.kcal || m.elevationM) && (
+                <span className="run-extra">
+                  {m.avgHr ? (
+                    <span>
+                      <Sym name="favorite" size={14} /> {m.avgHr} bpm{m.maxHr ? ` · max ${m.maxHr}` : ''}
+                    </span>
+                  ) : null}
+                  {m.kcal ? (
+                    <span>
+                      <Sym name="local_fire_department" size={14} /> {fmt(m.kcal)} kcal
+                    </span>
+                  ) : null}
+                  {m.elevationM ? <span>+{m.elevationM} m</span> : null}
+                </span>
+              )}
             </button>
             <button type="button" className="icon-btn small ws-more" aria-label="Altre azioni" onClick={() => setPickedRun(m)}>
               ⋮

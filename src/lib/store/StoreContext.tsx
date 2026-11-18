@@ -441,7 +441,11 @@ export function StoreProvider({ repo, children }: { repo: Repo; children: ReactN
   const updateDay = useCallback(
     async (date: ISODate, fn: (d: DayEntry) => DayEntry) => {
       if (!daysRef.current[date]) await loadRange(date, date);
-      saveDay(fn(structuredClone(daysRef.current[date] ?? emptyDay(date))));
+      const cur = daysRef.current[date] ?? emptyDay(date);
+      const next = fn(structuredClone(cur));
+      // Nothing changed (e.g. Garmin sending the same figures again): no save, no Google push.
+      if (JSON.stringify(next) === JSON.stringify(cur)) return;
+      saveDay(next);
     },
     [loadRange, saveDay],
   );

@@ -106,6 +106,7 @@ export const AddTravel = (p: P) => <Art pigment="sage" sym="flight_takeoff" {...
 // Settings cards
 export const IconAccount = (p: P) => <Art pigment="rose" sym="account_circle" {...p} />;
 export const IconGoogleCal = (p: P) => <Art pigment="ochre" sym="calendar_month" {...p} />;
+export const IconGarmin = (p: P) => <Art pigment="teal" sym="watch" {...p} />;
 export const IconRoster = (p: P) => <Art pigment="sage" sym="table_chart" {...p} />;
 export const IconColleagues = (p: P) => <Art pigment="sky" sym="group" {...p} />;
 export const IconShiftTypes = (p: P) => <Art pigment="terra" sym="schedule" {...p} />;

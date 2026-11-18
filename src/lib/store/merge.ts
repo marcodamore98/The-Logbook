@@ -56,7 +56,19 @@ export function mergeDay(base: DayEntry | undefined, local: DayEntry, remote: Da
   out.appointments = mergeList(b.appointments, local.appointments, remote.appointments) ?? [];
   out.todos = mergeList(b.todos, local.todos, remote.todos) ?? [];
   out.looseNotes = mergeList(b.looseNotes, local.looseNotes, remote.looseNotes);
-  for (const k of ['shift', 'guardia', 'mood', 'body', 'diary'] as const) (out as unknown as Record<string, unknown>)[k] = mergeValue<unknown>(b[k], local[k], remote[k]);
+  for (const k of ['shift', 'guardia', 'mood', 'diary', 'garmin'] as const) (out as unknown as Record<string, unknown>)[k] = mergeValue<unknown>(b[k], local[k], remote[k]);
+  // Body values one by one: Garmin writing the steps here and the water typed on the other device both stay.
+  if (local.body || remote.body) {
+    const lb = (local.body ?? {}) as Record<string, unknown>;
+    const rb = (remote.body ?? {}) as Record<string, unknown>;
+    const bb = (b.body ?? {}) as Record<string, unknown>;
+    const body: Record<string, unknown> = {};
+    for (const k of new Set([...Object.keys(lb), ...Object.keys(rb), ...Object.keys(bb)])) {
+      const v = mergeValue(bb[k], lb[k], rb[k]);
+      if (v !== undefined) body[k] = v;
+    }
+    out.body = Object.keys(body).length ? (body as DayEntry['body']) : undefined;
+  }
   if (local.food || remote.food) {
     const lf = local.food ?? { meals: {} };
     const rf = remote.food ?? { meals: {} };

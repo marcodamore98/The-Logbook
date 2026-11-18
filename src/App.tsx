@@ -5,6 +5,7 @@ import { BodySidebar } from './components/BodySidebar';
 import { GlyphClose, GlyphMenu, IconSettings, IconSync, IconToday, IconWorkout, NavArchive, NavCourse, NavDiary, NavFood, NavMonth, NavRun, NavStats, NavToday, NavWeek } from './components/icons';
 import { useDrawer } from './components/useDrawer';
 import { ActiveBar } from './components/training/ActiveBar';
+import { GarminAutoSync } from './components/useGarminSync';
 import { UndoProvider, useUndo } from './components/Undo';
 import { versionsOf } from './lib/store/history';
 import { restoreMissing } from './lib/store/restore';
@@ -255,6 +256,7 @@ function Shell({ userEmail }: { userEmail?: string }) {
               <ScrollMemory />
               <HierarchicalBack />
               <LossWatcher />
+              <GarminAutoSync />
               <BackToDay />
               <Suspense fallback={<div className="page-loading" aria-label="Caricamento" />}>
               <Routes>

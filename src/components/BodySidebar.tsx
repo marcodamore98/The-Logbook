@@ -1,12 +1,14 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useBurned } from './useBurned';
+import { useGarminSync } from './useGarminSync';
+import { useGarmin } from '../lib/garmin/client';
 import type { Burned } from '../lib/energy';
 import { Link, useLocation } from 'react-router-dom';
 import { addDays, formatLong, fromISO, shiftMinutes, today } from '../lib/dates';
 import { useStore } from '../lib/store/StoreContext';
 import { dayIntake } from '../lib/nutrition/foods';
 import { workoutVolume } from '../lib/training/analytics';
-import type { BodyGoals, BodyLog, DayEntry, ISODate } from '../lib/types';
+import type { BodyGoals, BodyLog, DayEntry, GarminDay, ISODate } from '../lib/types';
 import { fmt } from './charts';
 import { GlyphClose, IconScale, IconShift, IconSleep, IconSteps, IconTarget, IconWater, IconWork, IconWorkout, Sym } from './icons';
 import type { SymName } from './ms';
@@ -363,6 +365,8 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
         {calcOpen && <BodyFatCalc last={lastMeasures} onUse={setBody} onClose={() => setCalcOpen(false)} />}
       </section>
 
+      <GarminSection g={day.garmin} stepGoal={goals.steps} />
+
       <section className="side-section side-card">
         <h3 className="sub">Bilancio energetico</h3>
         <KcalRing eaten={intake.kcal ?? 0} goal={goals.kcalIn} burned={burned.total} />
@@ -473,22 +477,104 @@ function BodySidebarPanel({ onClose }: { onClose?: () => void }) {
   );
 }
 
+const HRV_STATUS: Record<string, string> = { BALANCED: 'equilibrata', UNBALANCED: 'sbilanciata', LOW: 'bassa', POOR: 'scarsa' };
+const stressLabel = (v: number) => (v <= 25 ? 'a riposo' : v <= 50 ? 'basso' : v <= 75 ? 'medio' : 'alto');
+const hm = (sec: number) => `${Math.floor(sec / 3600)}h ${String(Math.round((sec % 3600) / 60)).padStart(2, '0')}′`;
+
+/** What the Garmin watch measured on the day: Body Battery, stress, sleep, HRV, heart, calories, steps. */
+function GarminSection({ g, stepGoal }: { g?: GarminDay; stepGoal?: number }) {
+  const st = useGarmin();
+  const sync = useGarminSync();
+  if (!g && !st.configured) return null;
+  const tiles: [SymName, string, string, string?][] = [];
+  if (g?.bodyBatteryHigh !== undefined) tiles.push(['battery_charging_full', 'Body Battery', `${g.bodyBatteryHigh}`, g.bodyBatteryLow !== undefined ? `min ${g.bodyBatteryLow}` : undefined]);
+  if (g?.stress !== undefined && g.stress >= 0) tiles.push(['psychology', 'Stress medio', `${g.stress}`, stressLabel(g.stress)]);
+  if (g?.sleepSec) tiles.push(['bedtime', 'Sonno', hm(g.sleepSec), g.sleepScore !== undefined ? `punteggio ${g.sleepScore}` : undefined]);
+  if (g?.hrv !== undefined) tiles.push(['monitor_heart', 'HRV notte', `${g.hrv} ms`, g.hrvStatus ? HRV_STATUS[g.hrvStatus] : undefined]);
+  if (g?.restingHr !== undefined) tiles.push(['favorite', 'Battito a riposo', `${g.restingHr} bpm`, g.maxHr ? `max ${g.maxHr}` : undefined]);
+  if (g?.intensityMin !== undefined) tiles.push(['bolt', 'Minuti di intensità', `${g.intensityMin}′`]);
+  if (g?.activeKcal !== undefined) tiles.push(['local_fire_department', 'Calorie attive', fmt(g.activeKcal), g.totalKcal ? `${fmt(g.totalKcal)} totali` : undefined]);
+  if (g?.steps !== undefined) {
+    const goal = stepGoal ?? g.stepGoal;
+    tiles.push(['directions_walk', 'Passi', fmt(g.steps), goal ? `obiettivo ${fmt(goal)}` : g.distanceM ? `${fmt(g.distanceM / 1000, 1)} km` : undefined]);
+  }
+  const when = st.lastSync ? new Date(st.lastSync).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+  return (
+    <section className="side-section side-card garmin-card">
+      <div className="wsec-head">
+        <h3 className="sub">
+          <Sym name="watch" size={18} /> Dall’orologio
+        </h3>
+        <span className="badge badge-garmin">Garmin</span>
+      </div>
+      {tiles.length ? (
+        <div className="gm-tiles">
+          {tiles.map(([icon, label, value, sub]) => (
+            <div key={label} className="gm-tile">
+              <span className="gm-head">
+                <Sym name={icon} size={18} />
+                <small>{label}</small>
+              </span>
+              <strong>{value}</strong>
+              {sub && <em>{sub}</em>}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="muted small">Nessun dato di Garmin per questo giorno.</p>
+      )}
+      {st.configured && (
+        <div className="gm-foot">
+          {st.error ? (
+            <Link className="gm-error" to="/impostazioni">
+              {st.error}
+            </Link>
+          ) : (
+            <span className="muted small">{st.syncing ? 'Aggiornamento…' : when ? `Aggiornato alle ${when}` : 'Non ancora aggiornato'}</span>
+          )}
+          <button type="button" className="btn-ghost small" disabled={st.syncing} onClick={() => sync().catch(() => undefined)}>
+            <Sym name="sync" size={16} /> Aggiorna
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** Calories left today: a big lime ring with the number inside. */
 /** Where the calories burned come from: each workout and run, the steps, and the other activities written by hand. */
 export function BurnList({ burned, manual, onManual }: { burned: Burned; manual?: number; onManual?: (v: number | undefined) => void }) {
   return (
     <div className="burn-list">
-      {burned.items.map((i) => (
-        <div key={i.id} className="burn-row">
-          <span>{i.label}</span>
-          <strong>{fmt(i.kcal)} kcal</strong>
-        </div>
-      ))}
-      {burned.stepsCounted > 0 && (
-        <div className="burn-row">
-          <span>Passi ({fmt(burned.stepsCounted)})</span>
-          <strong>{fmt(burned.steps)} kcal</strong>
-        </div>
+      {burned.garmin !== undefined ? (
+        <>
+          <div className="burn-row burn-garmin">
+            <span>
+              <span className="badge badge-garmin">Garmin</span> Calorie attive
+            </span>
+            <strong>{fmt(burned.garmin)} kcal</strong>
+          </div>
+          {burned.items.length > 0 && (
+            <p className="burn-hint">
+              Misurate dall’orologio per tutta la giornata: {burned.items.map((i) => i.label).join(', ')} e i passi sono già compresi.
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          {burned.items.map((i) => (
+            <div key={i.id} className="burn-row">
+              <span>{i.label}</span>
+              <strong>{fmt(i.kcal)} kcal</strong>
+            </div>
+          ))}
+          {burned.stepsCounted > 0 && (
+            <div className="burn-row">
+              <span>Passi ({fmt(burned.stepsCounted)})</span>
+              <strong>{fmt(burned.steps)} kcal</strong>
+            </div>
+          )}
+        </>
       )}
       {onManual ? (
         <label className="burn-row burn-manual">
@@ -508,7 +594,7 @@ export function BurnList({ burned, manual, onManual }: { burned: Burned; manual?
           </div>
         )
       )}
-      {burned.guessed && (burned.exercise > 0 || burned.steps > 0) && <p className="burn-hint">Calcolate con {burned.kg} kg: scrivi il tuo peso in Corpo per un valore preciso.</p>}
+      {burned.garmin === undefined && burned.guessed && (burned.exercise > 0 || burned.steps > 0) && <p className="burn-hint">Calcolate con {burned.kg} kg: scrivi il tuo peso in Corpo per un valore preciso.</p>}
     </div>
   );
 }

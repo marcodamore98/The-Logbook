@@ -56,6 +56,8 @@ export interface Stats {
   categories: { appointments: Count[]; todos: Count[]; todosDone: number; todosTotal: number };
   muscles: Count[];
   body: { weight?: number; kcalIn?: number; steps?: number; sleepH?: number; weights: { date: ISODate; kg: number }[] };
+  /** Recovery measured by Garmin: averages and the nightly values for the trends. */
+  garmin: { days: number; restingHr?: number; hrv?: number; stress?: number; bodyBattery?: number; sleepScore?: number; activeKcal?: number; rhrPoints: { date: ISODate; v: number }[]; hrvPoints: { date: ISODate; v: number }[] };
   nutrition: { days: number; kcal?: number; protein?: number; carbs?: number; fat?: number; daysOnKcal: number; daysOnProtein: number };
 }
 
@@ -89,8 +91,10 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
     categories: { appointments: [], todos: [], todosDone: 0, todosTotal: 0 },
     muscles: [],
     body: { weights: [] },
+    garmin: { days: 0, rhrPoints: [], hrvPoints: [] },
     nutrition: { days: 0, daysOnKcal: 0, daysOnProtein: 0 },
   };
+  const gm: Record<'restingHr' | 'hrv' | 'stress' | 'bodyBattery' | 'sleepScore' | 'activeKcal', number[]> = { restingHr: [], hrv: [], stress: [], bodyBattery: [], sleepScore: [], activeKcal: [] };
   let moodSum = 0, moodN = 0, workM = 0, workS = 0;
   const apCat = new Tally(), tdCat = new Tally();
   const seenCourses = new Set<string>();
@@ -136,6 +140,22 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
         nutri.carbs.push(t.carbs);
         nutri.fat.push(t.fat);
       }
+    }
+    if (d.garmin) {
+      const g = d.garmin;
+      s.garmin.days++;
+      if (g.restingHr) {
+        gm.restingHr.push(g.restingHr);
+        s.garmin.rhrPoints.push({ date: d.date, v: g.restingHr });
+      }
+      if (g.hrv) {
+        gm.hrv.push(g.hrv);
+        s.garmin.hrvPoints.push({ date: d.date, v: g.hrv });
+      }
+      if (g.stress !== undefined && g.stress >= 0) gm.stress.push(g.stress);
+      if (g.bodyBatteryHigh !== undefined) gm.bodyBattery.push(g.bodyBatteryHigh);
+      if (g.sleepScore !== undefined) gm.sleepScore.push(g.sleepScore);
+      if (g.activeKcal !== undefined) gm.activeKcal.push(g.activeKcal);
     }
     if (d.body?.steps) bodyVals.steps.push(d.body.steps);
     if (d.body?.sleepH) bodyVals.sleepH.push(d.body.sleepH);
@@ -267,6 +287,17 @@ export function computeStats(days: DayEntry[], settings: Settings): Stats {
   const mean = (v: number[]) => (v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : undefined);
   s.nutrition = { ...s.nutrition, kcal: mean(bodyVals.kcalIn), protein: mean(nutri.protein), carbs: mean(nutri.carbs), fat: mean(nutri.fat) };
   s.body = { weight: mean(bodyVals.weight), kcalIn: mean(bodyVals.kcalIn), steps: mean(bodyVals.steps), sleepH: mean(bodyVals.sleepH), weights: s.body.weights.sort((a, b) => a.date.localeCompare(b.date)) };
+  s.garmin = {
+    ...s.garmin,
+    restingHr: mean(gm.restingHr),
+    hrv: mean(gm.hrv),
+    stress: mean(gm.stress),
+    bodyBattery: mean(gm.bodyBattery),
+    sleepScore: mean(gm.sleepScore),
+    activeKcal: mean(gm.activeKcal),
+    rhrPoints: s.garmin.rhrPoints.sort((a, b) => a.date.localeCompare(b.date)),
+    hrvPoints: s.garmin.hrvPoints.sort((a, b) => a.date.localeCompare(b.date)),
+  };
   s.mood = moodN ? Math.round((moodSum / moodN) * 10) / 10 : undefined;
   return s;
 }

@@ -7,6 +7,7 @@ import { listCalendars, type GCalendar } from '../lib/google/calendar';
 import { firebaseConfigured, logOut } from '../lib/firebase';
 import { CoachCard } from '../components/coach/CoachCard';
 import { DuplicateCleaner } from '../components/DuplicateCleaner';
+import { GarminCard } from '../components/GarminCard';
 import { Sym } from '../components/icons';
 import { myRosterDays, ROSTERS, ROSTER_SELF } from '../lib/roster';
 import { useStore } from '../lib/store/StoreContext';
@@ -236,6 +237,8 @@ export default function SettingsPage({ userEmail }: { userEmail?: string }) {
         )}
         {gcal.error && <p className="error small">{gcal.error}</p>}
       </Card>
+
+      <GarminCard />
 
       <Card
         id="settings.roster"

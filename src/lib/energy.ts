@@ -47,6 +47,7 @@ export function workoutKcal(m: WorkoutModule, kg: number, now = Date.now()): num
 }
 
 export function runKcal(m: RunModule, kg: number): number {
+  if (m.kcal) return m.kcal; // measured by Garmin
   const min = m.durationSec / 60;
   if (!min) return 0;
   // Phase by phase when they are known (treadmill: speed and incline of each series).
@@ -90,6 +91,8 @@ export interface Burned {
   /** Steps counted for calories (the day's steps minus those of runs and walks). */
   stepsCounted: number;
   manual: number;
+  /** Active calories measured by Garmin: when there, they replace workouts and steps worked out here. */
+  garmin?: number;
   kg: number;
   /** No weight written yet: worked out with DEFAULT_KG. */
   guessed: boolean;
@@ -106,6 +109,10 @@ export function burnedOn(day: DayEntry, kg: number | undefined, now = Date.now()
   const stepsCounted = Math.max(0, Math.round((day.body?.steps ?? 0) - exerciseSteps(day)));
   const steps = stepsKcal(stepsCounted, w);
   const manual = day.body?.kcalOut ?? 0;
+  // The watch measures the whole day (gym included, from the heart rate): its active calories
+  // take the place of the estimate, so nothing is counted twice.
+  const garmin = day.garmin?.activeKcal;
+  if (garmin !== undefined) return { total: garmin + manual, items, exercise, steps, stepsCounted, manual, garmin, kg: w, guessed: false };
   return { total: exercise + steps + manual, items, exercise, steps, stepsCounted, manual, kg: w, guessed: kg === undefined };
 }
 
